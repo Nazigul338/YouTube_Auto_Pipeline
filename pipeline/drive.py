@@ -92,6 +92,15 @@ class DriveClient:
         meta = {"name": name, "mimeType": FOLDER_MIME, "parents": [parent_id]}
         return self.svc.files().create(body=meta, fields="id").execute(num_retries=3)["id"]
 
+    def find_path(self, *names: str) -> str | None:
+        """Папкалар чынжырын ТАБАТ (эч нерсе түзбөйт). Жок болсо None."""
+        parent = "root"
+        for name in names:
+            parent = self.find_folder(name, parent)
+            if parent is None:
+                return None
+        return parent
+
     def ensure_path(self, *names: str) -> str:
         """Папкалар чынжырын табат же түзөт: ("YouTube_Auto", "Music") → id."""
         parent = "root"
@@ -153,12 +162,28 @@ class DriveClient:
 
 
 def explain_http_error(exc: Exception) -> str:
-    """HttpError'ду түшүнүктүү кылып кыскартат (ачкычтарды көрсөтпөстөн)."""
+    """Drive/OAuth катасын түшүнүктүү кылып кыскартат (ачкычтарды көрсөтпөстөн)."""
+    text = str(exc).lower()
+    name = type(exc).__name__
+
+    # Токен/клиент көйгөйлөрү (google.auth.exceptions.RefreshError)
+    if "invalid_grant" in text:
+        return (f"{name} — refresh token эскирген же жокко чыгарылган. "
+                "OAuth Playground'до жаңы токен алып, GDRIVE_REFRESH_TOKEN'ди алмаштырыңыз "
+                "(колдонмо 'Testing' режиминде болсо, токен 7 күндөн кийин өчөт)")
+    if "invalid_client" in text or "unauthorized_client" in text:
+        return (f"{name} — Client ID/Secret туура эмес, же токен башка клиент менен алынган. "
+                "GDRIVE_CLIENT_ID, GDRIVE_CLIENT_SECRET жана токен бир эле клиентке таандык болсун")
+    if "access_denied" in text:
+        return f"{name} — уруксат берилген эмес (Audience → Test users'ке Gmail'иңизди кошуңуз)"
+    if name == "RefreshError":
+        return f"{name} — токенди жаңыртуу ишке ашкан жок (GDRIVE_* маанилерин текшериңиз)"
+
     status = getattr(getattr(exc, "resp", None), "status", None)
     hints = {
-        400: "invalid_grant болушу мүмкүн: refresh token эскирген же туура эмес",
+        400: "суроо туура эмес",
         401: "авторизация катасы: GDRIVE_* ачкычтарын текшериңиз",
-        403: "уруксат жок же квота бүттү",
+        403: "уруксат жок, Drive API күйгүзүлгөн эмес, же квота бүттү",
         404: "папка/файл табылган жок",
     }
-    return f"{type(exc).__name__} (HTTP {status}) — {hints.get(status, 'белгисиз ката')}"
+    return f"{name} (HTTP {status}) — {hints.get(status, 'белгисиз ката')}"

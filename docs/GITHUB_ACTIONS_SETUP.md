@@ -24,35 +24,54 @@ Secrets'ке гана салыңыз.
 
 ## B. Google Drive'ка кирүү (3 маани)
 
-GitHub'дын серверине сиздин Drive'ка кирүүгө уруксат керек. Муну OAuth менен жасайбыз.
+GitHub'дын серверине сиздин Drive'ка кирүүгө уруксат керек (OAuth). Алынат:
+`GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`, `GDRIVE_REFRESH_TOKEN`.
 
-### B1. Google Cloud долбоору
-1. https://console.cloud.google.com → жогорудан **New Project** → аты: `youtube-auto` → Create.
-2. **APIs & Services → Library** → «Google Drive API» → **Enable**.
+> Бардык шилтемелерде долбоор ID'си `youtube-auto-514818` деп берилген.
+> Өзүңүздүн ID'иңиз башка болсо, `?project=` бөлүгүн алмаштырыңыз.
+> Бар болгон башка долбоорлордогу OAuth колдонмолорго (мис. Claude Colab Connector) тийбеңиз.
 
-### B2. OAuth экраны
-1. **APIs & Services → OAuth consent screen** (же «Google Auth platform»).
-2. User type: **External** → App name: `youtube-auto`, email: өзүңүздүн → Save.
-3. **Test users** бөлүмүнө өз Gmail'иңизди кошуңуз.
-4. ⚠️ **МААНИЛҮҮ:** «Publishing status» **Testing** болсо, токен **7 күндөн кийин өчөт**.
-   **«Publish app» / «In production»** кылыңыз. Google «verification керек» деп эскертет —
-   бул сиздин жеке колдонууңуз үчүн милдеттүү эмес, жөн эле улантыңыз.
+### B1. Өзүнчө долбоор
+https://console.cloud.google.com/projectcreate → аты `youtube-auto` → **Create**.
+Жогорку тилкеде долбоор аты `youtube-auto` экенин текшериңиз.
 
-### B3. OAuth клиент ID
-1. **Credentials → Create credentials → OAuth client ID**.
-2. Application type: **Web application**.
-3. **Authorized redirect URIs** → кошуңуз:
-   `https://developers.google.com/oauthplayground`
-4. Create → **Client ID** жана **Client secret** көрүнөт.
-   Аларды GitHub Secrets'ке кошуңуз: `GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`.
+### B2. Drive API
+https://console.cloud.google.com/apis/library/drive.googleapis.com?project=youtube-auto-514818 → **Enable**.
 
-### B4. Refresh token алуу
+### B3. OAuth экраны (Google Auth Platform)
+https://console.cloud.google.com/auth/overview?project=youtube-auto-514818 → **Get started**:
+1. App name: `Video Auto Pipeline`.
+   ⚠️ Атта **«YouTube» / «Google»** деген сөз болбосун, Google четке кагат
+   («app name does not comply with Google's requirements»).
+2. Audience: **External**. Contact email: өз Gmail'иңиз → **Create**.
+3. **Branding** бетинде (милдеттүү эмес, бирок Publish'ке жардам берет):
+   - Home page: `https://github.com/Nazigul338/YouTube_Auto_Pipeline`
+   - Privacy policy: GitHub Pages иштесе
+     `https://nazigul338.github.io/YouTube_Auto_Pipeline/#privacy`,
+     болбосо `https://github.com/Nazigul338/YouTube_Auto_Pipeline/blob/claude/youtube-auto-pipeline-87d41t/docs/PRIVACY.md`
+   - Authorized domain: `github.com` (кабыл албаса, бош калтырыңыз)
+   > Pages күйгүзүү: репозиторий → Settings → Pages → Source: *Deploy from a branch*
+   > → Branch: `claude/youtube-auto-pipeline-87d41t` / `(root)` → Save.
+4. **Audience → Test users → Add users** → өз Gmail'иңиз → Save.
+5. **Audience → Publish app → Confirm** (статус «In production» болсун).
+   - Баскыч боз болсо: бетти жаңыртыңыз, Branding'ди Save кылыңыз.
+   - Баары бир болбосо, **Testing** режиминде улантыңыз. Бирок бул режимде
+     refresh token **7 күндөн кийин өчөт** (кийин 5 мүнөттө жаңыртылат,
+     системанын эскертмеси «refresh token эскирген» деп чыгат).
+
+### B4. Client ID жана Secret
+**Clients → Create client** → *Web application* → Name: `pipeline` →
+**Authorized redirect URIs**: `https://developers.google.com/oauthplayground` → **Create**.
+GitHub Secrets'ке: `GDRIVE_CLIENT_ID`, `GDRIVE_CLIENT_SECRET`.
+
+### B5. Refresh token
 1. https://developers.google.com/oauthplayground ачыңыз.
-2. Жогорку оң бурчтагы ⚙️ → **Use your own OAuth credentials** күйгүзүп, Client ID жана Secret киргизиңиз.
-3. Сол жактагы талаага (Step 1) жазыңыз: `https://www.googleapis.com/auth/drive` → **Authorize APIs**.
-4. Gmail'иңизди тандап, уруксат бериңиз («unverified app» → Advanced → Continue).
-5. **Step 2 → Exchange authorization code for tokens** → **Refresh token** көчүрүңүз.
-6. GitHub Secrets'ке `GDRIVE_REFRESH_TOKEN` деп кошуңуз.
+2. ⚙️ → **Use your own OAuth credentials** → Client ID жана Secret киргизиңиз.
+3. Step 1: `https://www.googleapis.com/auth/drive` → **Authorize APIs**.
+4. Gmail тандаңыз. «Google hasn't verified this app» → **Advanced → Go to … (unsafe) → Allow**.
+5. Step 2: **Exchange authorization code for tokens** → **Refresh token** көчүрүңүз.
+6. GitHub Secrets'ке `GDRIVE_REFRESH_TOKEN`.
+   ⚠️ Токен Client ID/Secret менен **бир эле клиенттен** алынышы керек.
 
 ## C. Drive'дагы папкалар
 

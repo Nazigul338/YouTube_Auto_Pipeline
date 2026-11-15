@@ -40,7 +40,10 @@ def _summary(text: str) -> None:
 
 
 def pull_music(drive: DriveClient, cfg: Config) -> int:
-    folder_id = drive.ensure_path(DRIVE_ROOT_NAME, cfg.music_dirname)
+    folder_id = drive.find_path(DRIVE_ROOT_NAME, cfg.music_dirname)  # түзбөйт
+    if folder_id is None:
+        print(f"⚠ Drive'да {DRIVE_ROOT_NAME}/{cfg.music_dirname} папкасы жок — музыка өткөрүлдү")
+        return 0
     files = drive.download_folder(folder_id, cfg.music_root, only_ext=MUSIC_EXT)
     return len(files)
 
@@ -144,12 +147,14 @@ def run_check() -> int:
         try:
             drive = DriveClient.from_env()
             email = drive.whoami()
-            music_id = drive.ensure_path(DRIVE_ROOT_NAME, "Music")
-            tracks = [f for f in drive.list_children(music_id)
-                      if Path(f["name"]).suffix.lower() in MUSIC_EXT]
+            music_id = drive.find_path(DRIVE_ROOT_NAME, "Music")  # окуу гана, түзбөйт
+            tracks = ([f for f in drive.list_children(music_id)
+                       if Path(f["name"]).suffix.lower() in MUSIC_EXT] if music_id else [])
             add("Google Drive", True, f"аккаунт: {email}")
-            rows.append((f"Музыка ({DRIVE_ROOT_NAME}/Music)", bool(tracks),
-                         f"{len(tracks)} трек" if tracks else "бош — музыка салыңыз"))
+            note = (f"{len(tracks)} трек" if tracks else
+                    "бош — музыка салыңыз" if music_id else
+                    f"{DRIVE_ROOT_NAME}/Music папкасы жок — түзүп, музыка салыңыз")
+            rows.append((f"Музыка ({DRIVE_ROOT_NAME}/Music)", bool(tracks), note))
         except Exception as e:
             add("Google Drive", False, explain_http_error(e))
     else:

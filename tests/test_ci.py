@@ -25,6 +25,10 @@ class FakeDrive:
         self.paths.append(names)
         return "/".join(names)
 
+    def find_path(self, *names):
+        self.paths.append(("find",) + names)
+        return "/".join(names) if self.music is not None else None
+
     def download_folder(self, folder_id, dest, only_ext=None):
         dest.mkdir(parents=True, exist_ok=True)
         out = []
@@ -58,7 +62,8 @@ class TestCI(unittest.TestCase):
         self.assertEqual(len(drive.uploaded), 1)
         self.assertTrue((drive.uploaded[0] / "state.json").exists())
         self.assertIn(("YouTube_Auto", "Videos"), drive.paths)
-        self.assertIn(("YouTube_Auto", "Music"), drive.paths)
+        self.assertIn(("find", "YouTube_Auto", "Music"), drive.paths)  # окуу гана
+        self.assertNotIn(("YouTube_Auto", "Music"), drive.paths)       # түзүлгөн жок
 
     def test_without_drive_still_runs(self):
         self.assertEqual(ci.run_ci("Тест", "motivation", self.work, drive=None), 0)
@@ -126,3 +131,22 @@ class TestSecretStrip(unittest.TestCase):
             self.assertEqual(get_secret("X_TEST_KEY"), "abc123")
         with mock.patch.dict(os.environ, {"X_TEST_KEY": "   "}):
             self.assertIsNone(get_secret("X_TEST_KEY"))
+
+
+class TestDriveErrors(unittest.TestCase):
+    def test_refresh_errors_are_explained(self):
+        from pipeline.drive import explain_http_error
+        class RefreshError(Exception):
+            pass
+        self.assertIn("эскирген", explain_http_error(RefreshError("invalid_grant: Token has been expired")))
+        self.assertIn("Client ID", explain_http_error(RefreshError("invalid_client: Unauthorized")))
+        self.assertIn("Test users", explain_http_error(RefreshError("access_denied")))
+        self.assertNotIn("белгисиз ката", explain_http_error(RefreshError("x")))
+
+    def test_missing_music_folder_is_not_created(self):
+        d = FakeDrive(music=None)
+        with mock.patch("builtins.print"):
+            from pipeline.config import load_config
+            cfg = load_config("motivation", drive_root=tempfile.mkdtemp())
+            self.assertEqual(ci.pull_music(d, cfg), 0)
+        self.assertNotIn(("YouTube_Auto", "Music"), d.paths)
