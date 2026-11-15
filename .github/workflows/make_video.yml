@@ -1,0 +1,90 @@
+name: 🎬 Видео жасоо
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Видеонун темасы"
+        required: true
+        type: string
+      niche:
+        description: "Ниша профили"
+        required: true
+        default: motivation
+        type: choice
+        options:
+          - motivation
+      stop_after:
+        description: "Кайсы этаптан кийин токтотуу (тест үчүн)"
+        required: false
+        default: none
+        type: choice
+        options:
+          - none
+          - s1_script
+          - s2_scenes
+          - s3_voice
+          - s4_subtitles
+          - s5_visuals
+          - s6_music
+          - s7_render
+  # Расписание (кийин, Google Sheets'тен тема алуу даяр болгондо күйгүзөбүз):
+  # schedule:
+  #   - cron: "0 6 * * *"
+
+permissions:
+  contents: read
+
+# Бир убакта бир гана видео жасалат (API лимиттерин сактоо үчүн)
+concurrency:
+  group: make-video
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: FFmpeg жана шрифттер
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+
+      - name: Китепканалар
+        run: pip install -q -r requirements.txt
+
+      - name: Тесттер
+        run: python -m unittest discover tests
+
+      - name: Видео жасоо
+        env:
+          # Тема shell'ге түз коюлбайт (injection'дан сактоо үчүн) — env аркылуу өтөт
+          VIDEO_TOPIC: ${{ inputs.topic }}
+          VIDEO_NICHE: ${{ inputs.niche }}
+          VIDEO_STOP_AFTER: ${{ inputs.stop_after }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.ci
+
+      # Видео артефактка КОЮЛБАЙТ (репозиторий ачык). Логдор жана абал гана.
+      - name: Логдорду сактоо
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: |
+            work/Videos/*/state.json
+            work/Videos/*/logs/*
+          retention-days: 7
+          if-no-files-found: ignore
