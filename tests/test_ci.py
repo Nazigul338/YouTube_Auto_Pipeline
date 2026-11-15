@@ -117,3 +117,12 @@ class TestDriveHelpers(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSecretStrip(unittest.TestCase):
+    def test_get_secret_strips_whitespace(self):
+        from pipeline.config import get_secret
+        with mock.patch.dict(os.environ, {"X_TEST_KEY": "  abc123\n"}):
+            self.assertEqual(get_secret("X_TEST_KEY"), "abc123")
+        with mock.patch.dict(os.environ, {"X_TEST_KEY": "   "}):
+            self.assertIsNone(get_secret("X_TEST_KEY"))

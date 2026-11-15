@@ -107,10 +107,11 @@ def get_secret(name: str) -> str | None:
 
         try:
             value = userdata.get(name)
-            if value:
-                return value
+            if value and value.strip():
+                return value.strip()
         except Exception:
             pass
     except ImportError:
         pass
-    return os.environ.get(name) or None
+    value = os.environ.get(name, "").strip()
+    return value or None

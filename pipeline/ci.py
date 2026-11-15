@@ -121,7 +121,10 @@ def run_check() -> int:
             import requests
             r = requests.get("https://pixabay.com/api/videos/",
                              params={"key": key, "q": "sunrise", "per_page": 3}, timeout=30)
-            add("Pixabay API", r.status_code == 200, f"HTTP {r.status_code}")
+            note = f"HTTP {r.status_code}"
+            if r.status_code != 200:
+                note += f": {r.text.strip()[:80]}"   # Pixabay ката тексти (ачкыч жок)
+            add("Pixabay API", r.status_code == 200, note)
         except Exception as e:
             add("Pixabay API", False, type(e).__name__)
 
