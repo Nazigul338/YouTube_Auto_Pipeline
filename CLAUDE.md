@@ -14,9 +14,12 @@
 ## Архитектура
 - `pipeline/stages/` — этаптар (`s0_check` … `s9_qa`), `stages/__init__.py` ирети.
 - `pipeline/runner.py` — `state.json` аркылуу улантуу/кайра иштетүү.
-- `pipeline/ci.py` + `.github/workflows/` — GitHub Actions (негизги автоматтык жол).
-- `notebooks/RUN_PIPELINE.ipynb` — Colab (запас жол).
-- Drive: `YouTube_Auto/Music/<булак>/`, `YouTube_Auto/Videos/<дата>_<тема>/`.
+- `pipeline/ci.py` + `.github/workflows/make_video.yml` — GitHub Actions (ЖАЛГЫЗ жол;
+  колдонуучу Colab'ды колдонбойт — Colab'га көз карандылык кошпо).
+- Drive: `YouTube_Auto/{Projects,Scripts,Audio,Subtitles,Clips,Music,Final_Videos,Logs,Licenses}`;
+  реестр `Projects/_registry.json`; сынак режими `YouTube_Auto_TEST/`.
+- Gemini: v1beta (TTS ушунда гана иштейт), запас моделдер тизмеси `config.py`'де;
+  TTS'ке берилген нускаманы модель окуп коюшу мүмкүн — s3 Whisper менен текшерет.
 
 ## Коопсуздук
 - Репозиторий **ачык**. API ачкычтары кодго, логго, коммитке эч качан жазылбайт
@@ -25,5 +28,6 @@
 - Иштеп жаткан кодду уруксатсыз өчүрбө.
 
 ## Текшерүү
-`python -m unittest discover tests` — ар өзгөртүүдөн кийин.
+`python -m unittest discover tests` — ар өзгөртүүдөн кийин (узак тест: `tests/test_full_local.py`).
+Чыныгы API'лер менен: Actions → «🎬 Видео жасоо» → test_run ✓.
 Жөндөөнү текшерүү: GitHub Actions → «🔧 Жөндөөнү текшерүү».

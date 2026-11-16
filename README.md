@@ -1,52 +1,46 @@
 # YouTube Auto Pipeline
 
-Google Colab'да **бир баскыч** менен 8 мүнөттүк YouTube видео жасоочу система.
-Тема киргизилет → Сценарий → Үн → Субтитр → Видеоклиптер → Музыка → Монтаж → Даяр MP4.
+**GitHub Actions'та** толук автоматтык иштеген YouTube видео өндүрүү системасы
+(мотивация жана психология, орус тилдүү аудитория). **Colab талап кылынбайт.**
 
-## Колдонуу
+Тема → Сценарий → Сахналар → Үн (Algenib) → Субтитр → Клиптер → Анимация → Музыка →
+Монтаж → QA → **Final MP4 Google Drive'да**.
 
-1. Colab'да ачыңыз:
-   [notebooks/RUN_PIPELINE.ipynb](https://colab.research.google.com/github/Nazigul338/YouTube_Auto_Pipeline/blob/claude/youtube-auto-pipeline-87d41t/notebooks/RUN_PIPELINE.ipynb)
-   → **File → Save a copy in Drive** (бир жолу).
-2. 🔑 Secrets: `GOOGLE_API_KEY`, `PIXABAY_API_KEY` (кааласаңыз `PEXELS_API_KEY`).
-3. Музыка: YouTube Studio → Audio Library'ден 3–5 трек жүктөп,
-   `MyDrive/YouTube_Auto/Music/` папкасына салыңыз.
-4. TOPIC жазып, ▶️ басыңыз.
+- 📱 Колдонуу: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
+- 🔧 Бир жолку жөндөө (ачкычтар, Drive): [docs/GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md)
+- 📜 Каналдын эрежелери: [docs/VIDEO_RULES.md](docs/VIDEO_RULES.md) ·
+  кодго кантип киргизилген: [docs/RULES_IMPLEMENTATION.md](docs/RULES_IMPLEMENTATION.md)
 
-## Этаптардын абалы
+## Workflow'дор (Actions бөлүмүндө)
 
-Ирети жана талаптары: [docs/VIDEO_RULES.md](docs/VIDEO_RULES.md) (14-эреже).
-
-| # | Этап | Абалы |
-|---|---|---|
-| 0 | Чөйрөнү текшерүү (ачкычтар, Drive, музыка) | ✅ даяр |
-| 1 | Сценарий (Gemini) | ⏳ |
-| 2 | Сахналарга бөлүү | ⏳ |
-| 3 | Үн (Gemini TTS, Algenib) | ⏳ |
-| 4 | Субтитрлер (Whisper) | ⏳ |
-| 5 | Видеоклиптер (Pixabay/Pexels) | ⏳ |
-| 6 | Анимация жана эффекттер | ⏳ |
-| 7 | Фондук музыка (китепкана ✅, аралаштыруу ⏳) | ⏳ |
-| 8 | Монтаж (FFmpeg, 1080p, 30 FPS) | ⏳ |
-| 9 | Сапатты текшерүү жана Final MP4 | ⏳ |
+| Workflow | Эмне кылат |
+|---|---|
+| 🎬 Видео жасоо | Тема же video_id менен видео жасайт/улантат |
+| 🔧 Жөндөөнү текшерүү | Ачкычтар, Gemini, Pixabay, Drive, музыка |
+| 🔬 Мүмкүнчүлүктөрдү сыноо | Gemini моделдери, TTS, Whisper чынында иштейби |
 
 ## Түзүлүшү
 
 ```
 pipeline/
-  config.py      — жөндөөлөр (моделдер, үн, резолюция)
-  state.py       — state.json: ар бир этаптын абалы
-  project.py     — ар бир видеого өзүнчө папка, файлдарды үстүнөн жазбоо
-  runner.py      — этаптарды ирети менен иштетүү, ката/улантуу
-  stages/        — ар бир этап өзүнчө модуль
-  niches/        — ниша профилдери (motivation.yaml, ...)
-notebooks/RUN_PIPELINE.ipynb — Colab блокноту
-legacy/          — эски блокноттун көчүрмөсү
-docs/            — анализ жана документация
-tests/           — тесттер: python -m unittest discover tests
+  ci.py          — GitHub Actions'тын кирүү чекити (Video_NNN, улантуу, Drive'га сактоо)
+  runner.py      — этаптарды аткаруу, кайра аракет, ар этаптан кийин сактоо
+  storage.py     — Drive'дагы YouTube_Auto/ түзүлүшү жана реестр
+  drive.py       — Google Drive API (OAuth)
+  gemini.py      — Gemini: текст, TTS, embedding, аудио/сүрөт анализ (запас моделдер, timeout)
+  asr.py         — Whisper (PyAV'сыз)
+  stock.py       — Pixabay / Pexels
+  music.py       — музыка китепканасы (булак папкадан)
+  media.py       — FFmpeg жардамчылары
+  stages/        — s0_check … s9_qa (ар этап өзүнчө модуль)
+  niches/        — ниша профилдери (motivation.yaml)
+tests/           — 50+ тест + толук интеграциялык тест (жалган API, чыныгы FFmpeg)
+legacy/          — эски Colab блокноттору (колдонулбайт, тарых үчүн)
 ```
+
+Тесттер: `python -m unittest discover tests`
 
 ## Коопсуздук
 
-Репозиторий ачык (public). API ачкычтары **эч качан** кодго жазылбайт —
-алар Colab Secrets'те гана сакталат.
+Репозиторий ачык. API ачкычтары **GitHub Secrets'те гана**; логдо email жашырылат;
+видео ачык жерге (artifact) коюлбайт — Drive'га гана.
