@@ -71,3 +71,12 @@ class PlannedStage(Stage):
         raise NotImplementedStage(
             f"«{self.title}» этабы азырынча даяр эмес — кийинки кадамда кошулат."
         )
+
+
+def gemini_of(ctx: Context):
+    """Gemini клиенти (тесттерде ctx.services["gemini"] жалган клиент менен алмаштырылат)."""
+    if "gemini" not in ctx.services:
+        from ..gemini import from_config
+
+        ctx.services["gemini"] = from_config(ctx.cfg, log=ctx.log)
+    return ctx.services["gemini"]

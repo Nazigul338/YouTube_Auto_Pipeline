@@ -26,6 +26,7 @@ class Base(unittest.TestCase):
         self.tmp.cleanup()
 
     def run_quiet(self, topic, **kw):
+        kw.setdefault("stop_after", "s0_check")
         with mock.patch("builtins.print"):
             return runner.run(topic, cfg=self.cfg, **kw)
 
@@ -93,10 +94,10 @@ class TestRunner(Base):
         stages = list(runner.STAGES)
         stages[1] = Boom()
         with mock.patch.object(runner, "STAGES", stages):
-            st = self.run_quiet("Ката тема")
+            st = self.run_quiet("Ката тема", stop_after="s1_script")
             self.assertEqual(st.status("s1_script"), FAILED)
             self.assertIn("сыноо катасы", st.stage("s1_script")["error"])
-            st = self.run_quiet("Ката тема")  # кайра ▶
+            st = self.run_quiet("Ката тема", stop_after="s1_script")  # кайра ▶
             self.assertEqual(st.status("s1_script"), DONE)
             self.assertEqual(st.stage("s1_script")["attempts"], 2)
 
@@ -110,7 +111,7 @@ class TestRunner(Base):
         stages = list(runner.STAGES)
         stages[1] = NoFile()
         with mock.patch.object(runner, "STAGES", stages):
-            st = self.run_quiet("Текшерүү тема")
+            st = self.run_quiet("Текшерүү тема", stop_after="s1_script")
         self.assertEqual(st.status("s1_script"), FAILED)
 
     def test_missing_secret_fails_check(self):

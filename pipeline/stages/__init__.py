@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from .base import PlannedStage, Stage
 from .s0_check import CheckStage
+from .s1_script import ScriptStage
+from .s2_scenes import ScenesStage
 
 
 def _planned(name: str, title: str) -> Stage:
@@ -16,8 +18,8 @@ def _planned(name: str, title: str) -> Stage:
 # Topic → Script → Scenes → TTS → Subtitles → Clips → Animation → Music → Montage → QA → Final MP4
 STAGES: list[Stage] = [
     CheckStage(),
-    _planned("s1_script", "Сценарий"),
-    _planned("s2_scenes", "Сахналарга бөлүү"),
+    ScriptStage(),
+    ScenesStage(),
     _planned("s3_voice", "Үн (Gemini TTS)"),
     _planned("s4_subtitles", "Субтитрлер (Whisper)"),
     _planned("s5_visuals", "Видеоклиптер"),

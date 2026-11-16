@@ -11,6 +11,7 @@ import json
 from pipeline import ci, runner
 from pipeline.stages.base import Stage, StageError, TransientError
 from pipeline.storage import LocalStore
+from tests.fakes import FakeGemini
 
 KEYS = {"GOOGLE_API_KEY": "t", "PIXABAY_API_KEY": "t"}
 
@@ -38,7 +39,7 @@ class TestCI(unittest.TestCase):
         return self.root / "drive" / "YouTube_Auto" / Path(*parts)
 
     def test_layout_ids_and_checkpoint(self):
-        code = ci.run_ci("Тест", "motivation", self.work, store=self.store)
+        code = ci.run_ci("Тест", "motivation", self.work, store=self.store, services={"gemini": FakeGemini()}, stop_after="s2_scenes")
         self.assertEqual(code, 0)
         for f in ["Projects", "Scripts", "Audio", "Subtitles", "Clips", "Final_Videos", "Logs", "Licenses"]:
             self.assertTrue(self.drive(f).is_dir(), f)
@@ -47,14 +48,14 @@ class TestCI(unittest.TestCase):
         reg = self.store.load_registry()
         self.assertEqual(reg["videos"]["Video_001"]["topic"], "Тест")
         self.assertTrue((self.work / "Music" / "Pixabay" / "a.mp3").exists())
-        ci.run_ci("Экинчи", "motivation", self.work, store=self.store)
+        ci.run_ci("Экинчи", "motivation", self.work, store=self.store, services={"gemini": FakeGemini()}, stop_after="s2_scenes")
         self.assertIn("Video_002", self.store.load_registry()["videos"])
 
     def test_no_store_fails_fast(self):
         self.assertEqual(ci.run_ci("Тест", "motivation", self.work, store=None), 2)
 
     def test_empty_topic(self):
-        self.assertEqual(ci.run_ci("  ", "motivation", self.work, store=self.store), 2)
+        self.assertEqual(ci.run_ci("  ", "motivation", self.work, store=self.store, services={"gemini": FakeGemini()}, stop_after="s2_scenes"), 2)
 
     def test_resume_by_video_id(self):
         calls = {"n": 0}
@@ -73,12 +74,12 @@ class TestCI(unittest.TestCase):
         stages = list(runner.STAGES)
         stages[1] = Flaky()
         with mock.patch.object(runner, "STAGES", stages), mock.patch.object(ci, "STAGES", stages):
-            self.assertEqual(ci.run_ci("Ката", "motivation", self.work, store=self.store), 1)
+            self.assertEqual(ci.run_ci("Ката", "motivation", self.work, store=self.store, services={"gemini": FakeGemini()}, stop_after="s2_scenes"), 1)
             st = json.loads(self.drive("Projects", "Video_001", "state.json").read_text("utf-8"))
             self.assertEqual(st["stages"]["s1_script"]["status"], "failed")  # Drive'да сакталды
             # жаңы runner (бош workdir) — Drive'дан улантуу
             code = ci.run_ci("", "motivation", self.root / "work2", store=self.store,
-                             video_id="Video_001")
+                             video_id="Video_001", services={"gemini": FakeGemini()}, stop_after="s2_scenes")
         self.assertEqual(code, 0)
         st = json.loads(self.drive("Projects", "Video_001", "state.json").read_text("utf-8"))
         self.assertEqual(st["stages"]["s1_script"]["status"], "done")
@@ -107,13 +108,13 @@ class TestCI(unittest.TestCase):
         with mock.patch.object(runner, "STAGES", stages), mock.patch.object(ci, "STAGES", stages), \
              mock.patch.object(runner.time, "sleep", lambda s: None):
             from pipeline.stages.base import Context
-            code = ci.run_ci("Тест", "motivation", self.work, store=self.store)
+            code = ci.run_ci("Тест", "motivation", self.work, store=self.store, services={"gemini": FakeGemini()}, stop_after="s2_scenes")
         self.assertEqual(calls["n"], 3)
 
     def test_summary_written(self):
         summary = self.root / "summary.md"
         with mock.patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(summary)}):
-            ci.run_ci("Тест", "motivation", self.work, store=self.store)
+            ci.run_ci("Тест", "motivation", self.work, store=self.store, services={"gemini": FakeGemini()}, stop_after="s2_scenes")
         text = summary.read_text(encoding="utf-8")
         self.assertIn("Video_001", text)
 
