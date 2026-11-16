@@ -12,16 +12,19 @@ def _planned(name: str, title: str) -> Stage:
     return stage
 
 
+# Ирети docs/VIDEO_RULES.md, 14-эреже боюнча:
+# Topic → Script → Scenes → TTS → Subtitles → Clips → Animation → Music → Montage → QA → Final MP4
 STAGES: list[Stage] = [
     CheckStage(),
     _planned("s1_script", "Сценарий"),
     _planned("s2_scenes", "Сахналарга бөлүү"),
-    _planned("s3_voice", "Үн (TTS)"),
-    _planned("s4_subtitles", "Субтитрлер"),
+    _planned("s3_voice", "Үн (Gemini TTS)"),
+    _planned("s4_subtitles", "Субтитрлер (Whisper)"),
     _planned("s5_visuals", "Видеоклиптер"),
-    _planned("s6_music", "Фондук музыка"),
-    _planned("s7_render", "Монтаж"),
-    _planned("s8_qa", "Сапатты текшерүү"),
+    _planned("s6_animation", "Анимация жана эффекттер"),
+    _planned("s7_music", "Фондук музыка"),
+    _planned("s8_render", "Монтаж (FFmpeg)"),
+    _planned("s9_qa", "Сапатты текшерүү жана Final MP4"),
 ]
 
 STAGE_NAMES = [s.name for s in STAGES]

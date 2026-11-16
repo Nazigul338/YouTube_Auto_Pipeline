@@ -30,8 +30,9 @@ class Config:
     width: int = 1920
     height: int = 1080
     fps: int = 30
-    shot_min_sec: float = 3.0
-    shot_max_sec: float = 4.0
+    shot_min_sec: float = 2.5               # эреже 5: орточо ~3 сек,
+    shot_max_sec: float = 3.5               # чеги ой/сүйлөмгө жараша жылат
+    min_duration_sec: int = 490             # 8:10 — орто-реклама үчүн 8:00дөн ашык
 
     # --- Моделдер ---
     script_model: str = "gemini-3.8-flash"

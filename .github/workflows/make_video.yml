@@ -26,8 +26,9 @@ on:
           - s3_voice
           - s4_subtitles
           - s5_visuals
-          - s6_music
-          - s7_render
+          - s6_animation
+          - s7_music
+          - s8_render
   # Расписание (кийин, Google Sheets'тен тема алуу даяр болгондо күйгүзөбүз):
   # schedule:
   #   - cron: "0 6 * * *"
