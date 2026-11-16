@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .stages.base import StageError, TransientError
+from .errors import StageError, TransientError
 
 TRANSIENT_CODES = {408, 429, 500, 502, 503, 504}
 

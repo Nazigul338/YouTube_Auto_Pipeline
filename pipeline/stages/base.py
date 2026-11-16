@@ -15,16 +15,7 @@ from ..config import Config
 from ..state import VideoState
 
 
-class StageError(Exception):
-    """Этаптын түшүнүктүү катасы (колдонуучуга кыргызча көрсөтүлөт)."""
-
-
-class TransientError(StageError):
-    """Убактылуу ката (API 429/503, тармак) — этап кайра аракет кылынат."""
-
-
-class NotImplementedStage(Exception):
-    """Этап азырынча иштелип чыга элек."""
+from ..errors import NotImplementedStage, StageError, TransientError  # noqa: F401
 
 
 @dataclass

@@ -6,6 +6,8 @@ from .base import PlannedStage, Stage
 from .s0_check import CheckStage
 from .s1_script import ScriptStage
 from .s2_scenes import ScenesStage
+from .s3_voice import VoiceStage
+from .s4_subtitles import SubtitlesStage
 
 
 def _planned(name: str, title: str) -> Stage:
@@ -20,8 +22,8 @@ STAGES: list[Stage] = [
     CheckStage(),
     ScriptStage(),
     ScenesStage(),
-    _planned("s3_voice", "Үн (Gemini TTS)"),
-    _planned("s4_subtitles", "Субтитрлер (Whisper)"),
+    VoiceStage(),
+    SubtitlesStage(),
     _planned("s5_visuals", "Видеоклиптер"),
     _planned("s6_animation", "Анимация жана эффекттер"),
     _planned("s7_music", "Фондук музыка"),

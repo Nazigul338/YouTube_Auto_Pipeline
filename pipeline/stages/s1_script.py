@@ -213,7 +213,7 @@ class ScriptStage(Stage):
                            purpose="script_draft", temperature=0.95)
             title, body = split_title(draft)
             ctx.path("script", f"draft_{round_ + 1}.txt").write_text(draft, encoding="utf-8")
-            if word_count(body) < 400:
+            if word_count(body) < 0.4 * cfg.words_min:
                 raise StageError(f"Gemini өтө кыска текст берди ({word_count(body)} сөз)")
 
             text, changes = fact_review(g, body)
