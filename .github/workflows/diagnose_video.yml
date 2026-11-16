@@ -1,0 +1,44 @@
+name: 🔎 Видеону диагностикалоо
+
+# Даяр видеонун агымдарын (видео/аудио узактыгы), кадр санын, PTS'ин текшерет жана
+# кадрлардын контакт-барагын Drive'га (_diagnose/) жүктөйт. Видеону өзгөртпөйт.
+on:
+  workflow_dispatch:
+    inputs:
+      video_id:
+        description: "Видеонун ID'си (мис. Video_001)"
+        required: true
+        type: string
+      test_root:
+        description: "Drive папкасы"
+        required: false
+        default: YouTube_Auto_TEST
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version | head -1
+      - run: pip install -q -r requirements.txt
+      - name: Диагностика
+        env:
+          VIDEO_ID: ${{ inputs.video_id }}
+          YTA_DRIVE_FOLDER: ${{ inputs.test_root }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.diagnose
