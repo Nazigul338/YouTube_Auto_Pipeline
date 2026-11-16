@@ -1,47 +1,93 @@
 # YouTube Auto Pipeline
 
 **GitHub Actions'та** толук автоматтык иштеген YouTube видео өндүрүү системасы
-(мотивация жана психология, орус тилдүү аудитория). **Colab талап кылынбайт.**
+(мотивация жана психология, орус тилдүү аудитория, ~8 мүнөттүк видео). **Colab талап кылынбайт.**
 
-Тема → Сценарий → Сахналар → Үн (Algenib) → Субтитр → Клиптер → Анимация → Музыка →
-Монтаж → QA → **Final MP4 Google Drive'да**.
+Тема → Сценарий → Сахналар → Үн (Gemini TTS, Algenib) → Субтитр (Whisper) → Клиптер →
+Анимация → Музыка → Монтаж (FFmpeg, 1080p) → QA → **Final MP4 Google Drive'да**.
 
+> 📌 **Азыркы абал, ачык көйгөйлөр жана кийинки кадамдар: [PROJECT_STATUS.md](PROJECT_STATUS.md)**
+> (толук видео чыныгы API менен азырынча аякталган жок — ошол файлды караңыз).
+
+## Документтер
 - 📱 Колдонуу: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
-- 🔧 Бир жолку жөндөө (ачкычтар, Drive): [docs/GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md)
+- 🔧 Бир жолку жөндөө (ачкычтар, Google Drive): [docs/GITHUB_ACTIONS_SETUP.md](docs/GITHUB_ACTIONS_SETUP.md)
 - 📜 Каналдын эрежелери: [docs/VIDEO_RULES.md](docs/VIDEO_RULES.md) ·
   кодго кантип киргизилген: [docs/RULES_IMPLEMENTATION.md](docs/RULES_IMPLEMENTATION.md)
+- 🤖 Claude үчүн сессия тартиби: [CLAUDE.md](CLAUDE.md)
 
-## Workflow'дор (Actions бөлүмүндө)
+## Керектүү API ачкычтар (GitHub → Settings → Secrets and variables → Actions)
+
+| Secret | Милдеттүүбү | Эмне үчүн |
+|---|---|---|
+| `GOOGLE_API_KEY` | ✅ | Gemini: сценарий, үн (TTS), музыка/кадр анализи |
+| `PIXABAY_API_KEY` | ✅ | видео/сүрөт клиптер |
+| `GDRIVE_CLIENT_ID` | ✅ | Google Drive OAuth |
+| `GDRIVE_CLIENT_SECRET` | ✅ | Google Drive OAuth |
+| `GDRIVE_REFRESH_TOKEN` | ✅ | Google Drive OAuth (токен **Production** режиминде алынышы керек) |
+| `PEXELS_API_KEY` | – | кошумча клип булагы |
+
+Репозиторий **ачык**: ачкычтарды коддо, логдо, issue'да же чатта эч качан жазбаңыз.
+
+## Бир баскыч менен видео жасоо
+
+1. github.com/Nazigul338/YouTube_Auto_Pipeline/actions → **🎬 Видео жасоо** → **Run workflow**.
+2. **topic** талаасына теманы жазыңыз → **Run workflow**.
+3. 40–70 мүнөттөн кийин (болжол, дагы өлчөнө элек) видео: Drive → `YouTube_Auto/Final_Videos/Video_NNN.mp4`.
+   Сценарий, үн, субтитр, лицензия, QA отчету — `Scripts/`, `Audio/`, `Subtitles/`, `Licenses/`, `Projects/Video_NNN/`.
+
+Токтоп калса: **🔁 Токтоп калган видеону улантуу** күн сайын өзү улантат (квота/убактылуу ката).
+Колго улантуу: `🎬` → **video_id** (мис. `Video_004`), topic бош. Сынак: `test_run` ✓ (`YouTube_Auto_TEST/`).
+
+## Workflow'дор
 
 | Workflow | Эмне кылат |
 |---|---|
-| 🎬 Видео жасоо | Тема же video_id менен видео жасайт/улантат |
-| 🔁 Токтоп калган видеону улантуу | Күн сайын өзү: квота/убактылуу катадан токтогон видеону улантат |
+| 🎬 Видео жасоо | Тема же `video_id` менен видео жасайт/улантат |
+| 🔁 Токтоп калган видеону улантуу | Күн сайын өзү: квота/убактылуу катадан токтогонду улантат |
 | 🔧 Жөндөөнү текшерүү | Ачкычтар, Gemini, Pixabay, Drive, музыка |
+| 🔐 Drive авторизациясын текшерүү | OAuth режими (Testing/Production), токен жаңыртуу, чыныгы жүктөө |
 | 🔬 Мүмкүнчүлүктөрдү сыноо | Gemini моделдери, TTS, Whisper чынында иштейби |
 
-## Түзүлүшү
+## Системанын архитектурасы
 
 ```
 pipeline/
-  ci.py          — GitHub Actions'тын кирүү чекити (Video_NNN, улантуу, Drive'га сактоо)
-  runner.py      — этаптарды аткаруу, кайра аракет, ар этаптан кийин сактоо
+  ci.py          — GitHub Actions кирүү чекити (Video_NNN, улантуу, Drive'га сактоо, --resume-pending)
+  runner.py      — этаптарды аткаруу, кайра аракет, ар этаптан кийин сактоо, ката түрлөрү
   storage.py     — Drive'дагы YouTube_Auto/ түзүлүшү жана реестр
   drive.py       — Google Drive API (OAuth)
-  gemini.py      — Gemini: текст, TTS, embedding, аудио/сүрөт анализ (запас моделдер, timeout)
+  auth_check.py  — OAuth/Drive текшерүү
+  gemini.py      — Gemini: текст, TTS, embedding, аудио/сүрөт анализ (запас моделдер, квота, timeout)
   asr.py         — Whisper (PyAV'сыз)
   stock.py       — Pixabay / Pexels
-  music.py       — музыка китепканасы (булак папкадан)
+  music.py       — музыка китепканасы (булак папкадан, лицензия)
   media.py       — FFmpeg жардамчылары
   stages/        — s0_check … s9_qa (ар этап өзүнчө модуль)
   niches/        — ниша профилдери (motivation.yaml)
-tests/           — 50+ тест + толук интеграциялык тест (жалган API, чыныгы FFmpeg)
+tests/           — 77 тест + толук интеграциялык тест (жалган API, чыныгы FFmpeg)
 legacy/          — эски Colab блокноттору (колдонулбайт, тарых үчүн)
 ```
 
-Тесттер: `python -m unittest discover tests`
+Этаптар: `s0_check` → `s1_script` → `s2_scenes` → `s3_voice` → `s4_subtitles` → `s5_visuals` →
+`s6_animation` → `s7_music` → `s8_render` → `s9_qa` (QA өтсө гана Final MP4 «даяр»).
+
+## Каталарды аныктоо жана чечүү
+
+Иштин **Summary** бетинде кайсы этапта, эмне себептен токтогону жазылат.
+
+| Ката | Себеби жана чечими |
+|---|---|
+| `КҮНҮМДҮК квота бүттү` (Gemini) | Акысыз квота бүттү — 🔁 workflow эртеси өзү улантат |
+| `503 high demand` | Gemini убактылуу бош эмес — система өзү кайра аракет кылат |
+| `refresh token эскирген` / `invalid_grant` | Google токени өчтү (Testing токени 7 күн). `docs/GITHUB_ACTIONS_SETUP.md` B5 менен жаңы токен алып, `GDRIVE_REFRESH_TOKEN`'ди алмаштырыңыз; текшерүү: 🔐 workflow |
+| `QA өткөн жок` | `Projects/Video_NNN/report.txt`'те ❌ пункттарды караңыз; чыныгы ката автоматтык уланбайт |
+| `GOOGLE_API_KEY жок` ж.б. | Secrets'ке кошуңуз; `🔧 Жөндөөнү текшерүү` иштетиңиз |
+| Үн «туура эмес» (3-этап) | Система бөлүктү өзү кайра жаратат; 4 аракеттен кийин да болбосо — `rerun_from: s3_voice` |
+
+Тесттер: `YTA_SKIP_SLOW=1 python -m unittest discover tests`
 
 ## Коопсуздук
 
-Репозиторий ачык. API ачкычтары **GitHub Secrets'те гана**; логдо email жашырылат;
-видео ачык жерге (artifact) коюлбайт — Drive'га гана.
+API ачкычтары **GitHub Secrets'те гана**; логдо email жашырылат; видео ачык жерге (artifact)
+коюлбайт — Drive'га гана; видео YouTube'га **автоматтык жарыяланбайт**.
