@@ -116,7 +116,7 @@ class QAStage(Stage):
                 f"диктор музыкадан {rel} LU катуу (керек ≥ 10)")
 
         # 6. Кара экран, катып калган кадр, тынчтык
-        blacks = [b for b in detect(final, "blackdetect=d=0.4:pic_th=0.97", "black")
+        blacks = [b for b in detect(final, "blackdetect=d=0.5:pic_th=0.98:pix_th=0.04", "black")
                   if b[0] > 0.6 and b[1] < dur - 1.2]
         rep.add("black", "Кара экран жок", not blacks, f"{len(blacks)} жер: {blacks[:3]}" if blacks else "жок")
         freezes = [f for f in detect(final, "freezedetect=n=0.002:d=3", "freeze")
