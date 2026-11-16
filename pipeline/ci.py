@@ -169,6 +169,8 @@ def find_pending(registry: dict, now_dt: datetime | None = None) -> str | None:
     now_dt = now_dt or datetime.now(timezone.utc)
     for vid, v in sorted(registry.get("videos", {}).items()):
         status = v.get("status")
+        if "stopped_by_user" not in v:
+            continue   # эски форматтагы жазуу (сыноодон калган) — автоматтык уланбайт
         if status not in ("failed", "in_progress") or v.get("stopped_by_user") or v.get("abandoned"):
             continue
         if v.get("auto_resumes", 0) >= MAX_AUTO_RESUMES:

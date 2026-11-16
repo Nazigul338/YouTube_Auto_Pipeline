@@ -21,7 +21,7 @@ OLD = (NOW - timedelta(hours=5)).isoformat()
 
 def video(**kw):
     base = {"topic": "t", "niche": "motivation", "created": (NOW - timedelta(days=1)).isoformat(),
-            "updated": OLD}
+            "updated": OLD, "stopped_by_user": False}
     base.update(kw)
     return base
 
@@ -48,6 +48,11 @@ class TestFindPending(unittest.TestCase):
         self.assertEqual(self.pick({"Video_001": video(status="in_progress")}), "Video_001")
         fresh = video(status="in_progress", updated=(NOW - timedelta(minutes=3)).isoformat())
         self.assertIsNone(self.pick({"Video_001": fresh}))
+
+    def test_legacy_entries_without_marker_are_skipped(self):
+        legacy = video(status="in_progress")
+        del legacy["stopped_by_user"]
+        self.assertIsNone(self.pick({"Video_001": legacy}))
 
     def test_limits(self):
         self.assertIsNone(self.pick({"Video_001": video(
