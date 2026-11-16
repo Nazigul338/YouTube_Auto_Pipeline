@@ -73,19 +73,19 @@ class Stock:
         raise TransientError("Сток API лимити: кийинчерээк кайра аракет кылыңыз")
 
     # -------------------------------------------------------------- videos
-    def videos(self, query: str, min_duration: float = 3.0) -> list[Asset]:
-        out = self._pixabay_videos(query, min_duration)
+    def videos(self, query: str, min_duration: float = 3.0, page: int = 1) -> list[Asset]:
+        out = self._pixabay_videos(query, min_duration, page)
         if self.pexels_key:
             try:
-                out += self._pexels_videos(query, min_duration)
+                out += self._pexels_videos(query, min_duration, page)
             except StageError:
                 pass
         return out
 
-    def _pixabay_videos(self, query: str, min_duration: float) -> list[Asset]:
+    def _pixabay_videos(self, query: str, min_duration: float, page: int = 1) -> list[Asset]:
         d = self._get("https://pixabay.com/api/videos/",
                       {"key": self.pixabay_key, "q": query[:100], "per_page": 50,
-                       "safesearch": "true"})
+                       "page": page, "safesearch": "true"})
         out = []
         for h in d.get("hits", []):
             vids = h.get("videos", {})
@@ -103,9 +103,9 @@ class Stock:
                              query=query))
         return out
 
-    def _pexels_videos(self, query: str, min_duration: float) -> list[Asset]:
+    def _pexels_videos(self, query: str, min_duration: float, page: int = 1) -> list[Asset]:
         d = self._get("https://api.pexels.com/videos/search",
-                      {"query": query, "per_page": 40, "orientation": "landscape"},
+                      {"query": query, "per_page": 40, "page": page, "orientation": "landscape"},
                       {"Authorization": self.pexels_key})
         out = []
         for v in d.get("videos", []):
@@ -121,9 +121,9 @@ class Stock:
         return out
 
     # -------------------------------------------------------------- images
-    def images(self, query: str) -> list[Asset]:
+    def images(self, query: str, page: int = 1) -> list[Asset]:
         d = self._get("https://pixabay.com/api/",
-                      {"key": self.pixabay_key, "q": query[:100], "per_page": 40,
+                      {"key": self.pixabay_key, "q": query[:100], "per_page": 40, "page": page,
                        "image_type": "photo", "orientation": "horizontal", "min_width": 1920,
                        "safesearch": "true"})
         out = []

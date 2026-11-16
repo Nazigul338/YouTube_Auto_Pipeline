@@ -106,11 +106,11 @@ class FakeStock:
                      f"fake://{kind}/{h}", 1920, 1080, 8.0 if kind == "video" else 0.0,
                      f"https://pixabay.com/x/{h}", "tester", *PIXABAY_LICENSE, query=q)
 
-    def videos(self, q, min_duration=3.0):
-        return [self._asset("video", q, k) for k in range(self.per_query)]
+    def videos(self, q, min_duration=3.0, page=1):
+        return [self._asset("video", q, (page - 1) * 1000 + k) for k in range(self.per_query)]
 
-    def images(self, q):
-        return [self._asset("image", q, k) for k in range(5)]
+    def images(self, q, page=1):
+        return [self._asset("image", q, (page - 1) * 1000 + k) for k in range(5)]
 
     def download(self, asset, dest):
         import subprocess

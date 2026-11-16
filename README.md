@@ -60,7 +60,9 @@ pipeline/
   auth_check.py  — OAuth/Drive текшерүү
   gemini.py      — Gemini: текст, TTS, embedding, аудио/сүрөт анализ (запас моделдер, квота, timeout)
   asr.py         — Whisper (PyAV'сыз)
-  stock.py       — Pixabay / Pexels
+  stock.py       — Pixabay / Pexels (беттөө менен)
+  clipmemory.py  — Smart Video Memory: колдонулган клиптердин Drive базасы (JSON + CSV)
+  clipsearch.py  — акылдуу издөө: сахнанын темасы/маанисине жараша, кайталанбастан
   music.py       — музыка китепканасы (булак папкадан, лицензия)
   media.py       — FFmpeg жардамчылары
   stages/        — s0_check … s9_qa (ар этап өзүнчө модуль)

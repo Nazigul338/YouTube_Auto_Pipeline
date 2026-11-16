@@ -315,13 +315,15 @@ class DriveClient:
             p = self.download_file(item["id"], Path(d) / name)
             return json.loads(p.read_text(encoding="utf-8"))
 
-    def write_json(self, name: str, parent_id: str, data: Any) -> str:
+    def write_json(self, name: str, parent_id: str, data: Any, compact: bool = False) -> str:
         import json
         import tempfile
 
         with tempfile.TemporaryDirectory() as d:
             p = Path(d) / name
-            p.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+            text = (json.dumps(data, ensure_ascii=False, separators=(",", ":")) if compact
+                    else json.dumps(data, ensure_ascii=False, indent=1))
+            p.write_text(text, encoding="utf-8")
             return self.put_file(p, parent_id, name)
 
 

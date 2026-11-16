@@ -31,6 +31,7 @@ ROOT_NAME = "YouTube_Auto"
 FOLDERS = ["Projects", "Scripts", "Audio", "Subtitles", "Clips", "Music",
            "Final_Videos", "Logs", "Licenses"]
 REGISTRY = "_registry.json"
+MEMORY_FILE = "_clip_memory.json"   # Smart Video Memory (clipmemory.py)
 PROJECT_SUBFOLDERS = ["script", "audio", "subtitles", "clips", "animation", "music",
                       "render", "logs"]
 
@@ -66,6 +67,10 @@ class Store:
     def ensure_layout(self) -> None: ...
     def load_registry(self) -> dict: ...
     def save_registry(self, registry: dict) -> None: ...
+    def load_clip_memory(self) -> dict | None:
+        return None          # Smart Video Memory (pipeline/clipmemory.py)
+
+    def save_clip_memory(self, data: dict) -> None: ...
     def pull_project(self, video_id: str, dest: Path) -> bool: ...
     def push_project(self, src: Path, video_id: str, log: Callable[[str], None] = print) -> int: ...
     def pull_music(self, dest: Path) -> int: ...
@@ -94,6 +99,17 @@ class LocalStore(Store):
     def save_registry(self, registry: dict) -> None:
         p = self.root / "Projects" / REGISTRY
         p.write_text(json.dumps(registry, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    def load_clip_memory(self) -> dict | None:
+        p = self.root / "Projects" / MEMORY_FILE
+        return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
+
+    def save_clip_memory(self, data: dict) -> None:
+        p = self.root / "Projects" / MEMORY_FILE
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        tmp.replace(p)
 
     def pull_project(self, video_id: str, dest: Path) -> bool:
         src = self.root / "Projects" / video_id
@@ -165,6 +181,12 @@ class DriveStore(Store):
 
     def save_registry(self, registry: dict) -> None:
         self.drive.write_json(REGISTRY, self._folder("Projects"), registry)
+
+    def load_clip_memory(self) -> dict | None:
+        return self.drive.read_json(MEMORY_FILE, self._folder("Projects"), None)
+
+    def save_clip_memory(self, data: dict) -> None:
+        self.drive.write_json(MEMORY_FILE, self._folder("Projects"), data, compact=True)
 
     def pull_project(self, video_id: str, dest: Path) -> bool:
         pid = self.drive.find_folder(video_id, self._folder("Projects"))

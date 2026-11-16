@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import media
+from ..clipmemory import ClipMemory
 from ..textutil import word_count
 from .base import Context, Stage, StageError, gemini_of
 
@@ -174,16 +175,13 @@ class QAStage(Stage):
                 abs(covered - total) <= 0.1 and abs(shots[-1]["end"] - total) <= 0.1,
                 f"кадрлардын суммасы {covered:.2f} сек, аудио {total:.2f} сек")
         avg = sum(durs) / len(durs)
-        rep.add("pacing", "Кадрлар орточо ~3 сек сайын алмашат", 2.2 <= avg <= 3.8 and max(durs) <= 4.6,
-                f"орточо {avg:.2f} сек, эң узун {max(durs):.2f} сек, {len(shots)} кадр")
-        ids = [s["asset"] for s in shots]
-        hist = set()
-        for vid, vv in ctx.registry.get("videos", {}).items():
-            if vid != ctx.video_id:
-                hist.update(vv.get("clip_ids", []))
-        rep.add("unique", "Клиптер кайталанбайт (бул жана мурунку видеолор)",
-                len(set(ids)) == len(ids) and not (set(ids) & hist),
-                f"{len(set(ids))}/{len(ids)} уникалдуу; мурункулар менен кесилиш: {len(set(ids) & hist)}")
+        rep.add("pacing", "Кадрлар 3–4 сек сайын алмашат", 2.8 <= avg <= 4.2 and max(durs) <= 5.2
+                and min(durs) >= 1.2,
+                f"орточо {avg:.2f} сек, эң узун {max(durs):.2f}, эң кыска {min(durs):.2f}, {len(shots)} кадр")
+        want_lo, want_hi = int(total / 4.4), int(total / 2.8) + 1
+        rep.add("shot_count", f"Кадр саны ~{want_lo}–{want_hi} (орточо 3–4 сек)",
+                want_lo <= len(shots) <= want_hi, f"{len(shots)} кадр / {total:.0f} сек", required=False)
+        self.check_repetition(ctx, rep, shots)
 
         # 8. Субтитр
         srt = ctx.path("subtitles", "subtitles.srt").read_text(encoding="utf-8")
@@ -212,6 +210,36 @@ class QAStage(Stage):
         # 11. Кадрлар сценарийге дал келеби (Gemini көрүү менен) — кошумча текшерүү
         self.check_relevance(ctx, rep, final, shots)
         return self.finish(ctx, rep, final, meta, music, clip_lic)
+
+    def check_repetition(self, ctx, rep, shots) -> None:
+        """Кайталанбоо: бул видеодо да, база (Smart Video Memory) боюнча мурунку видеолордо да."""
+        from .s5_visuals import MAX_REUSE_FRACTION
+
+        ids = [s["asset"] for s in shots]
+        dups = sorted({i for i in ids if ids.count(i) > 1})
+        rep.add("unique", "Бир видеодо клиптер кайталанбайт", not dups,
+                f"{len(set(ids))}/{len(ids)} уникалдуу" + (f"; кайталангандар: {dups[:3]}" if dups else ""))
+        mem = ClipMemory.load(ctx.store, ctx.registry)
+        others = mem.used_by_others(ctx.video_id)
+        overlap = [i for i in ids if i in others]
+        allowed = int(MAX_REUSE_FRACTION * len(ids) + 0.999)
+        rep.add("no_reuse", f"Мурунку видеолордун клиптери кайра колдонулган эмес (чек ≤ {allowed} кадр)",
+                len(overlap) <= allowed,
+                f"мурункулар менен кесилиш: {len(overlap)} / {len(ids)} (база: {mem.stats()['clips']} клип, "
+                f"{mem.stats()['videos']} видео)" + (f"; мисал: {overlap[:3]}" if overlap else ""))
+        if ctx.store is not None and hasattr(ctx.store, "load_clip_memory"):
+            have = mem.clips_of(ctx.video_id)
+            rep.add("memory", "Клиптер видео базасына (Drive) жазылган", set(ids) <= have,
+                    f"{len(set(ids) & have)}/{len(set(ids))} клип базада")
+        match = [s.get("match", 0) for s in shots if s["kind"] == "video"]
+        if match:
+            share = sum(1 for m in match if m > 0) / len(match)
+            rep.add("theme_match", "Клиптердин тегдери сахнанын маанисине дал келет (Pixabay tags)",
+                    share >= 0.5, f"{share:.0%} кадр дал келет (≥50% керек)", required=False)
+        ext = sum(1 for s in shots if s.get("extend"))
+        if ext:
+            rep.add("extended", "Кыска клиптер автоматтык узартылды", None, f"{ext} кадр (-stream_loop)",
+                    required=False)
 
     def check_relevance(self, ctx, rep, final, shots):
         scenes = {s["id"]: s for s in json.loads(ctx.path("scenes.json").read_text("utf-8"))["scenes"]}
@@ -251,6 +279,12 @@ class QAStage(Stage):
             ctx.store.publish("Licenses", lic, f"{ctx.video_id}_LICENSE.txt")
         entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
         entry["final"] = f"Final_Videos/{ctx.video_id}.mp4"
+        try:                                       # клиптер «жарыялангандай» белгиленет
+            mem = ClipMemory.load(ctx.store, ctx.registry)
+            if mem.mark_published(ctx.video_id):
+                mem.save(ctx.store, ctx.path("clips", "clip_memory.csv"))
+        except Exception as e:                     # база жазылбаса да видео даяр
+            ctx.log(f"   ⚠️ клип базасын жаңыртуу ишке ашкан жок: {type(e).__name__}")
         return {"report_file": str(ctx.path("report.txt")), "license_file": str(lic),
                 "passed": True}
 

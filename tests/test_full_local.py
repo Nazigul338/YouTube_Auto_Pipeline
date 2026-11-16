@@ -80,6 +80,37 @@ class TestFullPipeline(unittest.TestCase):
         self.assertTrue(reg["clip_ids"])
         self.assertTrue(reg["concept"])
         self.assertFalse(any((drive / "Projects" / "Video_001").rglob("*.mp4")))  # оор файлдар жок
+        # Smart Video Memory: база Drive'да, CSV көчүрмөсү бар, клиптер «published»
+        from pipeline.clipmemory import ClipMemory
+        mem = ClipMemory.load(LocalStore(self.root / "drive"))
+        self.assertTrue((drive / "Projects" / "_clip_memory.json").exists())
+        self.assertTrue((drive / "Clips" / "clip_memory.csv").exists())
+        self.assertEqual(mem.clips_of("Video_001"), set(reg["clip_ids"]))
+        self.assertTrue(all(u["status"] == "published" for r in mem.clips.values() for u in r["uses"]))
+        self.assertIn("Video_001", (drive / "Clips" / "clip_memory.csv").read_text(encoding="utf-8"))
+        self.assertIn("✅ Бир видеодо клиптер кайталанбайт", report)
+        self.assertIn("✅ Мурунку видеолордун клиптери кайра колдонулган эмес", report)
+
+    def test_second_video_has_no_clips_from_first(self):
+        """Бир эле издөө сөздөрү (FakeStock бирдей натыйжа берет) — бирок клиптер кайталанбайт."""
+        from pipeline.clipmemory import ClipMemory
+        # Жалган Gemini шаблондук текст берет — сценарийдин оригиналдуулук тыюусу (s1) бул тестте
+        # текшерилбейт (ал өзүнчө тесттелет); бул жерде клиптердин кайталанбоосун гана текшеребиз.
+        patch = mock.patch.multiple("pipeline.stages.s1_script", JACCARD_MAX=1.1, COSINE_MAX=1.1)
+        patch.start()
+        self.addCleanup(patch.stop)
+        stock, gem = FakeStock(), FakeGemini(words=130)
+        for n, topic in ((1, "Почему мы откладываем"), (2, "Страх перемен")):
+            proj = self.root / "w" / "Projects" / f"Video_{n:03d}"
+            services = {"gemini": gem, "stock": stock, "asr": fake_whisper_for(proj)}
+            with mock.patch.object(ci, "load_config") as lc:
+                lc.side_effect = lambda nn, drive_root=None: small_cfg(drive_root)
+                self.assertEqual(ci.run_ci(topic, "motivation", self.root / "w",
+                                           store=self.store, services=services), 0)
+        mem = ClipMemory.load(LocalStore(self.root / "drive"))
+        a, b = mem.clips_of("Video_001"), mem.clips_of("Video_002")
+        self.assertTrue(a and b)
+        self.assertEqual(a & b, set())
 
 
 if __name__ == "__main__":

@@ -126,8 +126,20 @@ def expect_len(path: Path, want: float, tol: float, label: str, debug: list[dict
     return got
 
 
-def xfade_chain(inputs: list[Path], durs: list[float], transitions: list[dict], out: Path) -> float:
-    """inputs[k] узактыгы durs[k]; transitions[k] — k жана k+1 ортосундагы өтүү."""
+def _eff_d(t: dict) -> tuple[str, float]:
+    """Өтүүнүн түрү жана ЭФФЕКТИВДҮҮ узактыгы (cut → 0.04 сек fade)."""
+    d = max(0.0, float(t.get("dur", 0.5)))
+    typ = t.get("type", "fade")
+    return ("fade", 0.04) if typ == "cut" or d == 0 else (typ, d)
+
+
+def xfade_chain(inputs: list[Path], durs: list[float], transitions: list[dict], out: Path,
+                normalize: bool = False) -> float:
+    """inputs[k] узактыгы durs[k]; transitions[k] — k жана k+1 ортосундагы өтүү.
+
+    normalize=True: ар кирүүгө `setpts=PTS-STARTPTS,fps,format` (убакыт белгилери/кадр ылдамдыгы
+    дал келбегенде xfade кыскарып калбасын). Кайтарат: күтүлгөн узактык.
+    """
     if len(inputs) == 1:
         media.run(["ffmpeg", "-y", "-v", "error", "-i", str(inputs[0]), "-c", "copy", str(out)],
                   "көчүрүү")
@@ -135,22 +147,97 @@ def xfade_chain(inputs: list[Path], durs: list[float], transitions: list[dict], 
     args = []
     for p in inputs:
         args += ["-i", str(p)]
-    parts, prev, acc = [], "[0:v]", durs[0]
+    parts, acc = [], durs[0]
+    if normalize:
+        for k in range(len(inputs)):
+            parts.append(f"[{k}:v]setpts=PTS-STARTPTS,fps={FPS},format=yuv420p[n{k}]")
+    src = (lambda k: f"[n{k}]") if normalize else (lambda k: f"[{k}:v]")
+    prev = src(0)
     for k in range(1, len(inputs)):
-        t = transitions[k - 1]
-        d = max(0.0, float(t.get("dur", 0.5)))
-        typ = t.get("type", "fade")
-        if typ == "cut" or d == 0:
-            typ, d = "fade", 0.04
+        typ, d = _eff_d(transitions[k - 1])
         off = acc - d
         label = f"[x{k}]"
-        parts.append(f"{prev}[{k}:v]xfade=transition={typ}:duration={d:.3f}:offset={off:.3f}{label}")
+        parts.append(f"{prev}{src(k)}xfade=transition={typ}:duration={d:.3f}:offset={off:.3f}{label}")
         prev = label
         acc = off + durs[k]
     parts[-1] = parts[-1].rsplit("[", 1)[0] + "[outv]"
     media.run(["ffmpeg", "-y", "-v", "error", *args, "-filter_complex", ";".join(parts),
                "-map", "[outv]", *ENC, str(out)], f"өтүүлөр ({out.stem})", timeout=3600)
     return acc
+
+
+def cut_chain(inputs: list[Path], durs: list[float], transitions: list[dict], out: Path) -> float:
+    """Запас жол: өтүүсүз (кесүү менен) бириктирүү, `trim`+`concat` — узактыгы так, FFmpeg версиясына
+    көз каранды эмес. Ар сахнанын өтүүгө бөлүнгөн куйругу кыркылат → жалпы узактык xfade менен бирдей."""
+    args, parts = [], []
+    total = 0.0
+    for k, p in enumerate(inputs):
+        args += ["-i", str(p)]
+        keep = durs[k] - (_eff_d(transitions[k])[1] if k < len(inputs) - 1 else 0.0)
+        total += keep
+        parts.append(f"[{k}:v]trim=duration={keep:.3f},setpts=PTS-STARTPTS,fps={FPS},"
+                     f"format=yuv420p[c{k}]")
+    parts.append("".join(f"[c{k}]" for k in range(len(inputs))) + f"concat=n={len(inputs)}:v=1:a=0[outv]")
+    media.run(["ffmpeg", "-y", "-v", "error", *args, "-filter_complex", ";".join(parts),
+               "-map", "[outv]", *ENC, str(out)], f"кесүү менен бириктирүү ({out.stem})", timeout=3600)
+    return total
+
+
+def pts_summary(path: Path) -> dict:
+    """Диагностика: кадрлардын убакыт белгилери (кыскарган монтаждын себебин табуу үчүн)."""
+    import subprocess
+
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                        "frame=pts_time", "-of", "csv=p=0", str(path)], capture_output=True, text=True)
+    pts = []
+    for x in r.stdout.split():
+        try:
+            pts.append(float(x.rstrip(",")))
+        except ValueError:
+            pass
+    st = media.probe(path)["streams"][0]
+    if not pts:
+        return {"file": path.name, "frames": 0}
+    deltas = [b - a for a, b in zip(pts, pts[1:])] or [0.0]
+    return {"file": path.name, "frames": len(pts), "first_pts": round(pts[0], 3),
+            "last_pts": round(pts[-1], 3), "delta_min": round(min(deltas), 4),
+            "delta_max": round(max(deltas), 3), "monotonic": min(deltas) >= 0,
+            "time_base": st.get("time_base"), "fps": st.get("r_frame_rate"),
+            "start_time": st.get("start_time")}
+
+
+def assemble(inputs: list[Path], durs: list[float], transitions: list[dict], out: Path,
+             label: str, tol: float, debug: list) -> tuple[float, str]:
+    """Өтүүлөр менен бириктирүү; узактык так чыкпаса — кийинки ыкма. Кайтарат: (узактык, ыкма).
+
+    Ыкмалар: 1) xfade (мурунку ыкма) → 2) xfade + нормалдаштырылган кирүүлөр → 3) өтүүсүз кесүү.
+    Ар аракеттин өлчөөсү жана (ката болсо) кирүүлөрдүн PTS отчету debug'га жазылат.
+    """
+    attempts = [("xfade", lambda: xfade_chain(inputs, durs, transitions, out)),
+                ("xfade+normalize", lambda: xfade_chain(inputs, durs, transitions, out, normalize=True)),
+                ("cut", lambda: cut_chain(inputs, durs, transitions, out))]
+    if len(inputs) == 1:
+        attempts = attempts[:1]
+    last_err = None
+    for name, fn in attempts:
+        try:
+            want = fn()
+            expect_len(out, want, tol, label, debug)
+            if name != "xfade":
+                debug.append({"label": label, "fallback_used": name})
+            return want, name
+        except StageError as e:
+            last_err = e
+            info: dict = {"label": label, "method_failed": name, "error": str(e)[:300]}
+            if name == "xfade":          # биринчи ишке ашпаганда кирүүлөрдү текшеребиз (себебин табуу)
+                try:
+                    info["inputs"] = [pts_summary(p) for p in inputs]
+                    if out.exists():
+                        info["output"] = pts_summary(out)
+                except Exception as ex:   # диагностика экинчи даражалуу
+                    info["pts_error"] = type(ex).__name__
+            debug.append(info)
+    raise StageError(f"{label}: бардык бириктирүү ыкмалары ишке ашкан жок. Акыркы ката: {last_err}")
 
 
 class RenderStage(Stage):
@@ -217,15 +304,20 @@ class RenderStage(Stage):
         for b in range(0, len(scene_files), BATCH):
             idx = list(range(b, min(b + BATCH, len(scene_files))))
             bf = rdir / f"batch_{b // BATCH:02d}.mp4"
-            dur = xfade_chain([scene_files[i] for i in idx], [scene_durs[i] for i in idx],
-                              [scene_trans[i] for i in idx[:-1]], bf)
-            expect_len(bf, dur, BATCH_TOL, f"топ {b // BATCH}", debug)
+            dur, how = assemble([scene_files[i] for i in idx], [scene_durs[i] for i in idx],
+                                [scene_trans[i] for i in idx[:-1]], bf, f"топ {b // BATCH}",
+                                BATCH_TOL, debug)
+            if how != "xfade":
+                ctx.log(f"   ⚠️ топ {b // BATCH}: ыкма «{how}» колдонулду (xfade узактыкты бузду; "
+                        f"logs/render_debug.json)")
             batch_files.append(bf)
             batch_durs.append(dur)
             batch_trans.append(scene_trans[idx[-1]])
         video = rdir / "video_noaudio.mp4"
-        vdur = xfade_chain(batch_files, batch_durs, batch_trans[:-1], video)
-        expect_len(video, vdur, BATCH_TOL, "бириктирилген видео (аудиосуз)", debug)
+        vdur, how = assemble(batch_files, batch_durs, batch_trans[:-1], video,
+                             "бириктирилген видео (аудиосуз)", BATCH_TOL, debug)
+        if how != "xfade":
+            ctx.log(f"   ⚠️ топторду бириктирүү: ыкма «{how}» колдонулду")
         expect_len(video, total + batch_trans[-1].get("dur", 0.0), FINAL_TOL,
                    "видео ↔ аудионун узактыгы (аудиосуз монтаж)", debug)
 
