@@ -22,7 +22,8 @@ from pathlib import Path
 from typing import Any
 
 from .config import Config, get_secret, load_config
-from .drive import DriveClient, drive_secrets_present, explain_http_error
+from .drive import (DriveClient, _secret, check_client_credentials,
+                    drive_secrets_present, explain_http_error)
 from .runner import run
 from .stages import STAGE_NAMES, STAGES
 from .stages.s0_check import MUSIC_EXT, OPTIONAL_SECRETS, REQUIRED_SECRETS
@@ -144,6 +145,12 @@ def run_check() -> int:
 
     # Drive
     if drive_secrets_present():
+        try:
+            ok, note = check_client_credentials(_secret("GDRIVE_CLIENT_ID"),
+                                                _secret("GDRIVE_CLIENT_SECRET"))
+            add("Drive: Client ID + Secret", ok, note)
+        except Exception as e:
+            add("Drive: Client ID + Secret", False, type(e).__name__)
         try:
             drive = DriveClient.from_env()
             email = drive.whoami()

@@ -41,6 +41,32 @@ def _escape(value: str) -> str:
     return value.replace("\\", "\\\\").replace("'", "\\'")
 
 
+def check_client_credentials(client_id: str, client_secret: str,
+                             post=None) -> tuple[bool, str]:
+    """Client ID/Secret жарактуубу — токенсиз текшерүү.
+
+    Google'го ЖАЛГАН refresh token жөнөтөбүз. Google адегенде клиентти текшерет:
+      invalid_client → ID же Secret туура эмес;
+      invalid_grant  → клиент туура (жалган токен гана четке кагылды).
+    """
+    if post is None:
+        import requests
+        post = requests.post
+    resp = post(TOKEN_URI, data={
+        "client_id": client_id, "client_secret": client_secret,
+        "refresh_token": "dummy-token-for-client-check",
+        "grant_type": "refresh_token"}, timeout=30)
+    try:
+        error = resp.json().get("error", "")
+    except Exception:
+        return False, f"Google күтүлбөгөн жооп берди (HTTP {resp.status_code})"
+    if error == "invalid_grant":
+        return True, "Client ID/Secret туура (Google кабыл алды)"
+    if error == "invalid_client":
+        return False, "Client ID же Client secret туура эмес"
+    return False, f"белгисиз жооп: {error or resp.status_code}"
+
+
 class DriveClient:
     def __init__(self, client_id: str, client_secret: str, refresh_token: str):
         from google.oauth2.credentials import Credentials

@@ -163,3 +163,22 @@ class TestDriveSecretStrip(unittest.TestCase):
                              ["id", "sec", "tok"])
         with mock.patch.dict(os.environ, {**env, "GDRIVE_REFRESH_TOKEN": "  \n"}):
             self.assertFalse(drive.drive_secrets_present())
+
+
+class TestClientCheck(unittest.TestCase):
+    class R:
+        def __init__(self, data, code=400):
+            self._d, self.status_code = data, code
+        def json(self):
+            return self._d
+
+    def test_client_ok_when_invalid_grant(self):
+        from pipeline.drive import check_client_credentials
+        ok, _ = check_client_credentials("i", "s", post=lambda *a, **k: self.R({"error": "invalid_grant"}))
+        self.assertTrue(ok)
+
+    def test_client_bad_when_invalid_client(self):
+        from pipeline.drive import check_client_credentials
+        ok, note = check_client_credentials("i", "s", post=lambda *a, **k: self.R({"error": "invalid_client"}))
+        self.assertFalse(ok)
+        self.assertIn("туура эмес", note)
