@@ -3,7 +3,7 @@
   1. Ар кадр өзүнчө рендерленет: масштаб (16:9 толтуруу), кыймыл (zoom/pan/push),
      сүрөттөр Ken Burns менен. Параллель (4 CPU).
   2. Бир сахнанын кадрлары — кесүү менен (кайра кодировкасыз бириктирүү).
-  3. Сахналар — жумшак өтүү (xfade) менен; эс тутум үчүн 8-сахналык топтор, 2 деңгээл.
+  3. Сахналар — жумшак өтүү (xfade) менен; ар өтүү өзүнчө кичине ffmpeg (1–2 кирүү), кадр-так сегменттер → concat.
      Өтүүнүн узактыгы алдын ала кошулат → видео менен үндүн убактысы так дал келет.
   4. Акыркы өтүү: түс градациясы + виньетка + субтитр + текст-карточкалар + үн.
 """
@@ -22,7 +22,6 @@ from .s5_visuals import ensure_media
 from .s7_music import ensure_mix
 
 W, H, FPS = 1920, 1080, 30
-BATCH = 8
 ENC = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
        "-r", str(FPS), "-an"]
 
@@ -53,6 +52,7 @@ def motion_filter(motion: str, dur: float, intensity: float) -> str:
 SHOT_TOL = 0.12      # кадрдын чыныгы узактыгы күтүлгөндөн ушунчадан көп кыска болбосун
 SCENE_TOL = 0.35
 BATCH_TOL = 0.8
+SEG_TOL = 0.25        # concat-copy: кадр-так план ± бир нече кадр
 FINAL_TOL = 1.0
 
 
@@ -133,54 +133,105 @@ def _eff_d(t: dict) -> tuple[str, float]:
     return ("fade", 0.04) if typ == "cut" or d == 0 else (typ, d)
 
 
-def xfade_chain(inputs: list[Path], durs: list[float], transitions: list[dict], out: Path,
-                normalize: bool = False) -> float:
-    """inputs[k] узактыгы durs[k]; transitions[k] — k жана k+1 ортосундагы өтүү.
+def fr(sec: float) -> int:
+    """Секунд → кадр (30 fps), тегеректелет."""
+    return int(round(sec * FPS))
 
-    normalize=True: ар кирүүгө `setpts=PTS-STARTPTS,fps,format` (убакыт белгилери/кадр ылдамдыгы
-    дал келбегенде xfade кыскарып калбасын). Кайтарат: күтүлгөн узактык.
+
+def plan_segments(durs: list[float], transitions: list[dict]) -> dict:
+    """Убакыт сызыгынын КАДР-ТАК планы (чыныгы файл узактыктарына көз каранды эмес → жылыш топтолбойт).
+
+    durs[k] — k-сахнанын файлы (акыркы кадры өтүүгө узартылган), transitions[k] — k→k+1 өтүүсү.
+    Тизме: body_0, trans_0, body_1, … body_n-1.  Жалпы = f(Σdurs − Σoverlaps).
     """
-    if len(inputs) == 1:
-        media.run(["ffmpeg", "-y", "-v", "error", "-i", str(inputs[0]), "-c", "copy", str(out)],
-                  "көчүрүү")
-        return durs[0]
-    args = []
-    for p in inputs:
-        args += ["-i", str(p)]
-    parts, acc = [], durs[0]
-    if normalize:
-        for k in range(len(inputs)):
-            parts.append(f"[{k}:v]setpts=PTS-STARTPTS,fps={FPS},format=yuv420p[n{k}]")
-    src = (lambda k: f"[n{k}]") if normalize else (lambda k: f"[{k}:v]")
-    prev = src(0)
-    for k in range(1, len(inputs)):
-        typ, d = _eff_d(transitions[k - 1])
-        off = acc - d
-        label = f"[x{k}]"
-        parts.append(f"{prev}{src(k)}xfade=transition={typ}:duration={d:.3f}:offset={off:.3f}{label}")
-        prev = label
-        acc = off + durs[k]
-    parts[-1] = parts[-1].rsplit("[", 1)[0] + "[outv]"
-    media.run(["ffmpeg", "-y", "-v", "error", *args, "-filter_complex", ";".join(parts),
-               "-map", "[outv]", *ENC, str(out)], f"өтүүлөр ({out.stem})", timeout=3600)
-    return acc
+    n = len(durs)
+    dout = [(_eff_d(transitions[k])[1] if k < n - 1 else 0.0) for k in range(n)]
+    segs, t = [], 0.0
+    for k in range(n):
+        din = dout[k - 1] if k else 0.0
+        a, b = fr(t + din), fr(t + durs[k] - dout[k])
+        segs.append({"kind": "body", "scene": k, "src_start": fr(din), "frames": b - a})
+        if k < n - 1:
+            c = fr(t + durs[k])
+            typ, d = _eff_d(transitions[k])
+            segs.append({"kind": "trans", "scene": k, "src_start": fr(durs[k] - dout[k]),
+                         "frames": c - b, "type": typ})
+        t += durs[k] - dout[k]
+    return {"segments": segs, "total_frames": fr(t)}
 
 
-def cut_chain(inputs: list[Path], durs: list[float], transitions: list[dict], out: Path) -> float:
-    """Запас жол: өтүүсүз (кесүү менен) бириктирүү, `trim`+`concat` — узактыгы так, FFmpeg версиясына
-    көз каранды эмес. Ар сахнанын өтүүгө бөлүнгөн куйругу кыркылат → жалпы узактык xfade менен бирдей."""
-    args, parts = [], []
-    total = 0.0
-    for k, p in enumerate(inputs):
-        args += ["-i", str(p)]
-        keep = durs[k] - (_eff_d(transitions[k])[1] if k < len(inputs) - 1 else 0.0)
-        total += keep
-        parts.append(f"[{k}:v]trim=duration={keep:.3f},setpts=PTS-STARTPTS,fps={FPS},"
-                     f"format=yuv420p[c{k}]")
-    parts.append("".join(f"[c{k}]" for k in range(len(inputs))) + f"concat=n={len(inputs)}:v=1:a=0[outv]")
-    media.run(["ffmpeg", "-y", "-v", "error", *args, "-filter_complex", ";".join(parts),
-               "-map", "[outv]", *ENC, str(out)], f"кесүү менен бириктирүү ({out.stem})", timeout=3600)
-    return total
+def _src(k: int, start: int, tail_pad: float = 2.0) -> str:
+    """Кирүү агымы: start кадрдан баштап, кыска болсо акыркы кадр клондолот (чоң filtergraph ЖОК)."""
+    return (f"trim=start_frame={start},setpts=PTS-STARTPTS,tpad=stop_mode=clone:"
+            f"stop_duration={tail_pad:g},fps={FPS},format=yuv420p")
+
+
+def _render_segment(seg: dict, files: list[Path], out: Path) -> None:
+    n = seg["frames"]
+    k = seg["scene"]
+    if seg["kind"] == "body":
+        media.run(["ffmpeg", "-y", "-v", "error", "-i", str(files[k]), "-vf", _src(k, seg["src_start"]),
+                   "-frames:v", str(n), *ENC, str(out)], f"сегмент {out.stem}", timeout=900)
+        return
+    if n < 2:      # өтө кыска өтүү (cut) — кадр кесүү менен
+        media.run(["ffmpeg", "-y", "-v", "error", "-i", str(files[k]), "-vf", _src(k, seg["src_start"]),
+                   "-frames:v", str(n), *ENC, str(out)], f"сегмент {out.stem}", timeout=900)
+        return
+    fc = (f"[0:v]{_src(k, seg['src_start'])},trim=end_frame={n},setpts=PTS-STARTPTS[a];"
+          f"[1:v]{_src(k + 1, 0)},trim=end_frame={n},setpts=PTS-STARTPTS[b];"
+          f"[a][b]xfade=transition={seg['type']}:duration={n / FPS:.4f}:offset=0[v]")
+    media.run(["ffmpeg", "-y", "-v", "error", "-i", str(files[k]), "-i", str(files[k + 1]),
+               "-filter_complex", fc, "-map", "[v]", "-frames:v", str(n), *ENC, str(out)],
+              f"өтүү {out.stem}", timeout=900)
+
+
+def stitch(files: list[Path], durs: list[float], transitions: list[dict], rdir: Path,
+           out: Path, debug: list, workers: int = 2) -> tuple[float, int]:
+    """Сахналарды өтүүлөр менен бириктирет — ЖҮЗДӨГӨН КИЧИНЕ ffmpeg чакыруусу менен.
+
+    Мурунку ыкма (8 кирүүлүү чоң xfade графы) GitHub FFmpeg 8.0.1'де видеону кыркып салган/илинип калган;
+    бул ыкмада ар кадам 1–2 кирүүлүү, ар сегмент так кадр санына чейин, акыры concat `-c copy`.
+    Кайтарат: (узактык сек, кадр саны).
+    """
+    plan = plan_segments(durs, transitions)
+    segs = plan["segments"]
+    sdir = rdir / "segments"
+    sdir.mkdir(parents=True, exist_ok=True)
+    jobs = []
+    for i, s in enumerate(segs):
+        s["file"] = sdir / f"seg_{i:03d}_{s['kind']}.mp4"
+        jobs.append(s)
+
+    def check(s):
+        got = video_len(s["file"])
+        if got is None or abs(got - s["frames"] / FPS) > 0.15:
+            raise StageError(f"{s['file'].name}: {got} сек, күтүлгөнү {s['frames'] / FPS:.2f} сек")
+
+    def work(s):
+        try:
+            _render_segment(s, files, s["file"])
+            check(s)
+        except StageError:
+            if s["kind"] != "trans":
+                raise
+            # өтүү иштебесе — кесүү менен (узактык так калат)
+            s["fallback"] = "cut"
+            media.run(["ffmpeg", "-y", "-v", "error", "-i", str(files[s["scene"]]), "-vf",
+                       _src(s["scene"], s["src_start"]), "-frames:v", str(s["frames"]), *ENC,
+                       str(s["file"])], f"өтүү (кесүү) {s['file'].stem}", timeout=900)
+            check(s)
+        return s
+
+    with ThreadPoolExecutor(max(1, workers)) as ex:
+        list(ex.map(work, [s for s in jobs if s["frames"] > 0]))
+    lst = sdir / "list.txt"
+    lst.write_text("".join(f"file '{s['file'].name}'\n" for s in segs if s["frames"] > 0),
+                   encoding="utf-8")
+    media.run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy",
+               str(out)], "сегменттерди бириктирүү", timeout=1800)
+    debug.append({"label": "stitch", "segments": len(segs), "planned_frames": plan["total_frames"],
+                  "cut_fallbacks": [s["file"].name for s in segs if s.get("fallback")]})
+    return plan["total_frames"] / FPS, plan["total_frames"]
 
 
 def pts_summary(path: Path) -> dict:
@@ -204,40 +255,6 @@ def pts_summary(path: Path) -> dict:
             "delta_max": round(max(deltas), 3), "monotonic": min(deltas) >= 0,
             "time_base": st.get("time_base"), "fps": st.get("r_frame_rate"),
             "start_time": st.get("start_time")}
-
-
-def assemble(inputs: list[Path], durs: list[float], transitions: list[dict], out: Path,
-             label: str, tol: float, debug: list) -> tuple[float, str]:
-    """Өтүүлөр менен бириктирүү; узактык так чыкпаса — кийинки ыкма. Кайтарат: (узактык, ыкма).
-
-    Ыкмалар: 1) xfade (мурунку ыкма) → 2) xfade + нормалдаштырылган кирүүлөр → 3) өтүүсүз кесүү.
-    Ар аракеттин өлчөөсү жана (ката болсо) кирүүлөрдүн PTS отчету debug'га жазылат.
-    """
-    attempts = [("xfade", lambda: xfade_chain(inputs, durs, transitions, out)),
-                ("xfade+normalize", lambda: xfade_chain(inputs, durs, transitions, out, normalize=True)),
-                ("cut", lambda: cut_chain(inputs, durs, transitions, out))]
-    if len(inputs) == 1:
-        attempts = attempts[:1]
-    last_err = None
-    for name, fn in attempts:
-        try:
-            want = fn()
-            expect_len(out, want, tol, label, debug)
-            if name != "xfade":
-                debug.append({"label": label, "fallback_used": name})
-            return want, name
-        except StageError as e:
-            last_err = e
-            info: dict = {"label": label, "method_failed": name, "error": str(e)[:300]}
-            if name == "xfade":          # биринчи ишке ашпаганда кирүүлөрдү текшеребиз (себебин табуу)
-                try:
-                    info["inputs"] = [pts_summary(p) for p in inputs]
-                    if out.exists():
-                        info["output"] = pts_summary(out)
-                except Exception as ex:   # диагностика экинчи даражалуу
-                    info["pts_error"] = type(ex).__name__
-            debug.append(info)
-    raise StageError(f"{label}: бардык бириктирүү ыкмалары ишке ашкан жок. Акыркы ката: {last_err}")
 
 
 class RenderStage(Stage):
@@ -298,27 +315,13 @@ class RenderStage(Stage):
             scene_trans.append(trans)
             expect_len(sf, scene_durs[-1], SCENE_TOL, f"сахна {k}", debug)
 
-        # 3) өтүүлөр: топтор → бириктирүү
-        ctx.log("   3/4 Өтүүлөр (xfade) …")
-        batch_files, batch_durs, batch_trans = [], [], []
-        for b in range(0, len(scene_files), BATCH):
-            idx = list(range(b, min(b + BATCH, len(scene_files))))
-            bf = rdir / f"batch_{b // BATCH:02d}.mp4"
-            dur, how = assemble([scene_files[i] for i in idx], [scene_durs[i] for i in idx],
-                                [scene_trans[i] for i in idx[:-1]], bf, f"топ {b // BATCH}",
-                                BATCH_TOL, debug)
-            if how != "xfade":
-                ctx.log(f"   ⚠️ топ {b // BATCH}: ыкма «{how}» колдонулду (xfade узактыкты бузду; "
-                        f"logs/render_debug.json)")
-            batch_files.append(bf)
-            batch_durs.append(dur)
-            batch_trans.append(scene_trans[idx[-1]])
+        # 3) өтүүлөр: ар сегмент өзүнчө кичине ffmpeg (чоң xfade графы жок), кадр-так
+        ctx.log("   3/4 Өтүүлөр (сегменттер) …")
         video = rdir / "video_noaudio.mp4"
-        vdur, how = assemble(batch_files, batch_durs, batch_trans[:-1], video,
-                             "бириктирилген видео (аудиосуз)", BATCH_TOL, debug)
-        if how != "xfade":
-            ctx.log(f"   ⚠️ топторду бириктирүү: ыкма «{how}» колдонулду")
-        expect_len(video, total + batch_trans[-1].get("dur", 0.0), FINAL_TOL,
+        vdur, vframes = stitch(scene_files, scene_durs, scene_trans, rdir, video, debug, workers=workers)
+        expect_len(video, vdur, SEG_TOL, "бириктирилген видео (аудиосуз)", debug)
+        last_ext = scene_trans[-1].get("dur", 0.0)
+        expect_len(video, total + last_ext, FINAL_TOL,
                    "видео ↔ аудионун узактыгы (аудиосуз монтаж)", debug)
 
         # 4) акыркы өтүү: градация, виньетка, субтитр, карточкалар, үн
