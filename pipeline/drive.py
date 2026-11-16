@@ -109,6 +109,17 @@ class DriveClient:
             if not token:
                 return items
 
+    def walk(self, folder_id: str, prefix: str = "") -> list[tuple[str, dict[str, Any]]]:
+        """Папканы рекурсивдүү окуйт: [(салыштырмалуу жол, файл маалыматы), ...]."""
+        out: list[tuple[str, dict[str, Any]]] = []
+        for item in self.list_children(folder_id):
+            rel = f"{prefix}{item['name']}"
+            if item["mimeType"] == FOLDER_MIME:
+                out += self.walk(item["id"], rel + "/")
+            else:
+                out.append((rel, item))
+        return out
+
     def find_folder(self, name: str, parent_id: str = "root") -> str | None:
         resp = self.svc.files().list(
             q=(f"name = '{_escape(name)}' and '{parent_id}' in parents "

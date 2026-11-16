@@ -26,7 +26,8 @@ from .drive import (DriveClient, _secret, check_client_credentials,
                     drive_secrets_present, explain_http_error)
 from .runner import run
 from .stages import STAGE_NAMES, STAGES
-from .stages.s0_check import MUSIC_EXT, OPTIONAL_SECRETS, REQUIRED_SECRETS
+from .music import AUDIO_EXT as MUSIC_EXT, describe_report, library_report
+from .stages.s0_check import OPTIONAL_SECRETS, REQUIRED_SECRETS
 from .state import DONE, FAILED, STATUS_ICON, VideoState
 
 DRIVE_ROOT_NAME = os.environ.get("YTA_DRIVE_FOLDER", "YouTube_Auto")
@@ -155,13 +156,15 @@ def run_check() -> int:
             drive = DriveClient.from_env()
             email = drive.whoami()
             music_id = drive.find_path(DRIVE_ROOT_NAME, "Music")  # окуу гана, түзбөйт
-            tracks = ([f for f in drive.list_children(music_id)
-                       if Path(f["name"]).suffix.lower() in MUSIC_EXT] if music_id else [])
             add("Google Drive", True, f"аккаунт: {email}")
-            note = (f"{len(tracks)} трек" if tracks else
-                    "бош — музыка салыңыз" if music_id else
-                    f"{DRIVE_ROOT_NAME}/Music папкасы жок — түзүп, музыка салыңыз")
-            rows.append((f"Музыка ({DRIVE_ROOT_NAME}/Music)", bool(tracks), note))
+            if music_id is None:
+                rows.append((f"Музыка ({DRIVE_ROOT_NAME}/Music)", False,
+                             f"{DRIVE_ROOT_NAME}/Music папкасы жок — түзүп, музыка салыңыз"))
+            else:
+                rel = [r for r, _ in drive.walk(music_id)]
+                total, by_source, unknown = library_report(rel)
+                rows.append((f"Музыка ({DRIVE_ROOT_NAME}/Music)", total > 0,
+                             describe_report(total, by_source, unknown)))
         except Exception as e:
             add("Google Drive", False, explain_http_error(e))
     else:

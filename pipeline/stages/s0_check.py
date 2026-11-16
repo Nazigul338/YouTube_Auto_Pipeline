@@ -10,11 +10,11 @@ import shutil
 from typing import Any
 
 from ..config import get_secret
+from ..music import describe_report, library_report, scan
 from .base import Context, Stage, StageError
 
 REQUIRED_SECRETS = ["GOOGLE_API_KEY", "PIXABAY_API_KEY"]
 OPTIONAL_SECRETS = ["PEXELS_API_KEY"]
-MUSIC_EXT = {".mp3", ".wav", ".m4a", ".ogg"}
 MIN_FREE_GB = 5
 
 
@@ -65,16 +65,14 @@ class CheckStage(Stage):
         # 4. Музыка (YouTube Audio Library'ден колго жүктөлөт)
         music_root = ctx.cfg.music_root
         music_root.mkdir(parents=True, exist_ok=True)
-        tracks = [p for p in music_root.rglob("*") if p.suffix.lower() in MUSIC_EXT]
-        report["music_tracks"] = len(tracks)
-        if tracks:
-            ctx.log(f"   ✓ Музыка: {len(tracks)} трек ({music_root})")
+        rels = [t.rel for t in scan(music_root)]
+        total, by_source, unknown = library_report(rels)
+        report["music_tracks"] = total
+        report["music_unknown_source"] = unknown
+        if total:
+            ctx.log(f"   ✓ Музыка: {describe_report(total, by_source, unknown)}")
         else:
-            ctx.log(
-                f"   ⚠ Музыка папкасы бош: {music_root}\n"
-                "     YouTube Studio → Audio Library'ден 3–5 трек жүктөп, ушул "
-                "папкага салыңыз. (Музыка этабына чейин керек болот.)"
-            )
+            ctx.log(f"   ⚠ Музыка: {describe_report(0, {}, 0)}  ({music_root})")
 
         # 5. Диск орду (Colab'дын убактылуу диски)
         free_gb = shutil.disk_usage("/").free / 1024**3
