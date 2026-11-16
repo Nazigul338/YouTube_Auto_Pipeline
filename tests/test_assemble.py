@@ -104,6 +104,27 @@ class TestStitch(unittest.TestCase):
         self.assertEqual(nframes(out), frames)
         self.assertEqual(len(dbg[0]["cut_fallbacks"]), 1)
 
+    def test_render_shot_normalizes_color_tags_across_clips(self):
+        """Ар башка түс белгилүү клиптер → бирдей белгилүү кадрлар (FFmpeg 8 кадр жоготпосун)."""
+        specs = {"none": [], "bt601": ["-colorspace", "smpte170m", "-color_primaries", "smpte170m",
+                                       "-color_trc", "smpte170m"],
+                 "pc": ["-vf", "format=yuvj420p", "-color_range", "pc"]}
+        tags = set()
+        for name, extra in specs.items():
+            clip = self.d / f"c_{name}.mp4"
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
+                            "testsrc2=size=640x360:rate=30:duration=6", "-c:v", "libx264", "-preset",
+                            "ultrafast", *([] if "-vf" in extra else ["-pix_fmt", "yuv420p"]), *extra,
+                            str(clip)], check=True)
+            out = self.d / f"shot_{name}.mp4"
+            s8.render_shot(clip, out, "video", 0.5, 2.0, "zoom_in", 1.0)
+            r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                                "stream=color_space,color_range,color_primaries,color_transfer,pix_fmt",
+                                "-of", "csv=p=0", str(out)], capture_output=True, text=True)
+            tags.add(r.stdout.strip())
+        self.assertEqual(len(tags), 1, tags)
+        self.assertIn("bt709", tags.pop())
+
     def test_pts_summary(self):
         f = self.scenes([135])[0]
         s = s8.pts_summary(f)

@@ -104,7 +104,10 @@ def main() -> int:
                                       for x in si}, key=str)}
         rows.append(row)
         print(json.dumps(row, ensure_ascii=False), flush=True)
-    bad = [r for r in rows if r["ffmpeg_decoded"] != r["want_frames"]]
+    # тулку: body-чыпка (trim+tpad+fps) кадр жоготпошу керек: want − 15 + 60
+    bad = [r for r in rows if r["ffmpeg_decoded"] != r["want_frames"]
+           or r["body_filter_frames(no -frames:v)"] != r["want_frames"] - 15 + 60
+           or len(r["shot_colors"]) != 1]
     print("RESULT:", "ӨТТҮ (бардык сахналар толук декодтолду)" if not bad else
           f"КАТА: {[r['scene'] for r in bad]} толук декодтолгон жок")
     return 0

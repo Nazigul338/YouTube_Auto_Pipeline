@@ -22,8 +22,15 @@ from .s5_visuals import ensure_media
 from .s7_music import ensure_mix
 
 W, H, FPS = 1920, 1080, 30
+# Бардык кадрлар БИРДЕЙ түс белгилери менен чыгат. Pixabay клиптеринде bt601/bt709/белгисиз, tv/pc ар башка;
+# бир сахнада аралашса FFmpeg 8.0.1 filtergraph'ты ортосунан кайра ачып кадрларды жоготот (Video_001:
+# сахна 8.37 сек ордуна 4.93 сек; GitHub runner'де probe_concat аныктаган, FFmpeg 6.1'де байкалбайт).
+COLOR_VF = ("scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,"
+            "setparams=colorspace=bt709:color_primaries=bt709:color_trc=bt709:range=tv")
+COLOR_ARGS = ["-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
+              "-color_range", "tv"]
 ENC = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p",
-       "-r", str(FPS), "-an"]
+       "-r", str(FPS), *COLOR_ARGS, "-an"]
 
 
 def motion_filter(motion: str, dur: float, intensity: float) -> str:
@@ -73,7 +80,7 @@ def render_shot(clip: Path, out: Path, kind: str, offset: float, dur: float,
         if got is not None and got >= dur - SHOT_TOL:
             return out
         out.unlink()
-    vf = motion_filter(motion, dur, intensity) + ",format=yuv420p"
+    vf = motion_filter(motion, dur, intensity) + "," + COLOR_VF
     tmp = out.with_suffix(".tmp.mp4")
     if kind == "image":
         attempts = [["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.3f}", "-i", str(clip)]]
