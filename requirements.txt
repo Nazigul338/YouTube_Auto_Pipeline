@@ -1,6 +1,9 @@
-# Colab'да көпчүлүгү алдын ала орнотулган. Жетишпегендери автоматтык орнотулат.
-google-genai>=1.0
+google-genai>=3.3
 google-api-python-client>=2.100
 google-auth>=2.20
 pyyaml>=6.0
 requests>=2.31
+numpy>=1.26
+# Whisper. PyAV колдонулбайт (av 19 + faster-whisper 1.2.1 шайкеш эмес) —
+# аудио ffmpeg аркылуу декоддолуп, Whisper'ге массив катары берилет.
+faster-whisper>=1.1

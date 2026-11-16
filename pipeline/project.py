@@ -9,7 +9,7 @@ from pathlib import Path
 from .config import Config
 from .state import VideoState
 
-SUBFOLDERS = ["script", "audio", "subs", "clips", "render", "logs"]
+from .storage import PROJECT_SUBFOLDERS as SUBFOLDERS  # noqa: E402
 
 _TRANSLIT = {
     "а": "a", "б": "b", "в": "v", "г": "g", "д": "d", "е": "e", "ё": "e",

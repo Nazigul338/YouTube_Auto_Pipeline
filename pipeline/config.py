@@ -15,8 +15,8 @@ import yaml
 
 NICHES_DIR = Path(__file__).parent / "niches"
 
-# Google Drive'дагы негизги папка (Colab'да)
-DEFAULT_DRIVE_ROOT = "/content/drive/MyDrive/YouTube_Auto"
+# Жергиликтүү иштөө папкасы (GitHub Actions runner'де). Drive — storage.py аркылуу.
+DEFAULT_DRIVE_ROOT = "work"
 
 
 @dataclass
@@ -34,11 +34,14 @@ class Config:
     shot_max_sec: float = 3.5               # чеги ой/сүйлөмгө жараша жылат
     min_duration_sec: int = 490             # 8:10 — орто-реклама үчүн 8:00дөн ашык
 
-    # --- Моделдер ---
-    script_model: str = "gemini-3.8-flash"
-    tts_model: str = "gemini-3.8-flash-tts"
+    # --- Моделдер (ирети = артыкчылык; биринчиси иштебесе — кийинкиси) ---
+    # Тизме probe сыноосунун жыйынтыгы боюнча (2026-11-16).
+    text_models: tuple = ("gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash",
+                          "gemini-3.5-flash")
+    tts_models: tuple = ("gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts")
+    embed_model: str = "gemini-embedding-001"
     tts_voice: str = "Algenib"
-    whisper_model: str = "small"            # бекер Colab (CPU) үчүн
+    whisper_model: str = "small"            # GitHub runner: 4 CPU
 
     # --- Сценарий ---
     language: str = "ru"
@@ -99,20 +102,9 @@ def load_config(niche: str = "motivation", drive_root: str | None = None,
 
 
 def get_secret(name: str) -> str | None:
-    """API ачкычын коопсуз алуу: Colab Secrets → чөйрө өзгөрмөсү.
+    """API ачкычын чөйрө өзгөрмөсүнөн алуу (GitHub Secrets → env).
 
     Ачкычтар эч качан кодго, логго же Drive'га жазылбайт.
     """
-    try:
-        from google.colab import userdata  # type: ignore
-
-        try:
-            value = userdata.get(name)
-            if value and value.strip():
-                return value.strip()
-        except Exception:
-            pass
-    except ImportError:
-        pass
     value = os.environ.get(name, "").strip()
     return value or None

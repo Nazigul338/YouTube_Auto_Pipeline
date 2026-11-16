@@ -100,7 +100,7 @@ class DriveClient:
         while True:
             resp = self.svc.files().list(
                 q=f"'{parent_id}' in parents and trashed = false",
-                fields="nextPageToken, files(id, name, mimeType, size)",
+                fields="nextPageToken, files(id, name, mimeType, size, md5Checksum)",
                 pageSize=200,
                 pageToken=token,
             ).execute(num_retries=3)
@@ -201,6 +201,145 @@ class DriveClient:
                 log(f"   ⬆ {local_dir.name}/{path.name}")
                 self.upload_file(path, folder_id)
         return folder_id
+
+    # ---------- системанын өз файлдары (жаңыртууга болот) ----------
+    def find_file(self, name: str, parent_id: str) -> dict[str, Any] | None:
+        resp = self.svc.files().list(
+            q=(f"name = '{_escape(name)}' and '{parent_id}' in parents "
+               f"and mimeType != '{FOLDER_MIME}' and trashed = false"),
+            fields="files(id, name, size, md5Checksum)", pageSize=1,
+        ).execute(num_retries=3)
+        files = resp.get("files", [])
+        return files[0] if files else None
+
+    def update_file(self, file_id: str, local: Path) -> str:
+        """Системанын ӨЗ файлын (state.json, лог ж.б.) жаңы мазмун менен алмаштырат."""
+        from googleapiclient.http import MediaFileUpload
+
+        mime = mimetypes.guess_type(local.name)[0] or "application/octet-stream"
+        media = MediaFileUpload(str(local), mimetype=mime, resumable=True, chunksize=CHUNK)
+        req = self.svc.files().update(fileId=file_id, media_body=media, fields="id")
+        response = None
+        while response is None:
+            _, response = req.next_chunk(num_retries=5)
+        return response["id"]
+
+    def put_file(self, local: Path, parent_id: str, name: str | None = None) -> str:
+        """Ушул аталыштагы файл бар болсо — жаңыртат, жок болсо — түзөт.
+
+        Колдонуучунун файлдарына эмес, системанын папкаларына гана колдонулат.
+        """
+        name = name or local.name
+        existing = self.find_file(name, parent_id)
+        if existing:
+            if existing.get("md5Checksum") and existing["md5Checksum"] == _md5(local):
+                return existing["id"]
+            return self.update_file(existing["id"], local)
+        from googleapiclient.http import MediaFileUpload
+
+        mime = mimetypes.guess_type(name)[0] or "application/octet-stream"
+        media = MediaFileUpload(str(local), mimetype=mime, resumable=True, chunksize=CHUNK)
+        req = self.svc.files().create(body={"name": name, "parents": [parent_id]},
+                                      media_body=media, fields="id")
+        response = None
+        while response is None:
+            _, response = req.next_chunk(num_retries=5)
+        return response["id"]
+
+    def sync_up(self, local_dir: Path, folder_id: str,
+                skip: Callable[[str], bool] = lambda rel: False,
+                log: Callable[[str], None] = lambda m: None) -> int:
+        """Жергиликтүү папканы Drive'дагы папка менен шайкештейт (өзгөргөндөрүн гана).
+
+        Салыштыруу MD5 боюнча. Drive'да гана бар файлдар ӨЧҮРҮЛБӨЙТ.
+        """
+        remote = {rel: item for rel, item in self.walk(folder_id)}
+        folders: dict[str, str] = {"": folder_id}
+        sent = 0
+        for path in sorted(p for p in local_dir.rglob("*") if p.is_file()):
+            rel = path.relative_to(local_dir).as_posix()
+            if path.suffix == ".tmp" or skip(rel):
+                continue
+            item = remote.get(rel)
+            if item and item.get("md5Checksum") == _md5(path):
+                continue
+            parent_rel = rel.rsplit("/", 1)[0] if "/" in rel else ""
+            parent = self._ensure_rel(folder_id, parent_rel, folders)
+            if item:
+                self.update_file(item["id"], path)
+            else:
+                self.put_file(path, parent)
+            sent += 1
+            log(f"   ⬆ {rel}")
+        return sent
+
+    def _ensure_rel(self, root_id: str, rel: str, cache: dict[str, str]) -> str:
+        if rel in cache:
+            return cache[rel]
+        parent_rel, _, name = rel.rpartition("/")
+        parent = self._ensure_rel(root_id, parent_rel, cache)
+        cache[rel] = self.find_folder(name, parent) or self.create_folder(name, parent)
+        return cache[rel]
+
+    def download_file(self, file_id: str, dest: Path) -> Path:
+        from googleapiclient.http import MediaIoBaseDownload
+
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        request = self.svc.files().get_media(fileId=file_id)
+        with open(dest, "wb") as fh:
+            dl = MediaIoBaseDownload(fh, request, chunksize=CHUNK)
+            done = False
+            while not done:
+                _, done = dl.next_chunk(num_retries=3)
+        return dest
+
+    def download_tree(self, folder_id: str, dest: Path,
+                      skip: Callable[[str], bool] = lambda rel: False) -> int:
+        n = 0
+        for rel, item in self.walk(folder_id):
+            if item["mimeType"].startswith("application/vnd.google-apps") or skip(rel):
+                continue
+            self.download_file(item["id"], dest / rel)
+            n += 1
+        return n
+
+    def read_json(self, name: str, parent_id: str, default: Any = None) -> Any:
+        import json
+        import tempfile
+
+        item = self.find_file(name, parent_id)
+        if not item:
+            return default
+        with tempfile.TemporaryDirectory() as d:
+            p = self.download_file(item["id"], Path(d) / name)
+            return json.loads(p.read_text(encoding="utf-8"))
+
+    def write_json(self, name: str, parent_id: str, data: Any) -> str:
+        import json
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / name
+            p.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+            return self.put_file(p, parent_id, name)
+
+
+def _md5(path: Path) -> str:
+    import hashlib
+
+    h = hashlib.md5()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def mask_email(email: str) -> str:
+    """Ачык логдо email толук көрүнбөсүн: nazi.t...@gmail.com → n***@gmail.com."""
+    if "@" not in email:
+        return "***"
+    user, domain = email.split("@", 1)
+    return f"{user[:1]}***@{domain}"
 
 
 def explain_http_error(exc: Exception) -> str:

@@ -1,11 +1,16 @@
 name: 🎬 Видео жасоо
 
+# Colab талап кылынбайт. Бардык этаптар ушул жерде (GitHub'дын серверинде) аткарылат.
 on:
   workflow_dispatch:
     inputs:
       topic:
-        description: "Видеонун темасы"
-        required: true
+        description: "Видеонун темасы (жаңы видео үчүн)"
+        required: false
+        type: string
+      video_id:
+        description: "Токтоп калган видеону улантуу үчүн ID (мис. Video_001). Жаңы видео үчүн бош калтырыңыз"
+        required: false
         type: string
       niche:
         description: "Ниша профили"
@@ -14,29 +19,25 @@ on:
         type: choice
         options:
           - motivation
-      stop_after:
-        description: "Кайсы этаптан кийин токтотуу (тест үчүн)"
+      rerun_from:
+        description: "Ушул этаптан баштап кайра жасоо (video_id менен)"
         required: false
         default: none
         type: choice
-        options:
-          - none
-          - s1_script
-          - s2_scenes
-          - s3_voice
-          - s4_subtitles
-          - s5_visuals
-          - s6_animation
-          - s7_music
-          - s8_render
-  # Расписание (кийин, Google Sheets'тен тема алуу даяр болгондо күйгүзөбүз):
-  # schedule:
-  #   - cron: "0 6 * * *"
+        options: [none, s1_script, s2_scenes, s3_voice, s4_subtitles, s5_visuals,
+                  s6_animation, s7_music, s8_render, s9_qa]
+      stop_after:
+        description: "Ушул этаптан кийин токтотуу (тест үчүн)"
+        required: false
+        default: none
+        type: choice
+        options: [none, s1_script, s2_scenes, s3_voice, s4_subtitles, s5_visuals,
+                  s6_animation, s7_music, s8_render]
 
 permissions:
   contents: read
 
-# Бир убакта бир гана видео жасалат (API лимиттерин сактоо үчүн)
+# Бир убакта бир гана видео жасалат (API лимиттери жана реестр үчүн)
 concurrency:
   group: make-video
   cancel-in-progress: false
@@ -44,7 +45,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
 
@@ -56,7 +57,14 @@ jobs:
       - name: FFmpeg жана шрифттер
         run: |
           sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core fonts-montserrat || \
           sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+
+      - name: Whisper модели (кэш)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-small-v1
 
       - name: Китепканалар
         run: pip install -q -r requirements.txt
@@ -68,7 +76,9 @@ jobs:
         env:
           # Тема shell'ге түз коюлбайт (injection'дан сактоо үчүн) — env аркылуу өтөт
           VIDEO_TOPIC: ${{ inputs.topic }}
+          VIDEO_ID: ${{ inputs.video_id }}
           VIDEO_NICHE: ${{ inputs.niche }}
+          VIDEO_RERUN_FROM: ${{ inputs.rerun_from }}
           VIDEO_STOP_AFTER: ${{ inputs.stop_after }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
@@ -77,15 +87,4 @@ jobs:
           GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
           GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
         run: python -m pipeline.ci
-
-      # Видео артефактка КОЮЛБАЙТ (репозиторий ачык). Логдор жана абал гана.
-      - name: Логдорду сактоо
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: logs
-          path: |
-            work/Videos/*/state.json
-            work/Videos/*/logs/*
-          retention-days: 7
-          if-no-files-found: ignore
+      # Видео жана логдор Drive'га сакталат. Ачык репозиторий болгондуктан артефакт жок.

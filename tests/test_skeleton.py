@@ -58,7 +58,7 @@ class TestRunner(Base):
         state = self.run_quiet("Тест тема")
         folder = state.folder
         self.assertTrue((folder / "state.json").exists())
-        for sub in ["script", "audio", "subs", "clips", "render", "logs"]:
+        for sub in ["script", "audio", "subtitles", "clips", "animation", "music", "render", "logs"]:
             self.assertTrue((folder / sub).is_dir())
         self.assertEqual(state.status("s0_check"), DONE)
         self.assertEqual(state.status("s1_script"), PENDING)  # азырынча даяр эмес

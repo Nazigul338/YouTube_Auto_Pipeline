@@ -7,7 +7,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
@@ -17,6 +17,10 @@ from ..state import VideoState
 
 class StageError(Exception):
     """Этаптын түшүнүктүү катасы (колдонуучуга кыргызча көрсөтүлөт)."""
+
+
+class TransientError(StageError):
+    """Убактылуу ката (API 429/503, тармак) — этап кайра аракет кылынат."""
 
 
 class NotImplementedStage(Exception):
@@ -29,6 +33,10 @@ class Context:
     state: VideoState
     folder: Path
     log: Callable[[str], None]
+    video_id: str = ""
+    store: Any = None                      # storage.Store (Drive же жергиликтүү)
+    registry: dict = field(default_factory=dict)
+    services: dict = field(default_factory=dict)  # gemini, pixabay ж.б. (тесттерде алмаштырылат)
 
     def path(self, *parts: str) -> Path:
         return self.folder.joinpath(*parts)
@@ -38,6 +46,7 @@ class Stage:
     name: str = ""          # state.json'догу ачкыч, мис. "s1_script"
     title: str = ""         # колдонуучуга көрүнгөн ат, мис. "Сценарий"
     always_run: bool = False  # True: ар бир иштетүүдө кайра аткарылат (мис. текшерүү)
+    retries: int = 1          # TransientError болсо канча жолу кайра аракет кылуу
 
     def run(self, ctx: Context) -> dict[str, Any] | None:
         """Этаптын иши. Жыйынтык файлдардын жолдорун dict кылып кайтарат."""
