@@ -49,6 +49,14 @@ class TestQuota(unittest.TestCase):
         self.assertEqual(g._call(["a", "b"], fn, "t"), "b-ok")
         self.assertIn("a", g.skip_until)
 
+    def test_all_daily_quota_raises_quota_exhausted(self):
+        from pipeline.errors import QuotaExhausted
+        g, _ = make()
+        with self.assertRaises(QuotaExhausted) as cm:
+            g._call(["a", "b"], lambda m: (_ for _ in ()).throw(RPD), "tts")
+        self.assertIn("video_id", str(cm.exception))
+        self.assertNotIsInstance(cm.exception, TransientError)
+
     def test_bad_request_is_not_transient(self):
         g, _ = make()
         with self.assertRaises(StageError) as cm:

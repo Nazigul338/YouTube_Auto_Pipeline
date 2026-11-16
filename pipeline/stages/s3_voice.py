@@ -7,6 +7,9 @@
     эмеспи — сыноодо Gemini «Скажи спокойно…» деп окуп койгон), текст толук окулдубу.
     Шектүү болсо — ошол бөлүк башка промпт ыкмасы менен кайра жаратылат.
   - Даяр бөлүктөр кэште калат → иш үзүлсө, кайра жаратылбайт (квота үнөмдөлөт).
+  - БИР ВИДЕО — БИР TTS МОДЕЛИ (эреже 4: үн башынан аягына чейин бирдей). Биринчи
+    ийгиликтүү бөлүктүн модели бекитилет; анын күнүмдүк квотасы бүтсө — эртең улантылат.
+  - Акысыз TTS квотасы аз (сыноодо ~10–15 суроо/күн/модель) → бөлүктөр чоң (1400 белги).
   - Бөлүктөр табигый паузалар менен бириктирилет, loudnorm (−16 LUFS) менен
     деңгээли бирдей кылынат. Жасалма жайлатуу (atempo) КОЛДОНУЛБАЙТ.
 """
@@ -23,7 +26,7 @@ from .. import asr, media
 from ..textutil import word_count
 from .base import Context, Stage, StageError, gemini_of
 
-CHUNK_CHARS = 650                  # кыска бөлүк — TTS жана Whisper экөө тең ишенимдүү
+CHUNK_CHARS = 1400                 # акысыз TTS квотасы аз → суроолор аз болсун
 WPM_MIN, WPM_MAX = 105, 190       # табигый орус сүйлөөсүнүн чеги
 GAP_SCENE = 0.45                   # бөлүктөрдүн ортосундагы пауза (сек)
 MAX_INNER_SILENCE = 2.2
@@ -58,15 +61,24 @@ class VoiceStage(Stage):
         cdir.mkdir(parents=True, exist_ok=True)
         ctx.log(f"   {len(chunks)} бөлүк, үн: {cfg.tts_voice}")
 
+        pin_file = cdir / "model.txt"
+        self.pinned = pin_file.read_text().strip() if pin_file.exists() else None
+        if self.pinned:
+            ctx.log(f"   Бул видеонун TTS модели бекитилген: {self.pinned}")
         report = []
         for i, text in enumerate(chunks, 1):
             wav = cdir / f"chunk_{i:02d}.wav"
             meta = cdir / f"chunk_{i:02d}.json"
-            if wav.exists() and meta.exists() and \
-                    json.loads(meta.read_text())["text"] == text:
-                report.append(json.loads(meta.read_text()))
-                continue  # мурунку иштетүүдөн калган — кайра жаратпайбыз
+            if wav.exists() and meta.exists():
+                old = json.loads(meta.read_text())
+                if old["text"] == text and old.get("model") == self.pinned:
+                    report.append(old)
+                    continue  # мурунку иштетүүдөн калган — кайра жаратпайбыз
             info = self.make_chunk(ctx, g, text, style, wav, i, len(chunks))
+            if not self.pinned:
+                self.pinned = info["model"]
+                pin_file.write_text(self.pinned)
+                ctx.log(f"   TTS модели бекитилди: {self.pinned}")
             meta.write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
             report.append(info)
 
@@ -108,7 +120,10 @@ class VoiceStage(Stage):
         listen = asr.get(ctx)
         expect = [asr.norm_word(w) for w in text.split() if asr.norm_word(w)]
         for attempt, variant in enumerate((0, 2, 0, 2), 1):
-            pcm, rate = g.tts(text, voice=ctx.cfg.tts_voice, style=style, variant=variant)
+            pcm, rate = g.tts(text, voice=ctx.cfg.tts_voice, style=style, variant=variant,
+                              models=[self.pinned] if self.pinned else None)
+            used = next((u["model"] for u in reversed(getattr(g, "usage", []))
+                         if u.get("purpose") == "tts"), self.pinned or "?")
             dur = media.write_wav(wav, pcm, rate)
             wpm = len(expect) / (dur / 60) if dur else 0
             long_sil = [s for s in media.silences(wav, -42, MAX_INNER_SILENCE)
@@ -127,7 +142,7 @@ class VoiceStage(Stage):
             ctx.log(f"   🎙 {i}/{n}: {dur:.1f} сек, {wpm:.0f} сөз/мүн, дал келүү {coverage:.0%}"
                     + ("" if ok else f" — {', '.join(why)} ({attempt}-аракет)"))
             if ok:
-                return {"text": text, "duration": dur, "wpm": round(wpm, 1),
+                return {"text": text, "duration": dur, "wpm": round(wpm, 1), "model": used,
                         "coverage": round(coverage, 3), "attempts": attempt, "prompt_variant": variant}
             problems.append("; ".join(why))
         raise StageError(f"{i}-бөлүктүн үнү 4 аракеттен кийин да туура эмес: {problems}")

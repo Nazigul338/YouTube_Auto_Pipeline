@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .errors import StageError, TransientError
+from .errors import QuotaExhausted, StageError, TransientError
 
 TRANSIENT_CODES = {408, 429, 500, 502, 503, 504}
 
@@ -81,6 +81,7 @@ class Gemini:
               attempts: int = 2) -> Any:
         errors: list[str] = []
         all_transient = True
+        daily: list[str] = []
         candidates = [m for m in models if self.skip_until.get(m, 0) < time.time()] or models
         rate_attempts = 6   # мүнөттүк лимитте ошол эле моделди күтүп кайра суроо
         for model in candidates:
@@ -99,6 +100,7 @@ class Gemini:
                         if q["per_day"]:
                             self.log(f"   ⚠ {model}: КҮНҮМДҮК квота бүттү ({q['quota']}) → кийинки модель")
                             self.skip_until[model] = time.time() + 6 * 3600
+                            daily.append(model)
                             break
                         if attempt < rate_attempts:
                             wait = min(90.0, (q["delay"] or 20.0 * attempt) + 2)
@@ -125,6 +127,11 @@ class Gemini:
                     self.log(f"   ⚠ {model}: {code} — кийинки модель")
                     break
         detail = "\n".join(errors[-6:])
+        if daily and len(daily) == len(candidates):
+            raise QuotaExhausted(
+                f"Gemini ({purpose}): КҮНҮМДҮК акысыз квота бүттү ({', '.join(daily)}). "
+                f"Квота болжол менен Тынч океан убактысы боюнча түн жарымында жаңыланат. "
+                f"Эртең ушул эле video_id менен улантыңыз — бүткөн иштер сакталды.")
         msg = f"Gemini ({purpose}) иштеген жок. Акыркы каталар:\n{detail}"
         raise (TransientError if all_transient else StageError)(msg)
 
@@ -170,7 +177,8 @@ class Gemini:
         "{text}",
     )
 
-    def tts(self, text: str, *, voice: str, style: str, variant: int = 0) -> tuple[bytes, int]:
+    def tts(self, text: str, *, voice: str, style: str, variant: int = 0,
+            models: list[str] | None = None) -> tuple[bytes, int]:
         """PCM s16le моно байттары жана жыштыгы. Gemini WAV да, таза PCM да кайтара алат."""
         import io
         import wave
@@ -202,7 +210,7 @@ class Gemini:
                 raise RuntimeError("аудио бош же өтө кыска")
             return pcm, rate
 
-        return self._call(self.tts_models, fn, "tts")
+        return self._call(models or self.tts_models, fn, "tts")
 
     # ------------------------------------------------------------ башка
     def embed(self, texts: list[str]) -> list[list[float]]:

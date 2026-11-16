@@ -72,9 +72,10 @@ class FakeGemini:
             out.append([b / 255 for b in h])
         return out
 
-    def tts(self, text: str, *, voice: str, style: str, variant: int = 0):
+    def tts(self, text: str, *, voice: str, style: str, variant: int = 0, models=None):
         """Сөз санына жараша узактыктагы синус (24 кГц PCM)."""
         self.calls.append("tts")
+        self.usage.append({"purpose": "tts", "model": (models or ["fake-tts"])[0]})
         rate = 24000
         secs = max(1.0, len(re.findall(r"\w+", text)) / 2.4)
         n = int(secs * rate)

@@ -9,5 +9,12 @@ class TransientError(StageError):
     """Убактылуу ката (API 429/503, тармак) — этап кайра аракет кылынат."""
 
 
+class QuotaExhausted(StageError):
+    """API'нин КҮНҮМДҮК квотасы бүттү — кайра аракет бүгүн жардам бербейт.
+
+    Бүткөн иштер сакталат; эртең ошол эле video_id менен улантылат.
+    """
+
+
 class NotImplementedStage(Exception):
     """Этап азырынча иштелип чыга элек."""
