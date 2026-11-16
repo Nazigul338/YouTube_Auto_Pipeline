@@ -3,6 +3,12 @@ name: 🔬 Мүмкүнчүлүктөрдү сыноо
 # Gemini/TTS/AI-сүрөт/Whisper/Pixabay чынында иштейби — текшерет. Эч нерсени өзгөртпөйт.
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: "Эмнени сынаш керек"
+        default: all
+        type: choice
+        options: [all, tts]
 
 permissions:
   contents: read
@@ -26,4 +32,5 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PROBE_ONLY: ${{ inputs.only }}
         run: python -m pipeline.probe

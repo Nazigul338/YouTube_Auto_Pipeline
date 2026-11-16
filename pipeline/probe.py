@@ -82,6 +82,8 @@ def probe_gemini() -> dict:
     import importlib.metadata as md
     rec("google-genai", "info", md.version("google-genai"))
     client = genai.Client(api_key=key)
+    beta = genai.Client(api_key=key, http_options=types.HttpOptions(api_version="v1beta"))
+    only_tts = os.environ.get("PROBE_ONLY") == "tts"
 
     # 1. Моделдер тизмеси
     try:
@@ -111,11 +113,11 @@ def probe_gemini() -> dict:
 
     # 2. Текст (сценарий үчүн талапкерлер)
     text_ok = []
-    prefs = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.5-pro", "gemini-3.8-pro",
-             "gemini-3.5-flash-lite"]
+    prefs = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash", "gemini-3.5-flash",
+             "gemini-4-argon", "gemini-4-carbon", "gemini-4-hydrogen", "gemini-3.5-flash-lite"]
     cands = [p for p in prefs if p in groups["text"]] + \
             [n for n in groups["text"] if n not in prefs and "preview" not in n][:4]
-    for model in cands[:7]:
+    for model in ([] if only_tts else cands[:9]):
         try:
             t = time.time()
             r = client.models.generate_content(model=model, contents="Ответь одним словом: ок")
@@ -126,7 +128,7 @@ def probe_gemini() -> dict:
     out["text_ok"] = text_ok
 
     # 3. Google Search менен факт текшерүү
-    if text_ok:
+    if text_ok and not only_tts:
         try:
             r = client.models.generate_content(
                 model=text_ok[0],
@@ -156,9 +158,11 @@ def probe_gemini() -> dict:
         return len(data) / 2 / rate
 
     for model in cands:
+        if tts_ok:
+            break
         try:
             t = time.time()
-            r = client.models.generate_content(
+            r = beta.models.generate_content(
                 model=model, contents=f"Скажи спокойно и уверенно: {sample}",
                 config=types.GenerateContentConfig(
                     response_modalities=["AUDIO"],
@@ -167,14 +171,14 @@ def probe_gemini() -> dict:
             part = r.candidates[0].content.parts[0].inline_data
             wav_path = TMP / "tts.wav"
             dur = save_pcm(part.data, part.mime_type, wav_path)
-            rec(f"TTS generate_content: {model}", "ok", f"{dur:.1f} сек ({part.mime_type}), {time.time()-t:.1f} сек")
+            rec(f"TTS v1beta generate_content: {model}", "ok", f"{dur:.1f} сек ({part.mime_type}), {time.time()-t:.1f} сек")
             tts_ok = tts_ok or (model, wav_path)
         except Exception as e:
-            rec(f"TTS generate_content: {model}", "fail", err(e))
+            rec(f"TTS v1beta generate_content: {model}", "fail", err(e))
         try:
             import base64
             t = time.time()
-            r = client.interactions.create(
+            r = beta.interactions.create(
                 model=model, input=f"Скажи спокойно и уверенно: {sample}",
                 response_format={"type": "audio"},
                 generation_config={"speech_config": [{"voice": "Algenib"}]})
@@ -186,11 +190,14 @@ def probe_gemini() -> dict:
                     dur = w.getnframes() / w.getframerate()
             else:
                 dur = save_pcm(data, getattr(r.output_audio, "mime_type", "") or "", wav_path)
-            rec(f"TTS interactions: {model}", "ok", f"{dur:.1f} сек, баш: {data[:4]!r}, {time.time()-t:.1f} сек")
+            rec(f"TTS v1beta interactions: {model}", "ok", f"{dur:.1f} сек, баш: {data[:4]!r}, {time.time()-t:.1f} сек")
             tts_ok = tts_ok or (model, wav_path)
         except Exception as e:
-            rec(f"TTS interactions: {model}", "fail", err(e))
+            rec(f"TTS v1beta interactions: {model}", "fail", err(e))
     out["tts_ok"] = tts_ok
+
+    if only_tts:
+        return out
 
     # 4б. Тынымсыз модель (503) — кайра аракет
     for attempt in range(3):
@@ -315,9 +322,12 @@ def probe_whisper(tts) -> None:
 
 
 def main() -> int:
-    probe_runner()
+    only_tts = os.environ.get("PROBE_ONLY") == "tts"
+    if not only_tts:
+        probe_runner()
     g = probe_gemini()
-    probe_pixabay()
+    if not only_tts:
+        probe_pixabay()
     probe_whisper(g.get("tts_ok"))
 
     md = ["## 🔬 Мүмкүнчүлүктөрдү сынoo", "", "| Текшерүү | | Жыйынтык |", "|---|---|---|"]
