@@ -36,8 +36,8 @@ class Config:
 
     # --- Моделдер (ирети = артыкчылык; биринчиси иштебесе — кийинкиси) ---
     # Тизме probe сыноосунун жыйынтыгы боюнча (2026-11-16).
-    text_models: tuple = ("gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.6-flash",
-                          "gemini-3.5-flash")
+    # 3.7/3.6-flash сыноодо 29 мүнөт жооп бербей калган → тизмеде жок.
+    text_models: tuple = ("gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite")
     tts_models: tuple = ("gemini-3.8-flash-tts", "gemini-2.5-flash-preview-tts")
     embed_model: str = "gemini-embedding-001"
     tts_voice: str = "Algenib"

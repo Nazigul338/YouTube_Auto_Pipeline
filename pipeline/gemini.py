@@ -34,13 +34,18 @@ def _is_daily_quota(exc: Exception) -> bool:
     return "perday" in t or "per day" in t or "check your plan and billing" in t
 
 
+def _is_timeout(exc: Exception) -> bool:
+    name = type(exc).__name__.lower()
+    return "timeout" in name or "timed out" in str(exc).lower()
+
+
 def _short(exc: Exception) -> str:
     return f"{type(exc).__name__} [{_code(exc)}]: {str(exc)[:200]}"
 
 
 class Gemini:
     def __init__(self, api_key: str, *, text_models: list[str], tts_models: list[str],
-                 embed_model: str = "gemini-embedding-001", timeout_s: int = 240,
+                 embed_model: str = "gemini-embedding-001", timeout_s: int = 180,
                  log: Callable[[str], None] = print, sleep: Callable[[float], None] = time.sleep,
                  client: Any = None):
         self.text_models = text_models
@@ -75,6 +80,9 @@ class Gemini:
                     errors.append(f"{model}: {_short(e)}")
                     if code == 429 and _is_daily_quota(e):
                         self.log(f"   ⚠ {model}: квота/лимит бүттү → кийинки модель")
+                        break
+                    if _is_timeout(e):
+                        self.log(f"   ⚠ {model}: жооп бербей калды (timeout) → кийинки модель")
                         break
                     if code in TRANSIENT_CODES or code is None:
                         if attempt < attempts:
@@ -156,6 +164,27 @@ class Gemini:
             return out
 
         return self._call([self.embed_model], fn, "embedding")
+
+    def rate_frames(self, items: list[tuple[bytes, str]]) -> list[int]:
+        """Кадр сценарийдин ошол бөлүгүнө канчалык дал келет: 1–5 упай."""
+        from google.genai import types
+
+        def fn(model: str) -> list[int]:
+            contents: list[Any] = [
+                "You check a video edit. For each numbered frame, rate 1-5 how well the image "
+                "illustrates the narration text next to it (5 = clearly matches the meaning, "
+                "3 = acceptable mood match, 1 = unrelated). Return JSON array of integers only."]
+            for k, (jpg, text) in enumerate(items, 1):
+                contents += [f"Frame {k}. Narration (Russian): {text[:300]}",
+                             types.Part.from_bytes(data=jpg, mime_type="image/jpeg")]
+            r = self.client.models.generate_content(
+                model=model, contents=contents,
+                config=types.GenerateContentConfig(response_mime_type="application/json",
+                                                   temperature=0.1))
+            scores = parse_json(r.text or "[]")
+            return [int(s) for s in scores][:len(items)]
+
+        return self._call(self.text_models, fn, "frame_check")
 
     def ask_about_file(self, path: Path, prompt: str, *, purpose: str = "file") -> str:
         def fn(model: str) -> str:

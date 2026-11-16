@@ -8,6 +8,11 @@ from .s1_script import ScriptStage
 from .s2_scenes import ScenesStage
 from .s3_voice import VoiceStage
 from .s4_subtitles import SubtitlesStage
+from .s5_visuals import VisualsStage
+from .s6_animation import AnimationStage
+from .s7_music import MusicStage
+from .s8_render import RenderStage
+from .s9_qa import QAStage
 
 
 def _planned(name: str, title: str) -> Stage:
@@ -24,11 +29,11 @@ STAGES: list[Stage] = [
     ScenesStage(),
     VoiceStage(),
     SubtitlesStage(),
-    _planned("s5_visuals", "Видеоклиптер"),
-    _planned("s6_animation", "Анимация жана эффекттер"),
-    _planned("s7_music", "Фондук музыка"),
-    _planned("s8_render", "Монтаж (FFmpeg)"),
-    _planned("s9_qa", "Сапатты текшерүү жана Final MP4"),
+    VisualsStage(),
+    AnimationStage(),
+    MusicStage(),
+    RenderStage(),
+    QAStage(),
 ]
 
 STAGE_NAMES = [s.name for s in STAGES]

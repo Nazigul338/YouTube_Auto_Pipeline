@@ -81,8 +81,9 @@ def probe_gemini() -> dict:
     from google.genai import types
     import importlib.metadata as md
     rec("google-genai", "info", md.version("google-genai"))
-    client = genai.Client(api_key=key)
-    beta = genai.Client(api_key=key, http_options=types.HttpOptions(api_version="v1beta"))
+    client = genai.Client(api_key=key, http_options=types.HttpOptions(timeout=90_000))
+    beta = genai.Client(api_key=key, http_options=types.HttpOptions(api_version="v1beta",
+                                                                     timeout=120_000))
     only_tts = os.environ.get("PROBE_ONLY") == "tts"
 
     # 1. Моделдер тизмеси
