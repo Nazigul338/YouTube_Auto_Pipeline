@@ -29,7 +29,7 @@ class TestFullPipeline(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         self.store = LocalStore(self.root / "drive")
-        music = self.root / "drive" / "YouTube_Auto" / "Music" / "YouTube_Audio_Library"
+        music = self.root / "drive" / "YouTube_Auto" / "Music" / "YouTube_Audio_Library_Attribution"
         music.mkdir(parents=True)
         subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
                         "sine=f=330:d=20", "-ac", "2", str(music / "Calm Piano - Tester.mp3")],
