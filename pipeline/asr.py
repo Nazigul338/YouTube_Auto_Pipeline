@@ -28,12 +28,17 @@ def norm_word(w: str) -> str:
 
 
 def transcribe(path: Path, hint: str = "", model: str = "small") -> list[tuple[str, float, float]]:
-    """[(нормалдаштырылган сөз, башы, аягы)]"""
+    """[(нормалдаштырылган сөз, башы, аягы)]
+
+    `hint` Whisper'ге БЕРИЛБЕЙТ: сыноодо аудионун өзүнүн башкы сөздөрүн initial_prompt
+    катары берсе, Whisper ал сөздөрдү «мурун айтылган» деп эсептеп, жазбай калтырган
+    (жакшы үн жараксыз деп четке кагылган). hint тесттердеги жалган ASR үчүн гана.
+    """
     audio = media.decode_float32(path)
     segments, _ = _model(model).transcribe(
         audio, language="ru", word_timestamps=True, beam_size=5, vad_filter=False,
         condition_on_previous_text=False,   # сөздөрдү «жоготуп» коюудан сактайт
-        initial_prompt=" ".join(hint.split()[:60]) or None)
+        initial_prompt=None)
     out = []
     for seg in segments:
         for w in seg.words or []:
