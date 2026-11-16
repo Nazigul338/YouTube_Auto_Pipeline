@@ -61,13 +61,15 @@ class Gemini:
                 api_version="v1beta", timeout=timeout_s * 1000))
         self.client = client
         self.usage: list[dict] = []   # кайсы модель эмне үчүн колдонулду (AI отчету үчүн)
+        self.skip_until: dict[str, float] = {}   # иштебеген моделдер: убактылуу четке кагылат
 
     # ------------------------------------------------------------ жалпы
     def _call(self, models: list[str], fn: Callable[[str], Any], purpose: str,
-              attempts: int = 3) -> Any:
+              attempts: int = 2) -> Any:
         errors: list[str] = []
         all_transient = True
-        for model in models:
+        candidates = [m for m in models if self.skip_until.get(m, 0) < time.time()] or models
+        for model in candidates:
             for attempt in range(1, attempts + 1):
                 try:
                     result = fn(model)
@@ -80,17 +82,21 @@ class Gemini:
                     errors.append(f"{model}: {_short(e)}")
                     if code == 429 and _is_daily_quota(e):
                         self.log(f"   ⚠ {model}: квота/лимит бүттү → кийинки модель")
+                        self.skip_until[model] = time.time() + 6 * 3600
                         break
                     if _is_timeout(e):
                         self.log(f"   ⚠ {model}: жооп бербей калды (timeout) → кийинки модель")
+                        self.skip_until[model] = time.time() + 20 * 60
                         break
                     if code in TRANSIENT_CODES or code is None:
                         if attempt < attempts:
-                            wait = 15 * attempt
+                            wait = 10 * attempt
                             self.log(f"   ⚠ {model}: {code or type(e).__name__} — {wait} сек кийин кайра")
                             self.sleep(wait)
                             continue
-                        self.log(f"   ⚠ {model}: {attempts} аракет ийгиликсиз → кийинки модель")
+                        self.log(f"   ⚠ {model}: {attempts} аракет ийгиликсиз → кийинки модель "
+                                 f"(10 мүн четке кагылат)")
+                        self.skip_until[model] = time.time() + 10 * 60
                         break
                     all_transient = False  # 400/403/404 — бул модель жарабайт
                     self.log(f"   ⚠ {model}: {code} — кийинки модель")
@@ -135,8 +141,8 @@ class Gemini:
         # 0: англисче режиссёрдук нускама + текст (нускаманы окубоо эскертилет)
         "Read the following Russian text aloud as a narrator. Voice direction (do NOT read "
         "it aloud): {style}\n\n{text}",
-        # 1: документтеги стандарт форма
-        "{style_short}: {text}",
+        # 1: (алынды — сыноодо «Say in a deep…» деп ОКУЛУП калды) → таза текст
+        "{text}",
         # 2: таза текст — нускама эч качан окулбайт (стиль үн тандоосунан гана)
         "{text}",
     )

@@ -137,11 +137,16 @@ class TestInstructionRead(unittest.TestCase):
     def test_check_heard(self):
         from pipeline.stages.s3_voice import check_heard
         exp = "иногда самый трудный шаг это первый".split()
-        self.assertEqual(check_heard(exp, exp), (0, 1.0))
-        extra, cov = check_heard(exp, ["скажи", "спокойно", "и", "уверенно"] + exp)
+        self.assertEqual(check_heard(exp, exp), (0, 1.0, 0))
+        extra, cov, gap = check_heard(exp, ["скажи", "спокойно", "и", "уверенно"] + exp)
         self.assertEqual(extra, 4)
         self.assertEqual(cov, 1.0)
-        self.assertLess(check_heard(exp, exp[:3])[1], 0.9)
+        self.assertEqual(check_heard(exp, exp[:3])[2], 3)       # аягы окулбады — катар
+        long = [f"с{i}" for i in range(40)]
+        scattered = [w if i % 6 else "xx" for i, w in enumerate(long)]  # чачыранды ката
+        self.assertLessEqual(check_heard(long, scattered)[2], 1)
+        skipped = long[:10] + long[25:]                                 # 15 сөз окулбай калды
+        self.assertEqual(check_heard(long, skipped)[2], 15)
 
 
 class TestInstructionRetry(unittest.TestCase):

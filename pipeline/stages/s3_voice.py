@@ -23,7 +23,7 @@ from .. import asr, media
 from ..textutil import word_count
 from .base import Context, Stage, StageError, gemini_of
 
-CHUNK_CHARS = 1200
+CHUNK_CHARS = 650                  # кыска бөлүк — TTS жана Whisper экөө тең ишенимдүү
 WPM_MIN, WPM_MAX = 105, 190       # табигый орус сүйлөөсүнүн чеги
 GAP_SCENE = 0.45                   # бөлүктөрдүн ортосундагы пауза (сек)
 MAX_INNER_SILENCE = 2.2
@@ -107,21 +107,23 @@ class VoiceStage(Stage):
         problems = []
         listen = asr.get(ctx)
         expect = [asr.norm_word(w) for w in text.split() if asr.norm_word(w)]
-        for attempt, variant in enumerate((0, 0, 1, 2), 1):
+        for attempt, variant in enumerate((0, 2, 0, 2), 1):
             pcm, rate = g.tts(text, voice=ctx.cfg.tts_voice, style=style, variant=variant)
             dur = media.write_wav(wav, pcm, rate)
             wpm = len(expect) / (dur / 60) if dur else 0
             long_sil = [s for s in media.silences(wav, -42, MAX_INNER_SILENCE)
                         if 0.3 < s[0] < dur - 0.5]
             heard = [w for w, _, _ in listen(wav, text)]
-            extra_head, coverage = check_heard(expect, heard)
+            extra_head, coverage, gap = check_heard(expect, heard)
+            wav.with_name(f"{wav.stem}_heard_{attempt}.txt").write_text(" ".join(heard), encoding="utf-8")
             ok = (WPM_MIN <= wpm <= WPM_MAX and not long_sil and extra_head <= 1
-                  and coverage >= 0.9)
+                  and coverage >= 0.82 and gap <= 7)
             why = [] if ok else [x for x, bad in (
                 (f"{wpm:.0f} сөз/мүн", not WPM_MIN <= wpm <= WPM_MAX),
                 (f"тынчтык {long_sil[:1]}", bool(long_sil)),
                 (f"башында {extra_head} ашыкча сөз (нускама окулган)", extra_head > 1),
-                (f"текст {coverage:.0%} гана окулду", coverage < 0.9)) if bad]
+                (f"текст {coverage:.0%} гана угулду", coverage < 0.82),
+                (f"{gap} сөз катары менен окулбай калды", gap > 7)) if bad]
             ctx.log(f"   🎙 {i}/{n}: {dur:.1f} сек, {wpm:.0f} сөз/мүн, дал келүү {coverage:.0%}"
                     + ("" if ok else f" — {', '.join(why)} ({attempt}-аракет)"))
             if ok:
@@ -131,13 +133,21 @@ class VoiceStage(Stage):
         raise StageError(f"{i}-бөлүктүн үнү 4 аракеттен кийин да туура эмес: {problems}")
 
 
-def check_heard(expect: list[str], heard: list[str]) -> tuple[int, float]:
-    """(башындагы ашыкча сөздөрдүн саны, сценарийдин канчасы угулду)."""
+def check_heard(expect: list[str], heard: list[str]) -> tuple[int, float, int]:
+    """(башындагы ашыкча сөздөр, сценарийдин канчасы угулду, эң узун угулбаган катар).
+
+    Whisper'дин жөнөкөй каталары ЧАЧЫРАНДЫ болот; TTS бир бөлүктү окубай калса —
+    КАТАР үзгүлтүк пайда болот. Ошондуктан узун катар — негизги белги.
+    """
     if not heard:
-        return 0, 0.0
+        return 0, 0.0, len(expect)
     sm = difflib.SequenceMatcher(None, expect, heard, autojunk=False)
     blocks = [b for b in sm.get_matching_blocks() if b.size]
     matched = sum(b.size for b in blocks)
     first = next((b for b in blocks if b.size >= 2), blocks[0] if blocks else None)
     extra_head = (first.b - first.a) if first else len(heard)
-    return max(0, extra_head), matched / max(1, len(expect))
+    gap, pos = 0, 0
+    for b in blocks + [difflib.Match(len(expect), len(heard), 0)]:
+        gap = max(gap, b.a - pos)
+        pos = b.a + b.size
+    return max(0, extra_head), matched / max(1, len(expect)), gap
