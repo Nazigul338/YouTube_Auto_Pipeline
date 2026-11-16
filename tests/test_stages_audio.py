@@ -105,6 +105,9 @@ class TestVoiceAndSubs(unittest.TestCase):
         drive = self.root / "drive" / "YouTube_Auto"
         self.assertTrue((drive / "Audio" / "Video_001_voice.wav").exists())
         self.assertTrue((drive / "Subtitles" / "Video_001.srt").exists())
+        rep = json.loads((self.proj / "audio" / "voice_report.json").read_text(encoding="utf-8"))
+        self.assertEqual({c["model"] for c in rep["chunks"]}, {"fake-tts"})   # бир модель
+        self.assertEqual((self.proj / "audio" / "chunks" / "model.txt").read_text(), "fake-tts")
         # чанктар кэштелди: кайра иштетүүдө TTS чакырылбайт
         n_tts = g.calls.count("tts")
         code = ci.run_ci("", "motivation", self.root / "w", store=self.store, video_id="Video_001",
