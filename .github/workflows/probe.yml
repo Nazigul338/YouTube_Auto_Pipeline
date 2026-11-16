@@ -1,0 +1,29 @@
+name: 🔬 Мүмкүнчүлүктөрдү сыноо
+
+# Gemini/TTS/AI-сүрөт/Whisper/Pixabay чынында иштейби — текшерет. Эч нерсени өзгөртпөйт.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: FFmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - name: Китепканалар
+        run: pip install -q -r requirements.txt faster-whisper numpy
+      - name: Сыноо
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: python -m pipeline.probe
