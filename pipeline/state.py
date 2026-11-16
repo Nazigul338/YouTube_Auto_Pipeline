@@ -99,11 +99,13 @@ class VideoState:
             st["outputs"] = outputs
         self.save()
 
-    def mark_failed(self, name: str, error: str) -> None:
+    def mark_failed(self, name: str, error: str, kind: str = "error") -> None:
+        """kind: quota (күнүмдүк квота), transient (убактылуу), error (чыныгы ката)."""
         st = self.stage(name)
         st["status"] = FAILED
         st["finished_at"] = _now()
         st["error"] = error
+        st["kind"] = kind
         self.save()
 
     def reset(self, name: str) -> None:
@@ -114,6 +116,7 @@ class VideoState:
         st = self.stage(name)
         st["status"] = PENDING
         st.pop("error", None)
+        st.pop("kind", None)
         self.save()
 
     def outputs(self, name: str) -> dict[str, Any]:

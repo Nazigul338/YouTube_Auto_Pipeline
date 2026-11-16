@@ -19,6 +19,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .config import get_secret, load_config
@@ -95,6 +96,8 @@ def run_ci(topic: str, niche: str, workdir: Path, *, store: Store | None,
         state.save()
         resumed = False
 
+    entry0 = registry["videos"].setdefault(video_id, {"topic": topic, "niche": niche})
+    entry0["stopped_by_user"] = bool(stop_after)   # атайын токтотулган сыноо автоматтык уланбайт
     n = store.pull_music(cfg.music_root)
     log = _make_logger(folder)
     log("=" * 56)
@@ -110,6 +113,8 @@ def run_ci(topic: str, niche: str, workdir: Path, *, store: Store | None,
         entry = registry["videos"].setdefault(video_id, {"topic": topic})
         entry["status"] = _status(st)
         entry["updated"] = now()
+        failed = next((n for n in STAGE_NAMES if st.status(n) == FAILED), None)
+        entry["failure_kind"] = st.stage(failed).get("kind", "error") if failed else None
         store.push_project(folder, video_id, log=lambda m: None)
         store.save_registry(registry)
         log_file = folder / "logs" / "run.log"
@@ -143,6 +148,77 @@ def _write_summary(state: VideoState, video_id: str) -> None:
     else:
         lines.append(f"\nℹ️ Улантуу үчүн: Run workflow → **video_id** = `{video_id}`")
     _summary("\n".join(lines))
+
+
+# ---------------------------------------------------------------- авто-улантуу
+RESUMABLE_KINDS = {"quota", "transient"}   # чыныгы каталар (error) автоматтык уланбайт
+MAX_AUTO_RESUMES = 6
+MAX_AGE_DAYS = 10
+STALE_MINUTES = 20      # in_progress ушундан эски болсо — иш үзүлгөн (убакыт бүткөн/жокко чыгарылган)
+
+
+def _parse(ts: str | None) -> datetime | None:
+    try:
+        return datetime.fromisoformat(ts) if ts else None
+    except ValueError:
+        return None
+
+
+def find_pending(registry: dict, now_dt: datetime | None = None) -> str | None:
+    """Автоматтык улантууга татыктуу эң эски видеонун ID'си (же None)."""
+    now_dt = now_dt or datetime.now(timezone.utc)
+    for vid, v in sorted(registry.get("videos", {}).items()):
+        status = v.get("status")
+        if status not in ("failed", "in_progress") or v.get("stopped_by_user") or v.get("abandoned"):
+            continue
+        if v.get("auto_resumes", 0) >= MAX_AUTO_RESUMES:
+            continue
+        created = _parse(v.get("created"))
+        if created and now_dt - created > timedelta(days=MAX_AGE_DAYS):
+            continue
+        if status == "failed" and v.get("failure_kind") not in RESUMABLE_KINDS:
+            continue
+        if status == "in_progress":
+            updated = _parse(v.get("updated") or v.get("created"))
+            if updated and now_dt - updated < timedelta(minutes=STALE_MINUTES):
+                continue   # азыр башка иш аткарылып жатышы мүмкүн
+        return vid
+    return None
+
+
+def run_resume(workdir: Path, *, store: Store | None, services: dict | None = None,
+               now_dt: datetime | None = None) -> int:
+    """Токтоп калган видеолордун эң эскисин улантат. Квота/убактылуу ката — тынч (0)."""
+    if store is None:
+        msg = "❌ Google Drive туташкан эмес (GDRIVE_* ачкычтары жок)."
+        print(msg)
+        _summary(msg)
+        return 2
+    store.ensure_layout()
+    registry = store.load_registry()
+    vid = find_pending(registry, now_dt)
+    if vid is None:
+        msg = "✅ Улантууга видео жок (баары даяр же улантууга татыктуу эмес)."
+        print(msg)
+        _summary("## 🔁 Автоматтык улантуу\n" + msg)
+        return 0
+    entry = registry["videos"][vid]
+    entry["auto_resumes"] = entry.get("auto_resumes", 0) + 1
+    store.save_registry(registry)
+    print(f"🔁 Автоматтык улантуу: {vid} «{entry.get('topic', '')}» "
+          f"(аракет {entry['auto_resumes']}/{MAX_AUTO_RESUMES}, мурунку абал: "
+          f"{entry.get('status')}/{entry.get('failure_kind')})")
+    code = run_ci("", entry.get("niche") or "motivation", Path(workdir), store=store,
+                  video_id=vid, services=services)
+    after = store.load_registry()["videos"].get(vid, {})
+    if code == 1 and after.get("failure_kind") in RESUMABLE_KINDS:
+        note = ("күнүмдүк квота дагы бүтүк" if after["failure_kind"] == "quota"
+                else "убактылуу ката")
+        msg = f"⏳ {vid}: {note} — кийинки автоматтык аракетте уланат (ката эмес)."
+        print(msg)
+        _summary(msg)
+        return 0
+    return code
 
 
 # ---------------------------------------------------------------- --check
@@ -226,6 +302,8 @@ def _none(v: str | None) -> str | None:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="YouTube Auto Pipeline — GitHub Actions")
     p.add_argument("--check", action="store_true", help="жөндөөнү гана текшерүү")
+    p.add_argument("--resume-pending", action="store_true",
+                   help="токтоп калган видеолордун эң эскисин автоматтык улантуу")
     p.add_argument("--topic", default=os.environ.get("VIDEO_TOPIC", ""))
     p.add_argument("--video-id", default=os.environ.get("VIDEO_ID", ""))
     p.add_argument("--niche", default=os.environ.get("VIDEO_NICHE") or "motivation")
@@ -245,6 +323,8 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as e:
             print(f"❌ Drive'га кирүү ишке ашкан жок: {explain_http_error(e)}")
             return 2
+    if args.resume_pending:
+        return run_resume(Path(args.workdir), store=store)
     return run_ci(args.topic, args.niche, Path(args.workdir), store=store,
                   video_id=_none(args.video_id), rerun_from=_none(args.rerun_from),
                   stop_after=_none(args.stop_after))

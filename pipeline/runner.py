@@ -15,6 +15,7 @@ from typing import Callable
 from .config import Config, load_config
 from .project import find_video_folder, list_videos, new_video_folder
 from .stages import STAGE_NAMES, STAGES
+from .errors import QuotaExhausted
 from .stages.base import Context, NotImplementedStage, StageError, TransientError
 from .state import DONE, FAILED, STATUS_ICON, VideoState
 
@@ -137,16 +138,20 @@ def execute(ctx: Context, *, rerun_from: str | None = None, stop_after: str | No
                         f"({attempt + 1}/{attempts})...")
                     sleep(wait)
                     continue
-                state.mark_failed(stage.name, str(e))
+                state.mark_failed(stage.name, str(e), kind="transient")
+                _report_failure(log, i, stage, str(e), detail=None)
+                stop = True
+            except QuotaExhausted as e:
+                state.mark_failed(stage.name, str(e), kind="quota")
                 _report_failure(log, i, stage, str(e), detail=None)
                 stop = True
             except StageError as e:
-                state.mark_failed(stage.name, str(e))
+                state.mark_failed(stage.name, str(e), kind="error")
                 _report_failure(log, i, stage, str(e), detail=None)
                 stop = True
             except Exception as e:  # күтүлбөгөн ката
                 detail = traceback.format_exc()
-                state.mark_failed(stage.name, f"{type(e).__name__}: {e}")
+                state.mark_failed(stage.name, f"{type(e).__name__}: {e}", kind="error")
                 _report_failure(log, i, stage, f"{type(e).__name__}: {e}", detail)
                 stop = True
             else:

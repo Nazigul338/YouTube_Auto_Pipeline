@@ -1,0 +1,64 @@
+name: 🔁 Токтоп калган видеону улантуу
+
+# Күн сайын өзү иштейт (сиз эч нерсе баспайсыз):
+#  - Gemini'нин акысыз квотасы бүтүп токтоп калган видеону улантат;
+#  - убактылуу катадан (503 ж.б.) токтоп калганды улантат;
+#  - чыныгы каталарды (мис. QA өтпөсө) АВТОМАТТЫК УЛАНБАЙТ — алар сизге билдирилет.
+# Квота Тынч океан убактысы боюнча түн жарымында жаңыланат (UTC 07:00–08:00).
+on:
+  schedule:
+    - cron: "30 8 * * *"    # квота жаңыланган соң (Бишкек 14:30)
+    - cron: "30 15 * * *"   # запас аракет (Бишкек 21:30)
+  workflow_dispatch:
+    inputs:
+      test_run:
+        description: "Сынак режими (YouTube_Auto_TEST)"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+# make_video менен бир группа: бир убакта бир гана видео
+concurrency:
+  group: make-video
+  cancel-in-progress: false
+
+jobs:
+  resume:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: FFmpeg жана шрифттер
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core fonts-montserrat || \
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+
+      - name: Whisper модели (кэш)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-small-v1
+
+      - name: Китепканалар
+        run: pip install -q -r requirements.txt
+
+      - name: Токтоп калган видеону улантуу
+        env:
+          YTA_DRIVE_FOLDER: ${{ inputs.test_run && 'YouTube_Auto_TEST' || 'YouTube_Auto' }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.ci --resume-pending
