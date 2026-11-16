@@ -14,6 +14,7 @@ from __future__ import annotations
 import io
 import mimetypes
 import os
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -178,18 +179,47 @@ class DriveClient:
         return saved
 
     # ---------- жүктөө ----------
+    def _resumable(self, make_req: Callable[[], Any], what: str, tries: int = 4,
+                   sleep: Callable[[float], None] = time.sleep) -> str:
+        """Resumable жүктөөнү аягына чыгарат. Тармак/окуу таймауту (мис. 516 МБ видео, `TimeoutError: The
+        read operation timed out`) болсо — жүктөө башынан кайра башталат (4 жолу). Баары ишке ашпаса —
+        TransientError (кийинки ишке киргизүүдө система ошол этаптан улантат)."""
+        import httplib2
+        from googleapiclient.errors import HttpError
+
+        from .errors import TransientError
+
+        last: Exception | None = None
+        for attempt in range(tries):
+            try:
+                req = make_req()
+                response = None
+                while response is None:
+                    _, response = req.next_chunk(num_retries=5)
+                return response["id"]
+            except HttpError as e:
+                if getattr(e.resp, "status", 0) not in (429, 500, 502, 503, 504):
+                    raise
+                last = e
+            except (OSError, httplib2.HttpLib2Error) as e:   # TimeoutError, ConnectionError, SSLError ⊂ OSError
+                last = e
+            if attempt < tries - 1:
+                sleep(10 * (attempt + 1))
+        raise TransientError(f"Drive'га жүктөө ({what}) {tries} аракеттен кийин ишке ашкан жок: "
+                             f"{type(last).__name__}. Кайра иштетсеңиз улантылат.")
+
     def upload_file(self, local: Path, parent_id: str) -> str:
         """Файлды жүктөйт. Эч качан бар файлдын үстүнөн жазбайт."""
         from googleapiclient.http import MediaFileUpload
 
         mime = mimetypes.guess_type(local.name)[0] or "application/octet-stream"
-        media = MediaFileUpload(str(local), mimetype=mime, resumable=True, chunksize=CHUNK)
         meta = {"name": local.name, "parents": [parent_id]}
-        req = self.svc.files().create(body=meta, media_body=media, fields="id")
-        response = None
-        while response is None:
-            _, response = req.next_chunk(num_retries=5)
-        return response["id"]
+
+        def make():
+            media = MediaFileUpload(str(local), mimetype=mime, resumable=True, chunksize=CHUNK)
+            return self.svc.files().create(body=meta, media_body=media, fields="id")
+
+        return self._resumable(make, local.name)
 
     def upload_tree(self, local_dir: Path, parent_id: str,
                     log: Callable[[str], None] = print) -> str:
@@ -218,12 +248,12 @@ class DriveClient:
         from googleapiclient.http import MediaFileUpload
 
         mime = mimetypes.guess_type(local.name)[0] or "application/octet-stream"
-        media = MediaFileUpload(str(local), mimetype=mime, resumable=True, chunksize=CHUNK)
-        req = self.svc.files().update(fileId=file_id, media_body=media, fields="id")
-        response = None
-        while response is None:
-            _, response = req.next_chunk(num_retries=5)
-        return response["id"]
+
+        def make():
+            media = MediaFileUpload(str(local), mimetype=mime, resumable=True, chunksize=CHUNK)
+            return self.svc.files().update(fileId=file_id, media_body=media, fields="id")
+
+        return self._resumable(make, local.name)
 
     def put_file(self, local: Path, parent_id: str, name: str | None = None) -> str:
         """Ушул аталыштагы файл бар болсо — жаңыртат, жок болсо — түзөт.
@@ -239,13 +269,13 @@ class DriveClient:
         from googleapiclient.http import MediaFileUpload
 
         mime = mimetypes.guess_type(name)[0] or "application/octet-stream"
-        media = MediaFileUpload(str(local), mimetype=mime, resumable=True, chunksize=CHUNK)
-        req = self.svc.files().create(body={"name": name, "parents": [parent_id]},
-                                      media_body=media, fields="id")
-        response = None
-        while response is None:
-            _, response = req.next_chunk(num_retries=5)
-        return response["id"]
+
+        def make():
+            media = MediaFileUpload(str(local), mimetype=mime, resumable=True, chunksize=CHUNK)
+            return self.svc.files().create(body={"name": name, "parents": [parent_id]},
+                                           media_body=media, fields="id")
+
+        return self._resumable(make, name)
 
     def sync_up(self, local_dir: Path, folder_id: str,
                 skip: Callable[[str], bool] = lambda rel: False,
