@@ -29,9 +29,22 @@ def _code(exc: Exception) -> int | None:
         return None
 
 
+def quota_info(exc: Exception) -> dict:
+    """429 жообунан: күнүмдүк квотабы (PerDay), канча күтүү сунушталды (retryDelay).
+
+    Эскертүү: акысыз деңгээлде «check your plan and billing» ар бир 429'да болот —
+    ал күнүмдүк квотаны билдирбейт. Ошондуктан quotaId'ни окуйбуз.
+    """
+    t = str(exc)
+    qid = re.findall(r"quotaId['\"]?\s*:\s*['\"]([A-Za-z0-9_\-]+)", t)
+    delay = re.search(r"retryDelay['\"]?\s*:\s*['\"](\d+(?:\.\d+)?)s", t)
+    per_day = any("PerDay" in q for q in qid) or ("PerDay" in t and not qid)
+    return {"per_day": per_day, "delay": float(delay.group(1)) if delay else None,
+            "quota": ",".join(qid) or "?"}
+
+
 def _is_daily_quota(exc: Exception) -> bool:
-    t = str(exc).lower()
-    return "perday" in t or "per day" in t or "check your plan and billing" in t
+    return quota_info(exc)["per_day"]
 
 
 def _is_timeout(exc: Exception) -> bool:
@@ -69,8 +82,9 @@ class Gemini:
         errors: list[str] = []
         all_transient = True
         candidates = [m for m in models if self.skip_until.get(m, 0) < time.time()] or models
+        rate_attempts = 6   # мүнөттүк лимитте ошол эле моделди күтүп кайра суроо
         for model in candidates:
-            for attempt in range(1, attempts + 1):
+            for attempt in range(1, max(attempts, rate_attempts) + 1):
                 try:
                     result = fn(model)
                     self.usage.append({"purpose": purpose, "model": model})
@@ -80,9 +94,18 @@ class Gemini:
                 except Exception as e:
                     code = _code(e)
                     errors.append(f"{model}: {_short(e)}")
-                    if code == 429 and _is_daily_quota(e):
-                        self.log(f"   ⚠ {model}: квота/лимит бүттү → кийинки модель")
-                        self.skip_until[model] = time.time() + 6 * 3600
+                    if code == 429:
+                        q = quota_info(e)
+                        if q["per_day"]:
+                            self.log(f"   ⚠ {model}: КҮНҮМДҮК квота бүттү ({q['quota']}) → кийинки модель")
+                            self.skip_until[model] = time.time() + 6 * 3600
+                            break
+                        if attempt < rate_attempts:
+                            wait = min(90.0, (q["delay"] or 20.0 * attempt) + 2)
+                            self.log(f"   ⏳ {model}: мүнөттүк лимит ({q['quota']}) — {wait:.0f} сек күтүү")
+                            self.sleep(wait)
+                            continue
+                        self.log(f"   ⚠ {model}: лимит бошободу → кийинки модель")
                         break
                     if _is_timeout(e):
                         self.log(f"   ⚠ {model}: жооп бербей калды (timeout) → кийинки модель")
