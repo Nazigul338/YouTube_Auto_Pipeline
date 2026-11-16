@@ -26,6 +26,11 @@ on:
         type: choice
         options: [none, s1_script, s2_scenes, s3_voice, s4_subtitles, s5_visuals,
                   s6_animation, s7_music, s8_render, s9_qa]
+      test_run:
+        description: "Сынак режими: YouTube_Auto_TEST/ папкасына жазат (чыныгы номерлөөгө тийбейт)"
+        required: false
+        default: false
+        type: boolean
       stop_after:
         description: "Ушул этаптан кийин токтотуу (тест үчүн)"
         required: false
@@ -80,6 +85,7 @@ jobs:
           VIDEO_NICHE: ${{ inputs.niche }}
           VIDEO_RERUN_FROM: ${{ inputs.rerun_from }}
           VIDEO_STOP_AFTER: ${{ inputs.stop_after }}
+          YTA_DRIVE_FOLDER: ${{ inputs.test_run && 'YouTube_Auto_TEST' || 'YouTube_Auto' }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}

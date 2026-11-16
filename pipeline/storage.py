@@ -132,9 +132,10 @@ class LocalStore(Store):
 class DriveStore(Store):
     """Google Drive аркылуу (GitHub Actions'та)."""
 
-    def __init__(self, drive, root_name: str = ROOT_NAME):
+    def __init__(self, drive, root_name: str = ROOT_NAME, music_root: str = ROOT_NAME):
         self.drive = drive
         self.root_name = root_name
+        self.music_root = music_root   # сынак режиминде да музыка негизги папкадан окулат
         self.ids: dict[str, str] = {}
 
     def describe(self) -> str:
@@ -148,7 +149,7 @@ class DriveStore(Store):
     def ensure_layout(self) -> None:
         for f in FOLDERS:
             if f == "Music":  # колдонуучунун папкасы — түзбөйбүз, табабыз гана
-                mid = self.drive.find_path(self.root_name, "Music")
+                mid = self.drive.find_path(self.music_root, "Music")
                 if mid:
                     self.ids["Music"] = mid
                 continue
@@ -175,7 +176,7 @@ class DriveStore(Store):
     def pull_music(self, dest: Path) -> int:
         from .music import AUDIO_EXT
 
-        mid = self.ids.get("Music") or self.drive.find_path(self.root_name, "Music")
+        mid = self.ids.get("Music") or self.drive.find_path(self.music_root, "Music")
         if not mid:
             return 0
         n = 0
@@ -201,6 +202,6 @@ class DriveStore(Store):
 
     # Музыканын маанай белгилерин сактоо (Music/ ичиндеги системанын бир гана файлы)
     def save_music_tags(self, data: dict) -> None:
-        mid = self.ids.get("Music") or self.drive.find_path(self.root_name, "Music")
+        mid = self.ids.get("Music") or self.drive.find_path(self.music_root, "Music")
         if mid:
             self.drive.write_json("_tags.json", mid, data)
