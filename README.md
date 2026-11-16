@@ -7,7 +7,7 @@
 Анимация → Музыка → Монтаж (FFmpeg, 1080p) → QA → **Final MP4 Google Drive'да**.
 
 > 📌 **Азыркы абал, ачык көйгөйлөр жана кийинки кадамдар: [PROJECT_STATUS.md](PROJECT_STATUS.md)**
-> (толук видео чыныгы API менен азырынча аякталган жок — ошол файлды караңыз).
+> (биринчи толук видео чыныгы API менен 2026-11-16 жасалды — ошол файлды караңыз).
 
 ## Документтер
 - 📱 Колдонуу: [docs/USER_GUIDE.md](docs/USER_GUIDE.md)
@@ -33,7 +33,7 @@
 
 1. github.com/Nazigul338/YouTube_Auto_Pipeline/actions → **🎬 Видео жасоо** → **Run workflow**.
 2. **topic** талаасына теманы жазыңыз → **Run workflow**.
-3. 40–70 мүнөттөн кийин (болжол, дагы өлчөнө элек) видео: Drive → `YouTube_Auto/Final_Videos/Video_NNN.mp4`.
+3. ~70 мүнөттөн кийин (чыныгы өлчөнгөн: 69 мүн, 9:31 видео) видео: Drive → `YouTube_Auto/Final_Videos/Video_NNN.mp4`.
    Сценарий, үн, субтитр, лицензия, QA отчету — `Scripts/`, `Audio/`, `Subtitles/`, `Licenses/`, `Projects/Video_NNN/`.
 
 Токтоп калса: **🔁 Токтоп калган видеону улантуу** күн сайын өзү улантат (квота/убактылуу ката).
