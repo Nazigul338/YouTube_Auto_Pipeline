@@ -40,10 +40,11 @@ def clean(text: str) -> str:
     return text.replace("\n", " ")[:220]
 
 
-def rec(name: str, status: str, note: str = "") -> None:
-    RESULTS.append((name, status, clean(note)))
+def rec(name: str, status: str, note: str = "", full: bool = False) -> None:
+    note = clean(note) if not full else str(note)
+    RESULTS.append((name, status, note))
     icon = {"ok": "✅", "fail": "❌", "info": "ℹ️"}[status]
-    print(f"{icon} {name}: {clean(note)}", flush=True)
+    print(f"{icon} {name}: {note}", flush=True)
 
 
 def err(e: Exception) -> str:
@@ -101,7 +102,9 @@ def probe_gemini() -> dict:
         out["groups"] = groups
         rec("Gemini моделдери", "ok", f"бардыгы {len(names)}")
         for g, lst in groups.items():
-            rec(f"  {g}", "info", ", ".join(lst[:25]) or "—")
+            rec(f"  {g}", "info", ", ".join(lst) or "—", full=True)
+        for n, acts in models:
+            print(f"   · {n}: {','.join(acts)}", flush=True)
     except Exception as e:
         rec("Gemini моделдери", "fail", err(e))
         return out
@@ -137,10 +140,22 @@ def probe_gemini() -> dict:
         except Exception as e:
             rec("Google Search (факт текшерүү)", "fail", err(e))
 
-    # 4. TTS — Algenib
+    # 4. TTS — Algenib (тизмеде көрүнбөсө да түз аты менен сынайбыз)
     sample = "Иногда самый трудный шаг — это первый. Но именно он меняет всё."
     tts_ok = None
-    for model in groups["tts"][:4]:
+    guesses = ["gemini-3.8-flash-tts", "gemini-3.8-flash-preview-tts", "gemini-3.5-flash-tts",
+               "gemini-3.5-flash-preview-tts", "gemini-3.7-flash-tts", "gemini-3.6-flash-tts",
+               "gemini-2.5-flash-preview-tts", "gemini-2.5-pro-preview-tts"]
+    cands = list(dict.fromkeys(groups["tts"] + guesses +
+                               [n for n in names if "audio" in n or "omni" in n or "speech" in n]))
+
+    def save_pcm(data: bytes, mime: str, path: Path) -> float:
+        rate = int(re.search(r"rate=(\d+)", mime).group(1)) if mime and "rate=" in mime else 24000
+        with wave.open(str(path), "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(data)
+        return len(data) / 2 / rate
+
+    for model in cands:
         try:
             t = time.time()
             r = client.models.generate_content(
@@ -150,29 +165,43 @@ def probe_gemini() -> dict:
                     speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Algenib")))))
             part = r.candidates[0].content.parts[0].inline_data
-            data, mime = part.data, part.mime_type
-            rate = int(re.search(r"rate=(\d+)", mime or "").group(1)) if "rate=" in (mime or "") else 24000
             wav_path = TMP / "tts.wav"
-            with wave.open(str(wav_path), "wb") as w:
-                w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(data)
-            dur = len(data) / 2 / rate
-            tts_ok = (model, wav_path)
-            rec(f"TTS Algenib: {model}", "ok", f"{dur:.1f} сек аудио ({mime}), {time.time()-t:.1f} сек")
-            break
+            dur = save_pcm(part.data, part.mime_type, wav_path)
+            rec(f"TTS generate_content: {model}", "ok", f"{dur:.1f} сек ({part.mime_type}), {time.time()-t:.1f} сек")
+            tts_ok = tts_ok or (model, wav_path)
         except Exception as e:
-            rec(f"TTS Algenib: {model}", "fail", err(e))
-    if not tts_ok and groups["tts"]:
-        # эски Colab'дагы ыкма (interactions API)
+            rec(f"TTS generate_content: {model}", "fail", err(e))
         try:
             import base64
+            t = time.time()
             r = client.interactions.create(
-                model=groups["tts"][0], input=sample, response_format={"type": "audio"},
+                model=model, input=f"Скажи спокойно и уверенно: {sample}",
+                response_format={"type": "audio"},
                 generation_config={"speech_config": [{"voice": "Algenib"}]})
             data = base64.b64decode(r.output_audio.data)
-            rec("TTS (interactions API)", "ok", f"{len(data)} байт")
+            wav_path = TMP / "tts_i.wav"
+            if data[:4] == b"RIFF":
+                wav_path.write_bytes(data)
+                with wave.open(str(wav_path)) as w:
+                    dur = w.getnframes() / w.getframerate()
+            else:
+                dur = save_pcm(data, getattr(r.output_audio, "mime_type", "") or "", wav_path)
+            rec(f"TTS interactions: {model}", "ok", f"{dur:.1f} сек, баш: {data[:4]!r}, {time.time()-t:.1f} сек")
+            tts_ok = tts_ok or (model, wav_path)
         except Exception as e:
-            rec("TTS (interactions API)", "fail", err(e))
+            rec(f"TTS interactions: {model}", "fail", err(e))
     out["tts_ok"] = tts_ok
+
+    # 4б. Тынымсыз модель (503) — кайра аракет
+    for attempt in range(3):
+        try:
+            r = client.models.generate_content(model="gemini-3.8-flash", contents="Ответь: ок")
+            rec("gemini-3.8-flash (кайра аракет)", "ok", f"{attempt+1}-аракетте: {(r.text or '')[:10]!r}")
+            break
+        except Exception as e:
+            if attempt == 2:
+                rec("gemini-3.8-flash (кайра аракет)", "fail", err(e))
+            time.sleep(10 * (attempt + 1))
 
     # 5. Embedding (окшоштук үчүн)
     for model in groups["embedding"][:2]:
@@ -206,7 +235,7 @@ def probe_gemini() -> dict:
             rec("Аудиону түшүнүү (Files API)", "fail", err(e))
 
     # 7. AI-сүрөт (акыркы видеодо колдонулушу мүмкүн)
-    for model in groups["image"][:3]:
+    for model in groups["image"][:1]:
         try:
             if "imagen" in model:
                 r = client.models.generate_images(
