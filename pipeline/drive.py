@@ -80,6 +80,7 @@ class DriveClient:
             client_secret=client_secret,
             scopes=SCOPES,
         )
+        self.creds = creds
         self.svc = build("drive", "v3", credentials=creds, cache_discovery=False)
 
     @classmethod

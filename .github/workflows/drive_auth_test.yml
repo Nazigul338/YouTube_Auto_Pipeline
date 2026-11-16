@@ -1,0 +1,39 @@
+name: 🔐 Drive авторизациясын текшерүү
+
+# OAuth режимин (Testing/Production — токенден), токен жаңыртууну жана чыныгы Drive
+# жүктөөнү текшерет. OAuth жөндөөлөрүнө, Secrets'ке жана бар файлдарга ТИЙБЕЙТ.
+# Өзүнүн убактылуу сыноо папкасын гана түзүп, кайра өчүрөт.
+on:
+  workflow_dispatch:
+    inputs:
+      test_root:
+        description: "Сыноо Drive папкасы (чыныгы видеолорго тийбейт)"
+        required: false
+        default: YouTube_Auto_TEST
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  auth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -q -r requirements.txt
+      - name: Тесттер
+        env:
+          YTA_SKIP_SLOW: "1"
+        run: python -m unittest tests.test_auth_check
+      - name: OAuth жана Drive текшерүү
+        env:
+          YTA_DRIVE_FOLDER: ${{ inputs.test_root }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.auth_check
