@@ -75,6 +75,8 @@ jobs:
         run: pip install -q -r requirements.txt
 
       - name: Тесттер
+        env:
+          YTA_SKIP_SLOW: "1"   # узак интеграциялык тест ар иштетүүдө керек эмес
         run: python -m unittest discover tests
 
       - name: Видео жасоо

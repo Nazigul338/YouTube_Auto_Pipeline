@@ -16,19 +16,30 @@ from tests.fakes import FakeGemini
 KEYS = {"GOOGLE_API_KEY": "t", "PIXABAY_API_KEY": "t"}
 
 
-def fake_whisper_for(project: Path, drop_every: int = 0):
-    """Сценарийдин сөздөрүн аудионун узактыгына бирдей жайгаштырат."""
-    def run(voice):
-        script = (project / "script" / "script.txt").read_text(encoding="utf-8")
-        toks = [t for t, _ in tokens_with_text(script)]
+def fake_whisper_for(project: Path, drop_every: int = 0, read_instruction: bool = False):
+    """«Угулган» сөздөр = берилген тексттин сөздөрү, аудионун узактыгына бирдей жайгашат.
+
+    drop_every — субтитр этабында ар N-сөздү «укпай» калат (дал келүү төмөндөйт).
+    read_instruction — TTS нускаманы окуп койгондой кылат (башына ашыкча сөздөр).
+    """
+    def run(voice, hint=""):
+        toks = [t for t, _ in tokens_with_text(hint)]
+        if read_instruction and "chunk_" in str(voice) and run.bad > 0:
+            run.bad -= 1
+            toks = ["скажи", "спокойно", "и", "уверенно"] + toks
+        if drop_every and "chunk_" in str(voice):
+            drop = 0
+        else:
+            drop = drop_every
         dur = media.duration(voice)
         step = dur / len(toks)
         out = []
         for i, t in enumerate(toks):
-            if drop_every and i % drop_every:
+            if drop and i % drop:
                 continue
             out.append((t, i * step, (i + 0.9) * step))
         return out
+    run.bad = 1
     return run
 
 
@@ -78,7 +89,7 @@ class TestVoiceAndSubs(unittest.TestCase):
             lc.side_effect = lambda n, drive_root=None: _cfg(drive_root)
             code = ci.run_ci("Тема", "motivation", self.root / "w", store=self.store,
                              stop_after="s4_subtitles",
-                             services={"gemini": g, "whisper": fake_whisper_for(self.proj)})
+                             services={"gemini": g, "asr": fake_whisper_for(self.proj)})
         self.assertEqual(code, 0)
         voice = self.proj / "audio" / "voice.wav"
         self.assertTrue(voice.exists())
@@ -98,7 +109,7 @@ class TestVoiceAndSubs(unittest.TestCase):
         n_tts = g.calls.count("tts")
         code = ci.run_ci("", "motivation", self.root / "w", store=self.store, video_id="Video_001",
                          rerun_from="s3_voice", stop_after="s3_voice",
-                         services={"gemini": g, "whisper": fake_whisper_for(self.proj)})
+                         services={"gemini": g, "asr": fake_whisper_for(self.proj)})
         self.assertEqual(g.calls.count("tts"), n_tts)
 
     def test_low_coverage_fails(self):
@@ -107,7 +118,7 @@ class TestVoiceAndSubs(unittest.TestCase):
             lc.side_effect = lambda n, drive_root=None: _cfg(drive_root)
             code = ci.run_ci("Тема", "motivation", self.root / "w", store=self.store,
                              stop_after="s4_subtitles",
-                             services={"gemini": g, "whisper": fake_whisper_for(self.proj, 2)})
+                             services={"gemini": g, "asr": fake_whisper_for(self.proj, 2)})
         self.assertEqual(code, 1)
         st = json.loads((self.proj / "state.json").read_text(encoding="utf-8"))
         self.assertIn("дал келет", st["stages"]["s4_subtitles"]["error"])
@@ -120,3 +131,33 @@ def _cfg(root):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestInstructionRead(unittest.TestCase):
+    def test_check_heard(self):
+        from pipeline.stages.s3_voice import check_heard
+        exp = "иногда самый трудный шаг это первый".split()
+        self.assertEqual(check_heard(exp, exp), (0, 1.0))
+        extra, cov = check_heard(exp, ["скажи", "спокойно", "и", "уверенно"] + exp)
+        self.assertEqual(extra, 4)
+        self.assertEqual(cov, 1.0)
+        self.assertLess(check_heard(exp, exp[:3])[1], 0.9)
+
+
+class TestInstructionRetry(unittest.TestCase):
+    def test_chunk_regenerated_when_instruction_is_read(self):
+        tmp = tempfile.TemporaryDirectory()
+        root = Path(tmp.name)
+        store = LocalStore(root / "drive")
+        proj = root / "w" / "Projects" / "Video_001"
+        g = FakeGemini(words=300)
+        with mock.patch("builtins.print"), mock.patch.dict(os.environ, KEYS), \
+                mock.patch.object(ci, "load_config") as lc:
+            lc.side_effect = lambda n, drive_root=None: _cfg(drive_root)
+            code = ci.run_ci("Тема", "motivation", root / "w", store=store, stop_after="s3_voice",
+                             services={"gemini": g,
+                                       "asr": fake_whisper_for(proj, read_instruction=True)})
+        self.assertEqual(code, 0)
+        rep = json.loads((proj / "audio" / "voice_report.json").read_text(encoding="utf-8"))
+        self.assertEqual(rep["chunks"][0]["attempts"], 2)   # 1-аракет четке кагылды
+        tmp.cleanup()

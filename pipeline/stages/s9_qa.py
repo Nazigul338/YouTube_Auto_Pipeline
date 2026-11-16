@@ -146,7 +146,9 @@ class QAStage(Stage):
         srt = ctx.path("subtitles", "subtitles.srt").read_text(encoding="utf-8")
         last_t = re.findall(r"--> (\d\d):(\d\d):(\d\d),(\d+)", srt)[-1]
         last = int(last_t[0]) * 3600 + int(last_t[1]) * 60 + int(last_t[2])
-        rep.add("subs", "Субтитр үн менен шайкеш", abs(last - timing["duration"]) < 4 and srt.count("-->") > 50,
+        min_cues = max(5, len(timing["words"]) // 15)
+        rep.add("subs", "Субтитр үн менен шайкеш",
+                abs(last - timing["duration"]) < 4 and srt.count("-->") >= min_cues,
                 f"{srt.count('-->')} субтитр, акыркысы {last} сек / үн {timing['duration']:.0f} сек")
 
         # 9. Лицензиялар

@@ -131,11 +131,26 @@ class Gemini:
         return self._call(self.text_models, fn, purpose)
 
     # ------------------------------------------------------------ үн
-    def tts(self, text: str, *, voice: str, style: str) -> tuple[bytes, int]:
-        """PCM s16le моно байттары жана жыштыгы."""
+    TTS_PROMPTS = (
+        # 0: англисче режиссёрдук нускама + текст (нускаманы окубоо эскертилет)
+        "Read the following Russian text aloud as a narrator. Voice direction (do NOT read "
+        "it aloud): {style}\n\n{text}",
+        # 1: документтеги стандарт форма
+        "{style_short}: {text}",
+        # 2: таза текст — нускама эч качан окулбайт (стиль үн тандоосунан гана)
+        "{text}",
+    )
+
+    def tts(self, text: str, *, voice: str, style: str, variant: int = 0) -> tuple[bytes, int]:
+        """PCM s16le моно байттары жана жыштыгы. Gemini WAV да, таза PCM да кайтара алат."""
+        import io
+        import wave
+
         from google.genai import types
 
-        prompt = f"{style.strip()}\n\n{text.strip()}"
+        style_short = "Say in a deep, calm, confident voice"
+        prompt = self.TTS_PROMPTS[variant].format(style=style.strip(), style_short=style_short,
+                                                  text=text.strip())
 
         def fn(model: str) -> tuple[bytes, int]:
             r = self.client.models.generate_content(
@@ -145,12 +160,18 @@ class Gemini:
                     speech_config=types.SpeechConfig(voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice)))))
             part = r.candidates[0].content.parts[0].inline_data
-            mime = part.mime_type or ""
-            m = re.search(r"rate=(\d+)", mime)
-            data = part.data
-            if not data or len(data) < 4800:
+            data, mime = part.data or b"", part.mime_type or ""
+            if data[:4] == b"RIFF":
+                with wave.open(io.BytesIO(data)) as w:
+                    if w.getsampwidth() != 2 or w.getnchannels() != 1:
+                        raise RuntimeError(f"күтүлбөгөн WAV: {w.getsampwidth()}B×{w.getnchannels()}ch")
+                    rate, pcm = w.getframerate(), w.readframes(w.getnframes())
+            else:
+                m = re.search(r"rate=(\d+)", mime)
+                rate, pcm = (int(m.group(1)) if m else 24000), data
+            if len(pcm) < rate:  # < 0.5 сек
                 raise RuntimeError("аудио бош же өтө кыска")
-            return data, int(m.group(1)) if m else 24000
+            return pcm, rate
 
         return self._call(self.tts_models, fn, "tts")
 

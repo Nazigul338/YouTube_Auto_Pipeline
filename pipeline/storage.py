@@ -128,6 +128,11 @@ class LocalStore(Store):
         p = self.root / folder / name
         return p.read_text(encoding="utf-8") if p.exists() else None
 
+    def save_music_tags(self, data: dict) -> None:
+        p = self.root / "Music" / "_tags.json"
+        if p.parent.exists():
+            p.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
+
 
 class DriveStore(Store):
     """Google Drive аркылуу (GitHub Actions'та)."""

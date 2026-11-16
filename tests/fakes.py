@@ -72,7 +72,7 @@ class FakeGemini:
             out.append([b / 255 for b in h])
         return out
 
-    def tts(self, text: str, *, voice: str, style: str):
+    def tts(self, text: str, *, voice: str, style: str, variant: int = 0):
         """Сөз санына жараша узактыктагы синус (24 кГц PCM)."""
         self.calls.append("tts")
         rate = 24000
@@ -84,3 +84,44 @@ class FakeGemini:
 
     def ask_about_file(self, path, prompt, *, purpose="file"):
         return json.dumps({"mood": "emotional_piano", "energy": "low", "vocals": False})
+
+
+    def rate_frames(self, items):
+        self.calls.append("frame_check")
+        return [4] * len(items)
+
+
+class FakeStock:
+    """Сток API'нин ордуна: FFmpeg жасаган тест-клиптер (тармаксыз)."""
+
+    def __init__(self, per_query: int = 25):
+        self.per_query = per_query
+        self.downloads = 0
+
+    def _asset(self, kind, q, k):
+        from pipeline.stock import Asset, PIXABAY_LICENSE
+        h = abs(hash((q, k))) % 10**8
+        return Asset("pixabay", kind, f"pixabay{'-img' if kind == 'image' else ''}:{h}",
+                     f"fake://{kind}/{h}", 1920, 1080, 8.0 if kind == "video" else 0.0,
+                     f"https://pixabay.com/x/{h}", "tester", *PIXABAY_LICENSE, query=q)
+
+    def videos(self, q, min_duration=3.0):
+        return [self._asset("video", q, k) for k in range(self.per_query)]
+
+    def images(self, q):
+        return [self._asset("image", q, k) for k in range(5)]
+
+    def download(self, asset, dest):
+        import subprocess
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if dest.exists():
+            return dest
+        self.downloads += 1
+        if asset.kind == "video":
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
+                            f"testsrc2=size=640x360:rate=30:duration=8", "-c:v", "libx264",
+                            "-preset", "ultrafast", "-pix_fmt", "yuv420p", str(dest)], check=True)
+        else:
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
+                            "testsrc2=size=1280x720", "-frames:v", "1", str(dest)], check=True)
+        return dest

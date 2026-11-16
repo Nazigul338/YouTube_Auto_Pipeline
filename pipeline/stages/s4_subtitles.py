@@ -206,21 +206,6 @@ class SubtitlesStage(Stage):
         return idx
 
     def transcribe(self, ctx: Context, voice, script: str) -> list[tuple[str, float, float]]:
-        if "whisper" in ctx.services:          # тесттер үчүн
-            return ctx.services["whisper"](voice)
-        from faster_whisper import WhisperModel
+        from .. import asr
 
-        audio = media.decode_float32(voice)       # PyAV'сыз (шайкештик көйгөйүнөн качуу)
-        model = WhisperModel(ctx.cfg.whisper_model, device="cpu", compute_type="int8")
-        segments, _ = model.transcribe(audio, language="ru", word_timestamps=True, beam_size=5,
-                                       vad_filter=False,
-                                       initial_prompt=" ".join(script.split()[:60]))
-        out = []
-        for seg in segments:
-            for w in seg.words or []:
-                n = "".join(WORD_RE.findall(w.word.lower().replace("ё", "е")))
-                if n:
-                    out.append((n, float(w.start), float(w.end)))
-        if not out:
-            raise StageError("Whisper бир дагы сөз тапкан жок — аудио бош болушу мүмкүн")
-        return out
+        return asr.get(ctx)(voice, script)

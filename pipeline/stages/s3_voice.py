@@ -2,8 +2,10 @@
 
   - Текст сахналардын чегинде ≤1200 белгилүү бөлүктөргө бөлүнөт (сүйлөм ортосунан эмес).
   - Ар бөлүккө БИРДЕЙ стиль-нускама берилет → үн бөлүктөр арасында бирдей угулат.
-  - Ар бөлүк текшерилет: ылдамдыгы (сөз/мүнөт) жана ичиндеги узун тынчтык.
-    Шектүү болсо — ошол бөлүк кайра жаратылат.
+  - Ар бөлүк текшерилет: ылдамдыгы (сөз/мүнөт), ичиндеги узун тынчтык жана
+    Whisper менен «угулат»: башы сценарийдин башына дал келеби (нускама окулган
+    эмеспи — сыноодо Gemini «Скажи спокойно…» деп окуп койгон), текст толук окулдубу.
+    Шектүү болсо — ошол бөлүк башка промпт ыкмасы менен кайра жаратылат.
   - Даяр бөлүктөр кэште калат → иш үзүлсө, кайра жаратылбайт (квота үнөмдөлөт).
   - Бөлүктөр табигый паузалар менен бириктирилет, loudnorm (−16 LUFS) менен
     деңгээли бирдей кылынат. Жасалма жайлатуу (atempo) КОЛДОНУЛБАЙТ.
@@ -15,7 +17,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .. import media
+import difflib
+
+from .. import asr, media
 from ..textutil import word_count
 from .base import Context, Stage, StageError, gemini_of
 
@@ -101,17 +105,39 @@ class VoiceStage(Stage):
 
     def make_chunk(self, ctx, g, text: str, style: str, wav: Path, i: int, n: int) -> dict:
         problems = []
-        for attempt in range(1, 4):
-            pcm, rate = g.tts(text, voice=ctx.cfg.tts_voice, style=style)
+        listen = asr.get(ctx)
+        expect = [asr.norm_word(w) for w in text.split() if asr.norm_word(w)]
+        for attempt, variant in enumerate((0, 0, 1, 2), 1):
+            pcm, rate = g.tts(text, voice=ctx.cfg.tts_voice, style=style, variant=variant)
             dur = media.write_wav(wav, pcm, rate)
-            wc = word_count(text)
-            wpm = wc / (dur / 60) if dur else 0
+            wpm = len(expect) / (dur / 60) if dur else 0
             long_sil = [s for s in media.silences(wav, -42, MAX_INNER_SILENCE)
                         if 0.3 < s[0] < dur - 0.5]
-            ok = WPM_MIN <= wpm <= WPM_MAX and not long_sil
-            ctx.log(f"   🎙 {i}/{n}: {dur:.1f} сек, {wpm:.0f} сөз/мүн"
-                    + ("" if ok else f" — шектүү ({attempt}-аракет)"))
+            heard = [w for w, _, _ in listen(wav, text)]
+            extra_head, coverage = check_heard(expect, heard)
+            ok = (WPM_MIN <= wpm <= WPM_MAX and not long_sil and extra_head <= 1
+                  and coverage >= 0.9)
+            why = [] if ok else [x for x, bad in (
+                (f"{wpm:.0f} сөз/мүн", not WPM_MIN <= wpm <= WPM_MAX),
+                (f"тынчтык {long_sil[:1]}", bool(long_sil)),
+                (f"башында {extra_head} ашыкча сөз (нускама окулган)", extra_head > 1),
+                (f"текст {coverage:.0%} гана окулду", coverage < 0.9)) if bad]
+            ctx.log(f"   🎙 {i}/{n}: {dur:.1f} сек, {wpm:.0f} сөз/мүн, дал келүү {coverage:.0%}"
+                    + ("" if ok else f" — {', '.join(why)} ({attempt}-аракет)"))
             if ok:
-                return {"text": text, "duration": dur, "wpm": round(wpm, 1), "attempts": attempt}
-            problems.append(f"{wpm:.0f} сөз/мүн, тынчтык {long_sil[:2]}")
-        raise StageError(f"{i}-бөлүктүн үнү 3 аракеттен кийин да шектүү: {problems}")
+                return {"text": text, "duration": dur, "wpm": round(wpm, 1),
+                        "coverage": round(coverage, 3), "attempts": attempt, "prompt_variant": variant}
+            problems.append("; ".join(why))
+        raise StageError(f"{i}-бөлүктүн үнү 4 аракеттен кийин да туура эмес: {problems}")
+
+
+def check_heard(expect: list[str], heard: list[str]) -> tuple[int, float]:
+    """(башындагы ашыкча сөздөрдүн саны, сценарийдин канчасы угулду)."""
+    if not heard:
+        return 0, 0.0
+    sm = difflib.SequenceMatcher(None, expect, heard, autojunk=False)
+    blocks = [b for b in sm.get_matching_blocks() if b.size]
+    matched = sum(b.size for b in blocks)
+    first = next((b for b in blocks if b.size >= 2), blocks[0] if blocks else None)
+    extra_head = (first.b - first.a) if first else len(heard)
+    return max(0, extra_head), matched / max(1, len(expect))
