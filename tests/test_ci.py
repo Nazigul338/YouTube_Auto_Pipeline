@@ -150,3 +150,16 @@ class TestDriveErrors(unittest.TestCase):
             cfg = load_config("motivation", drive_root=tempfile.mkdtemp())
             self.assertEqual(ci.pull_music(d, cfg), 0)
         self.assertNotIn(("YouTube_Auto", "Music"), d.paths)
+
+
+class TestDriveSecretStrip(unittest.TestCase):
+    def test_gdrive_secrets_are_stripped(self):
+        from pipeline import drive
+        env = {"GDRIVE_CLIENT_ID": " id \n", "GDRIVE_CLIENT_SECRET": "sec\n",
+               "GDRIVE_REFRESH_TOKEN": "tok  "}
+        with mock.patch.dict(os.environ, env):
+            self.assertTrue(drive.drive_secrets_present())
+            self.assertEqual([drive._secret(n) for n in drive.SECRET_NAMES],
+                             ["id", "sec", "tok"])
+        with mock.patch.dict(os.environ, {**env, "GDRIVE_REFRESH_TOKEN": "  \n"}):
+            self.assertFalse(drive.drive_secrets_present())

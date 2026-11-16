@@ -28,8 +28,13 @@ class DriveError(Exception):
     pass
 
 
+def _secret(name: str) -> str:
+    """Ачкычтын четиндеги бош орун/жаңы сап Google'ду алдап коёт — кесебиз."""
+    return os.environ.get(name, "").strip()
+
+
 def drive_secrets_present() -> bool:
-    return all(os.environ.get(n) for n in SECRET_NAMES)
+    return all(_secret(n) for n in SECRET_NAMES)
 
 
 def _escape(value: str) -> str:
@@ -56,7 +61,7 @@ class DriveClient:
         """Ачкычтар бар болсо — клиент, жок болсо — None."""
         if not drive_secrets_present():
             return None
-        return cls(*(os.environ[n] for n in SECRET_NAMES))
+        return cls(*(_secret(n) for n in SECRET_NAMES))
 
     # ---------- окуу ----------
     def whoami(self) -> str:
