@@ -50,20 +50,80 @@ def motion_filter(motion: str, dur: float, intensity: float) -> str:
     return f"{base},crop={W}:{H}"
 
 
+SHOT_TOL = 0.12      # кадрдын чыныгы узактыгы күтүлгөндөн ушунчадан көп кыска болбосун
+SCENE_TOL = 0.35
+BATCH_TOL = 0.8
+FINAL_TOL = 1.0
+
+
+def video_len(path: Path) -> float | None:
+    return media.stream_durations(path)["video"]
+
+
 def render_shot(clip: Path, out: Path, kind: str, offset: float, dur: float,
                 motion: str, intensity: float) -> Path:
+    """Бир кадрды рендерлейт жана ЧЫНЫГЫ узактыгын текшерет.
+
+    Мурунку ката: клиптин чыныгы узактыгынан ашкан `-ss` бош/кыска файл берген, ал унчукпай
+    өтүп, монтаждын калган бөлүгүн бузган. Эми кадр кыска болсо: клиптин башынан (кайталап)
+    кайра рендерленет; ошондо да кыска болсо — так ката менен токтойт.
+    """
     if out.exists() and out.stat().st_size > 1000:
-        return out
-    if kind == "image":
-        src = ["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.3f}", "-i", str(clip)]
-    else:
-        src = ["-ss", f"{offset:.3f}", "-t", f"{dur + 0.2:.3f}", "-i", str(clip)]
+        got = video_len(out)
+        if got is not None and got >= dur - SHOT_TOL:
+            return out
+        out.unlink()
     vf = motion_filter(motion, dur, intensity) + ",format=yuv420p"
     tmp = out.with_suffix(".tmp.mp4")
-    media.run(["ffmpeg", "-y", "-v", "error", "-threads", "2", *src, "-vf", vf,
-               "-t", f"{dur:.3f}", *ENC, str(tmp)], f"кадр {out.stem}", timeout=900)
-    tmp.rename(out)
-    return out
+    if kind == "image":
+        attempts = [["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.3f}", "-i", str(clip)]]
+    else:
+        attempts = [
+            ["-ss", f"{offset:.3f}", "-t", f"{dur + 0.2:.3f}", "-i", str(clip)],
+            # запас: клиптин башынан, кыска болсо цикл менен кайталоо
+            ["-stream_loop", "-1", "-t", f"{dur + 0.2:.3f}", "-i", str(clip)],
+        ]
+    got = None
+    for src in attempts:
+        tmp.unlink(missing_ok=True)
+        try:
+            media.run(["ffmpeg", "-y", "-v", "error", "-threads", "2", *src, "-vf", vf,
+                       "-t", f"{dur:.3f}", *ENC, str(tmp)], f"кадр {out.stem}", timeout=900)
+            got = video_len(tmp)
+        except StageError:
+            got = None
+        if got is not None and got >= dur - SHOT_TOL:
+            tmp.rename(out)
+            return out
+    tmp.unlink(missing_ok=True)
+    raise StageError(f"{out.stem}: кадр кыска чыкты ({got} сек, күтүлгөнү {dur:.2f} сек); "
+                     f"клип: {clip.name}, offset {offset}")
+
+
+def check_contiguous(shots: list[dict], total: float, tol: float = 0.02) -> None:
+    """Кадрлар [0, total] аралыгын боштуксуз жана кайталанбай толук жабышы керек."""
+    prev = 0.0
+    for sh in shots:
+        if abs(sh["start"] - prev) > tol:
+            raise StageError(f"{sh['i']}-кадрда боштук/кайталануу: башталышы {sh['start']}, "
+                             f"мурунку кадрдын аягы {prev}")
+        if sh["dur"] <= 0:
+            raise StageError(f"{sh['i']}-кадрдын узактыгы ≤ 0")
+        prev = sh["end"]
+    if abs(prev - total) > 0.05:
+        raise StageError(f"Кадрлар аудионун бүт узактыгын жаппайт: акыркы кадр {prev:.2f} сек, "
+                         f"аудио {total:.2f} сек")
+
+
+def expect_len(path: Path, want: float, tol: float, label: str, debug: list[dict]) -> float:
+    """Файлдын видео агымынын ЧЫНЫГЫ узактыгы күтүлгөнгө дал келбесе — так ката."""
+    got = video_len(path)
+    debug.append({"label": label, "file": path.name, "want": round(want, 3),
+                  "got": None if got is None else round(got, 3)})
+    if got is None or abs(got - want) > tol:
+        raise StageError(f"{label}: видео агымы {got} сек, күтүлгөнү {want:.2f} сек "
+                         f"(чектен ашты: ±{tol}). Монтаж ушул жерде бузулду.")
+    return got
 
 
 def xfade_chain(inputs: list[Path], durs: list[float], transitions: list[dict], out: Path) -> float:
@@ -107,7 +167,15 @@ class RenderStage(Stage):
         rdir = ctx.path("render")
         sdir = rdir / "shots"
         sdir.mkdir(parents=True, exist_ok=True)
+        check_contiguous(shots, total)
+        debug: list[dict] = []
+        try:
+            return self._render(ctx, shots, mix, plan, total, motions, rdir, sdir, debug)
+        finally:   # ката чыкса да өлчөөлөр логго калсын (Drive → Projects/<ID>/logs/)
+            ctx.path("logs", "render_debug.json").write_text(
+                json.dumps(debug, ensure_ascii=False, indent=1), encoding="utf-8")
 
+    def _render(self, ctx, shots, mix, plan, total, motions, rdir, sdir, debug) -> dict[str, Any]:
         # 1) сахналарга топтоо; ар сахнанын акыркы кадры өтүү узактыгына узартылат
         scenes: list[list[dict]] = []
         for sh in shots:
@@ -141,6 +209,7 @@ class RenderStage(Stage):
             scene_files.append(sf)
             scene_durs.append(sum(sh["dur"] for sh in grp) + trans.get("dur", 0.0))
             scene_trans.append(trans)
+            expect_len(sf, scene_durs[-1], SCENE_TOL, f"сахна {k}", debug)
 
         # 3) өтүүлөр: топтор → бириктирүү
         ctx.log("   3/4 Өтүүлөр (xfade) …")
@@ -150,13 +219,15 @@ class RenderStage(Stage):
             bf = rdir / f"batch_{b // BATCH:02d}.mp4"
             dur = xfade_chain([scene_files[i] for i in idx], [scene_durs[i] for i in idx],
                               [scene_trans[i] for i in idx[:-1]], bf)
+            expect_len(bf, dur, BATCH_TOL, f"топ {b // BATCH}", debug)
             batch_files.append(bf)
             batch_durs.append(dur)
             batch_trans.append(scene_trans[idx[-1]])
         video = rdir / "video_noaudio.mp4"
         vdur = xfade_chain(batch_files, batch_durs, batch_trans[:-1], video)
-        if abs(vdur - (total + batch_trans[-1].get("dur", 0.0))) > 0.6:
-            ctx.log(f"   ⚠ Видеонун эсептелген узактыгы {vdur:.2f} / күтүлгөнү {total:.2f}")
+        expect_len(video, vdur, BATCH_TOL, "бириктирилген видео (аудиосуз)", debug)
+        expect_len(video, total + batch_trans[-1].get("dur", 0.0), FINAL_TOL,
+                   "видео ↔ аудионун узактыгы (аудиосуз монтаж)", debug)
 
         # 4) акыркы өтүү: градация, виньетка, субтитр, карточкалар, үн
         ctx.log("   4/4 Акыркы кодировка (субтитр, түс, үн) …")
@@ -173,12 +244,22 @@ class RenderStage(Stage):
                    "-pix_fmt", "yuv420p", "-r", str(FPS), "-c:a", "aac", "-b:a", "192k",
                    "-ar", "48000", "-movflags", "+faststart", str(final)],
                   "акыркы монтаж", timeout=7200)
-        dur = media.duration(final)
+        # ЭКИ агымдын узактыгы ӨЗҮНЧӨ текшерилет (format.duration эң узунун берет — аны ишенбейбиз)
+        sd = media.stream_durations(final)
+        v_len, a_len = sd["video"], sd["audio"]
         size = final.stat().st_size / 1e6
-        ctx.log(f"   ✓ final.mp4: {dur / 60:.2f} мүн, {size:.0f} МБ")
-        if dur < total - 1.0:
-            raise StageError(f"Видео күтүлгөндөн кыска: {dur:.1f} / {total:.1f} сек")
-        return {"final_path": str(final), "duration": round(dur, 2), "size_mb": round(size, 1)}
+        debug.append({"label": "final.mp4", "video": v_len, "audio": a_len, "want": round(total, 3),
+                      "nb_frames": sd["nb_frames"]})
+        if v_len is None or a_len is None:
+            raise StageError(f"final.mp4'те агым жок: видео {v_len}, аудио {a_len}")
+        ctx.log(f"   ✓ final.mp4: видео {v_len:.2f} сек, аудио {a_len:.2f} сек, "
+                f"күтүлгөнү {total:.2f} сек, {sd['nb_frames']} кадр, {size:.0f} МБ")
+        if abs(v_len - a_len) > 1.0 or abs(v_len - total) > FINAL_TOL:
+            raise StageError(f"Видео менен аудионун узактыгы дал келбейт: видео {v_len:.1f} сек, "
+                             f"аудио {a_len:.1f} сек, күтүлгөнү {total:.1f} сек")
+        dur = min(v_len, a_len)
+        return {"final_path": str(final), "duration": round(dur, 2), "size_mb": round(size, 1),
+                "video_sec": round(v_len, 2), "audio_sec": round(a_len, 2)}
 
 
 def _esc(p: Path) -> str:

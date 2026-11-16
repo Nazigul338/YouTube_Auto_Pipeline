@@ -21,7 +21,9 @@ from ..textutil import WORD_RE
 from .base import Context, Stage, StageError
 
 MIN_COVERAGE = 0.80
-LINE_CHARS = 40
+LINE_CHARS = 34     # 72 px шрифтте бир сап ~1480 px'ке батат (1920 кеңдикте)
+FONT_SIZE = 72      # телефондо окууга ыңгайлуу (мурун 60)
+MARGIN_V = 96       # экрандын түбүнөн (мурун 72) — интерфейс/жээктен алыс
 MAX_CUE_SEC = 3.6
 
 
@@ -94,6 +96,24 @@ def build_cues(raw_words: list[str], times: list[tuple[float, float]]):
     return cues
 
 
+def pick_font(preferred: str | None = None) -> str:
+    """Системада БАР шрифтти тандайт (жок шрифт — libass белгисиз алмаштырат).
+
+    Тартиби: ниша жөндөөсү → Montserrat → DejaVu Sans. Бардыгы Bold менен колдонулат.
+    """
+    import subprocess
+
+    try:
+        have = subprocess.run(["fc-list", ":", "family"], capture_output=True, text=True,
+                              timeout=20).stdout.lower()
+    except Exception:
+        have = ""
+    for name in [preferred, "Montserrat", "DejaVu Sans"]:
+        if name and name.lower() in have:
+            return name
+    return "DejaVu Sans"
+
+
 def ts_srt(t: float) -> str:
     ms = int(round(t * 1000))
     return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
@@ -113,7 +133,7 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: Sub,{font},{size},&H00FFFFFF,&H00FFFFFF,&H00141414,&H96000000,-1,0,0,0,100,100,0.5,0,1,3.2,1.2,2,160,160,{margin},204
+Style: Sub,{font},{size},&H00FFFFFF,&H00FFFFFF,&H00101010,&H96000000,-1,0,0,0,100,100,0.6,0,1,4.4,2.0,2,200,200,{margin},204
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -159,8 +179,9 @@ class SubtitlesStage(Stage):
 
         cues = build_cues(raw_words, times)
         kw_index = self.keyword_index(scenes, scene_times, raw_words)
-        font = ctx.cfg.niche_data.get("subtitle_font", "Montserrat SemiBold")
-        ass = [ASS_HEADER.format(font=font, size=60, margin=72)]
+        font = pick_font(ctx.cfg.niche_data.get("subtitle_font"))
+        ctx.log(f"   Субтитр шрифти: {font}, {FONT_SIZE} px, түбүнөн {MARGIN_V} px")
+        ass = [ASS_HEADER.format(font=font, size=FONT_SIZE, margin=MARGIN_V)]
         srt = []
         for n_, c in enumerate(cues, 1):
             words = []

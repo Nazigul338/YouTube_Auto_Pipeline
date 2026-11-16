@@ -33,6 +33,30 @@ def duration(path: Path) -> float:
     return float(probe(path)["format"]["duration"])
 
 
+def stream_durations(path: Path) -> dict:
+    """Ар агымдын УЗАКТЫГЫ өзүнчө: {"video", "audio", "format", "nb_frames"}.
+
+    `format.duration` (жана `duration()`) — ЭҢ УЗУН агымдыкы: аудио 571 сек, видео 111 сек болсо
+    да 571 берет. Монтаждын так узактыгын текшерүү үчүн ушуну колдонуңуз.
+    Агым жок болсо — None. Файл бузук болсо — None (ката көтөрбөйт).
+    """
+    out: dict = {"video": None, "audio": None, "format": None, "nb_frames": None}
+    try:
+        info = probe(path)
+    except StageError:
+        return out
+    fmt = info.get("format", {}).get("duration")
+    out["format"] = float(fmt) if fmt not in (None, "N/A") else None
+    for s in info.get("streams", []):
+        kind = s.get("codec_type")
+        if kind in ("video", "audio") and out[kind] is None:
+            d = s.get("duration")
+            out[kind] = float(d) if d not in (None, "N/A") else out["format"]
+            if kind == "video" and s.get("nb_frames") not in (None, "N/A"):
+                out["nb_frames"] = int(s["nb_frames"])
+    return out
+
+
 def write_wav(path: Path, pcm: bytes, rate: int) -> float:
     path.parent.mkdir(parents=True, exist_ok=True)
     with wave.open(str(path), "wb") as w:

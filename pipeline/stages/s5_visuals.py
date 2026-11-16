@@ -51,6 +51,19 @@ def plan_shots(scene_times: list[dict], words: list[dict], total: float,
     return shots
 
 
+MIN_CLIP_ROOM = 0.6     # клип кадрдан ушунча секунд узун болушу керек (offset үчүн орун)
+
+
+def pick_offset(real_duration: float, shot_dur: float, u: float) -> float:
+    """Клиптин ичинен кесүү башталышы. Ар дайым offset + shot_dur ≤ чыныгы узактык − 0.3.
+
+    real_duration — файлдын ЧЫНЫГЫ видео агымынын узактыгы (API метаданныйы эмес).
+    u — [0,1) кокус сан (кайталануучу).
+    """
+    room = max(0.0, real_duration - shot_dur - 0.3)
+    return round(min(room, 0.5 + u * max(0.0, room - 0.5)), 2)
+
+
 def used_history(registry: dict, video_id: str) -> set[str]:
     used: set[str] = set()
     for vid, v in registry.get("videos", {}).items():
@@ -124,16 +137,21 @@ class VisualsStage(Stage):
         # жүктөө (параллель) + текшерүү; бузук файл болсо — кийинки талапкер
         cdir = ctx.path("clips")
 
-        def fetch(i: int) -> tuple[int, Asset, Path]:
+        def fetch(i: int) -> tuple[int, Asset, Path, float | None]:
             a = chosen[i]
             for _ in range(4):
                 ext = ".mp4" if a.kind == "video" else ".jpg"
                 path = cdir / f"{a.id.replace(':', '_')}{ext}"
                 try:
                     stock.download(a, path)
-                    if a.kind == "video" and media.duration(path) < shots[i]["dur"] + 0.2:
-                        raise StageError("клип кыска")
-                    return i, a, path
+                    real = None
+                    if a.kind == "video":
+                        # ЧЫНЫГЫ видео агымынын узактыгы (API'ники эмес, файлдыкы):
+                        # Pixabay метаданныйы файлга дал келбей калышы мүмкүн.
+                        real = media.stream_durations(path)["video"]
+                        if real is None or real < shots[i]["dur"] + MIN_CLIP_ROOM:
+                            raise StageError(f"клип кыска: чыныгы {real} сек")
+                    return i, a, path, real
                 except Exception:
                     path.unlink(missing_ok=True)
                     nxt = [x for x in pool_by_shot.get(i, []) if x.id not in used]
@@ -148,13 +166,13 @@ class VisualsStage(Stage):
             results = list(ex.map(fetch, range(len(shots))))
 
         licenses = []
-        for i, a, path in results:
+        for i, a, path, real in results:
             sh = shots[i]
             sh.update({"kind": a.kind, "asset": a.id, "file": path.name, "source": a.source,
                        "query": a.query, "url": a.url})
             if a.kind == "video":
-                room = max(0.0, a.duration - sh["dur"] - 0.3)
-                sh["offset"] = round(min(room, 0.5 + rng.random() * max(0.0, room - 0.5)), 2)
+                sh["real_duration"] = round(real, 2)
+                sh["offset"] = pick_offset(real, sh["dur"], rng.random())
             licenses.append({"shot": i, "type": a.kind, "source": a.source, "id": a.id,
                              "author": a.author, "page_url": a.page_url, "license": a.license,
                              "license_url": a.license_url, "file": path.name,

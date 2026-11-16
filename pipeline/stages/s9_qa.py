@@ -64,6 +64,34 @@ def frame_jpg(video: Path, t: float) -> bytes:
     return r.stdout
 
 
+SYNC_TOL = 1.0
+
+
+def stream_sync(v_dur: float, a_dur: float, expected: float | None = None,
+                tol: float = SYNC_TOL) -> tuple[bool, str]:
+    """Видео жана аудио агымдарынын узактыгы. Айырма > 1 сек болсо — FAILED."""
+    diff = abs(v_dur - a_dur)
+    ok = diff <= tol and v_dur > 0 and a_dur > 0
+    if expected is not None and abs(v_dur - expected) > max(tol, 1.0):
+        ok = False
+    note = f"видео {v_dur:.2f} сек, аудио {a_dur:.2f} сек, айырма {diff:.2f} сек"
+    if expected is not None:
+        note += f", күтүлгөнү {expected:.2f} сек"
+    if not ok:
+        note += f" — ДАЛ КЕЛБЕЙТ (чек {tol} сек)"
+    return ok, note
+
+
+def frames_ok(nb_frames: int | None, v_dur: float, fps: float = 30.0,
+              tol: float = 0.03) -> tuple[bool, str]:
+    """Кадр саны ≈ узактык × fps (±3%). nb_frames белгисиз болсо — текшерилген эмес (өтөт)."""
+    if nb_frames is None:
+        return True, "nb_frames белгисиз (өткөрүлдү)"
+    want = v_dur * fps
+    ok = want > 0 and abs(nb_frames - want) <= tol * want + 2
+    return ok, f"{nb_frames} кадр, күтүлгөнү ~{want:.0f}" + ("" if ok else " — ДАЛ КЕЛБЕЙТ")
+
+
 class QAStage(Stage):
     name = "s9_qa"
     title = "Сапатты текшерүү жана Final MP4"
@@ -87,12 +115,23 @@ class QAStage(Stage):
             info = media.probe(final)
             v = next(s for s in info["streams"] if s["codec_type"] == "video")
             a = [s for s in info["streams"] if s["codec_type"] == "audio"]
-            dur = float(info["format"]["duration"])
+            sd = media.stream_durations(final)
             rep.add("opens", "Видео ачылат", True, f"{final.stat().st_size / 1e6:.0f} МБ")
         except Exception as e:
             rep.add("opens", "Видео ачылат", False, f"ffprobe: {e}")
             return self.finish(ctx, rep, final, meta, music, clip_lic)
-        rep.add("duration", "Узактыгы 8 мүнөттөн ашат", cfg.min_duration_sec <= dur <= MAX_DURATION,
+        # ЭКИ агымдын узактыгы ӨЗҮНЧӨ. `format.duration` эң узунун берет, ошондуктан аудио 571 сек,
+        # видео 111 сек болсо да «9:31» деп туура көрүнүп, катаны жашырган (Video_001).
+        v_dur, a_dur = sd["video"] or 0.0, sd["audio"] or 0.0
+        ok_sync, note_sync = stream_sync(v_dur, a_dur, total)
+        rep.add("sync", "Видео жана аудио агымдарынын узактыгы дал келет (айырма ≤ 1 сек)",
+                ok_sync, note_sync)
+        ok_frames, note_frames = frames_ok(sd["nb_frames"], v_dur)
+        rep.add("frames", "Кадрлардын саны видеонун узактыгына дал келет (30 fps)",
+                ok_frames, note_frames)
+        dur = min(v_dur, a_dur) if a_dur else v_dur        # «чыныгы» узактык — кыскасы
+        rep.add("duration", "Узактыгы 8 мүнөттөн ашат (кыска агым боюнча)",
+                cfg.min_duration_sec <= dur <= MAX_DURATION,
                 f"{int(dur // 60)}:{int(dur % 60):02d} (керек ≥ {cfg.min_duration_sec // 60}:"
                 f"{cfg.min_duration_sec % 60:02d})")
         fps = eval(v.get("r_frame_rate", "0/1")) if "/" in v.get("r_frame_rate", "") else 0
@@ -130,6 +169,10 @@ class QAStage(Stage):
 
         # 7. Кадрлардын темпи жана уникалдуулугу
         durs = [s["dur"] for s in shots]
+        covered = sum(durs)
+        rep.add("coverage", "Кадрлар аудионун бүт узактыгын жабат",
+                abs(covered - total) <= 0.1 and abs(shots[-1]["end"] - total) <= 0.1,
+                f"кадрлардын суммасы {covered:.2f} сек, аудио {total:.2f} сек")
         avg = sum(durs) / len(durs)
         rep.add("pacing", "Кадрлар орточо ~3 сек сайын алмашат", 2.2 <= avg <= 3.8 and max(durs) <= 4.6,
                 f"орточо {avg:.2f} сек, эң узун {max(durs):.2f} сек, {len(shots)} кадр")
