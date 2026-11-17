@@ -5,3 +5,4 @@ __pycache__/
 *.key
 secrets*.json
 /_local_drive/
+node_modules/

@@ -209,7 +209,41 @@ class QAStage(Stage):
 
         # 11. Кадрлар сценарийге дал келеби (Gemini көрүү менен) — кошумча текшерүү
         self.check_relevance(ctx, rep, final, shots)
+        if self._cinematic(ctx):            # СЫНАК режими гана: FFmpeg Skill'дин YouTube текшерүүсү
+            self.check_platform(ctx, rep, final)
         return self.finish(ctx, rep, final, meta, music, clip_lic)
+
+    @staticmethod
+    def _cinematic(ctx) -> bool:
+        from .. import cinematic
+
+        try:
+            plan = json.loads(ctx.path("animation", "plan.json").read_text(encoding="utf-8"))
+        except Exception:
+            return False
+        return bool(plan.get("cinematic")) and cinematic.enabled(ctx.store)
+
+    def check_platform(self, ctx, rep, final: Path) -> None:
+        """ffmpeg-skill `check.py --platform youtube` (.claude/skills/ffmpeg-skill). FAIL → QA өтпөйт."""
+        script = Path(__file__).resolve().parents[2] / ".claude" / "skills" / "ffmpeg-skill" / "scripts" / "check.py"
+        if not script.exists():
+            rep.add("platform", "YouTube талаптары (ffmpeg-skill check.py)", None, "check.py табылган жок",
+                    required=False)
+            return
+        try:
+            r = subprocess.run(["python3", str(script), str(final), "--platform", "youtube", "--json"],
+                               capture_output=True, text=True, timeout=1800)
+            d = json.loads(r.stdout or "{}")
+        except Exception as e:
+            rep.add("platform", "YouTube талаптары (ffmpeg-skill check.py)", None,
+                    f"иштеген жок: {type(e).__name__}", required=False)
+            return
+        rows = d.get("checks") or d.get("rows") or []
+        bad = [f"{x.get('check')}: {x.get('value')}" for x in rows if x.get("status") == "FAIL"]
+        warn = [x.get("check") for x in rows if x.get("status") == "WARN"]
+        ctx.path("platform_check.json").write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+        rep.add("platform", "YouTube талаптары (ffmpeg-skill check.py)", not bad,
+                f"{len(rows) - len(bad) - len(warn)} PASS, {len(warn)} WARN {warn}, {len(bad)} FAIL {bad}")
 
     def check_repetition(self, ctx, rep, shots) -> None:
         """Кайталанбоо: бул видеодо да, база (Smart Video Memory) боюнча мурунку видеолордо да."""
@@ -275,13 +309,15 @@ class QAStage(Stage):
             raise StageError("QA өткөн жок: " + "; ".join(f"{i['title']} ({i['note']})"
                                                          for i in rep.failed))
         url = None
+        # cinematic СЫНАГЫ эски видеонун ҮСТҮНӨН жазбайт: өзүнчө аталыш (эски/жаңыны салыштыруу үчүн)
+        suffix = "_cinematic" if self._cinematic(ctx) else ""
         if ctx.store:
-            url = ctx.store.publish("Final_Videos", final, f"{ctx.video_id}.mp4")
+            url = ctx.store.publish("Final_Videos", final, f"{ctx.video_id}{suffix}.mp4")
             ctx.store.publish("Licenses", lic, f"{ctx.video_id}_LICENSE.txt")
         entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
-        entry["final"] = f"Final_Videos/{ctx.video_id}.mp4"
+        entry["final" + suffix] = f"Final_Videos/{ctx.video_id}{suffix}.mp4"
         if url:
-            entry["final_url"] = url
+            entry["final_url" + suffix] = url
             ctx.log(f"   ▶️ ВИДЕОНУН ШИЛТЕМЕСИ: {url}")
         try:                                       # клиптер «жарыялангандай» белгиленет
             mem = ClipMemory.load(ctx.store, ctx.registry)

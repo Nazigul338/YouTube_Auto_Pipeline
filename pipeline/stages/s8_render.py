@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -68,7 +69,8 @@ def video_len(path: Path) -> float | None:
 
 
 def render_shot(clip: Path, out: Path, kind: str, offset: float, dur: float,
-                motion: str, intensity: float) -> Path:
+                motion: str, intensity: float, prefilter: str = "",
+                card: tuple[Path, float] | None = None) -> Path:
     """Бир кадрды рендерлейт жана ЧЫНЫГЫ узактыгын текшерет.
 
     Мурунку ката: клиптин чыныгы узактыгынан ашкан `-ss` бош/кыска файл берген, ал унчукпай
@@ -80,7 +82,15 @@ def render_shot(clip: Path, out: Path, kind: str, offset: float, dur: float,
         if got is not None and got >= dur - SHOT_TOL:
             return out
         out.unlink()
-    vf = motion_filter(motion, dur, intensity) + "," + COLOR_VF
+    # prefilter/card — cinematic СЫНАК режиминде гана берилет (кадыресе бош → мурунку жол)
+    vf = (prefilter + "," if prefilter else "") + motion_filter(motion, dur, intensity) + "," + COLOR_VF
+    if card is not None:
+        graph = ["-filter_complex",
+                 f"[0:v]{vf}[b];[1:v]setpts=PTS-STARTPTS+{card[1]:.3f}/TB[c];"
+                 f"[b][c]overlay=eof_action=pass:format=auto,{COLOR_VF}[v]", "-map", "[v]"]
+        extra_in = ["-i", str(card[0])]
+    else:
+        graph, extra_in = ["-vf", vf], []
     tmp = out.with_suffix(".tmp.mp4")
     if kind == "image":
         attempts = [["-loop", "1", "-framerate", str(FPS), "-t", f"{dur:.3f}", "-i", str(clip)]]
@@ -94,7 +104,7 @@ def render_shot(clip: Path, out: Path, kind: str, offset: float, dur: float,
     for src in attempts:
         tmp.unlink(missing_ok=True)
         try:
-            media.run(["ffmpeg", "-y", "-v", "error", "-threads", "2", *src, "-vf", vf,
+            media.run(["ffmpeg", "-y", "-v", "error", "-threads", "2", *src, *extra_in, *graph,
                        "-t", f"{dur:.3f}", *ENC, str(tmp)], f"кадр {out.stem}", timeout=900)
             got = video_len(tmp)
         except StageError:
@@ -302,10 +312,39 @@ class RenderStage(Stage):
                 m = motions[sh["i"]]
                 jobs.append((ctx.path("clips", sh["file"]), sdir / f"shot_{sh['i']:03d}.mp4",
                              sh["kind"], sh.get("offset", 0.0), d, m["motion"], m["intensity"]))
-        ctx.log(f"   1/4 Кадрлар рендерленүүдө: {len(jobs)} …")
         workers = max(1, min(3, (os.cpu_count() or 2) - 1))
-        with ThreadPoolExecutor(workers) as ex:
-            list(ex.map(lambda j: render_shot(*j), jobs))
+        from .. import cinematic
+        cine = bool(plan.get("cinematic")) and cinematic.enabled(ctx.store)   # СЫНАК гана
+        cards_ass = ctx.path("animation", "overlays.ass")
+        if cine:
+            t0 = time.time()
+            card_for_shot, cards_ass, hf_n, ass_n = self._cinematic_cards(ctx, shots, motions, plan, rdir)
+            ctx.log(f"   🎞 CINEMATIC (сынак): HyperFrames карточкалары {hf_n}, ASS карточкалары {ass_n} "
+                    f"({time.time() - t0:.0f} сек)")
+            debug.append({"label": "cinematic_cards", "hyperframes": hf_n, "ass": ass_n})
+        ctx.log(f"   1/4 Кадрлар рендерленүүдө: {len(jobs)} …")
+        t1 = time.time()
+        if cine:
+            infos: dict[int, dict] = {}
+
+            def job(j):
+                clip, out, kind, off, d, motion, inten = j
+                pre, info = cinematic.shot_prefilter(clip, kind, off, d)
+                idx = int(out.stem.split("_")[1])
+                infos[idx] = info
+                render_shot(clip, out, kind, off, d, motion, inten, prefilter=pre, card=card_for_shot.get(idx))
+
+            with ThreadPoolExecutor(workers) as ex:
+                list(ex.map(job, jobs))
+            blur_n = sum(1 for v in infos.values() if v.get("blur_bg"))
+            match_n = sum(1 for v in infos.values() if v.get("match"))
+            debug.append({"label": "cinematic_shots", "blur_bg": blur_n, "matched": match_n,
+                          "shots": {str(k): v for k, v in sorted(infos.items())}})
+            ctx.log(f"   🎞 кадрлар: жарык/түс бирдейленди {match_n}, blur фон {blur_n} "
+                    f"({time.time() - t1:.0f} сек)")
+        else:
+            with ThreadPoolExecutor(workers) as ex:
+                list(ex.map(lambda j: render_shot(*j), jobs))
 
         # 2) сахна = кадрлар кесүү менен (copy)
         ctx.log(f"   2/4 Сахналар: {len(scenes)} …")
@@ -335,8 +374,9 @@ class RenderStage(Stage):
         ctx.log("   4/4 Акыркы кодировка (субтитр, түс, үн) …")
         c = plan["concept_params"]
         subs = ctx.path("subtitles", "subtitles.ass")
-        cards = ctx.path("animation", "overlays.ass")
-        vf = (f"{c['grade']},vignette={c['vignette']},"
+        cards = cards_ass
+        look = cinematic.look_chain(c["grade"]) if cine else c["grade"]
+        vf = (f"{look},vignette={c['vignette']},"
               f"subtitles='{_esc(subs)}',subtitles='{_esc(cards)}',"
               f"fade=t=in:st=0:d=0.5,fade=t=out:st={max(0.0, total - 0.8):.3f}:d=0.8,format=yuv420p")
         final = rdir / "final.mp4"
@@ -360,8 +400,51 @@ class RenderStage(Stage):
             raise StageError(f"Видео менен аудионун узактыгы дал келбейт: видео {v_len:.1f} сек, "
                              f"аудио {a_len:.1f} сек, күтүлгөнү {total:.1f} сек")
         dur = min(v_len, a_len)
-        return {"final_path": str(final), "duration": round(dur, 2), "size_mb": round(size, 1),
-                "video_sec": round(v_len, 2), "audio_sec": round(a_len, 2)}
+        res = {"final_path": str(final), "duration": round(dur, 2), "size_mb": round(size, 1),
+               "video_sec": round(v_len, 2), "audio_sec": round(a_len, 2)}
+        if cine:
+            res["cinematic"] = True
+        return res
+
+    def _cinematic_cards(self, ctx, shots, motions, plan, rdir):
+        """Карточкаларды кадрларга жайгаштырып, HyperFrames менен рендерлейт (сынак).
+
+        Кайтарат: ({кадр_индекси: (mov, кечигүү)}, финалдык ASS файлы (ишке ашпагандары гана), hf_n, ass_n).
+        """
+        import json as _json
+
+        from .. import hfcards
+        from .s6_animation import card_line
+
+        src = ctx.path("animation", "overlays.ass")
+        cj = ctx.path("animation", "cards.json")
+        items = _json.loads(cj.read_text(encoding="utf-8")) if cj.exists() else []
+        placed = []
+        for c in items:
+            sh = next((s for s in shots if s["start"] <= c["start"] < s["end"]), None)
+            if sh is None:
+                continue
+            ext = (motions[sh["i"]].get("transition_out") or {}).get("dur", 0.0)
+            delay = round(c["start"] - sh["start"], 3)
+            dur = round(min(c["end"] - c["start"], sh["dur"] + ext - delay - 0.1), 3)
+            placed.append({**c, "shot": sh["i"], "delay": delay, "dur": dur})
+        done: dict[int, Path] = {}
+        usable = [p for p in placed if p["dur"] >= 1.2]
+        if hfcards.requested() and usable:
+            accent = hfcards.accent_css(plan["concept_params"].get("card_color", "&H004EC1F2&"))
+            res = hfcards.render_all(usable, rdir / "hf_cards", accent, log=ctx.log)
+            done = {id(usable[k]): v for k, v in res.items()}
+        elif not hfcards.requested():
+            ctx.log("   ℹ️ YTA_HYPERFRAMES өчүк — карточкалар ASS бойдон")
+        card_for_shot = {p["shot"]: (done[id(p)], p["delay"]) for p in usable if id(p) in done}
+        left = [c for c in items if not any(id(p) in done and p["text"] == c["text"] and
+                                            p["start"] == c["start"] for p in usable)]
+        text = src.read_text(encoding="utf-8")
+        header = text[: text.index("[Events]")] + "[Events]\n" + \
+            "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+        out = ctx.path("animation", "overlays_final.ass")
+        out.write_text(header + "\n".join(card_line(c) for c in left) + "\n", encoding="utf-8")
+        return card_for_shot, out, len(card_for_shot), len(left)
 
 
 def _esc(p: Path) -> str:

@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- HyperFrames текст-карточкасы (cinematic СЫНАК режими). __WORDS_HTML__, __DUR__ ж.б. pipeline/hfcards.py толтурат.
+     Фон ТУНУК (alpha) — видеонун үстүнө коюлат. Шрифт: Montserrat (OFL), анимация: GSAP (жергиликтүү файл). -->
+<html lang="ru" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "MontserratHF"; font-weight: 800; src: url("assets/montserrat-cyrillic-800-normal.woff2") format("woff2"); unicode-range: U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116; }
+      @font-face { font-family: "MontserratHF"; font-weight: 800; src: url("assets/montserrat-latin-800-normal.woff2") format("woff2"); unicode-range: U+0000-00FF, U+2000-206F; }
+      :root { --ink: #ffffff; --accent: __ACCENT__; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: transparent; }
+      #root { position: relative; width: 100%; height: 100%; font-family: "MontserratHF", sans-serif; }
+      #title { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); width: 1500px;
+               text-align: center; color: var(--ink); font-weight: 800; font-size: __SIZE__px; line-height: 1.12;
+               letter-spacing: 0.01em;
+               text-shadow: 0 6px 30px rgba(0, 0, 0, 0.6), 0 2px 4px rgba(0, 0, 0, 0.65); }
+      #title .w { display: inline-block; margin: 0 0.16em; }
+      #line { position: absolute; left: 50%; top: calc(40% + __LINE_OFFSET__px); width: 420px; height: 6px;
+              margin-left: -210px; border-radius: 3px; background: var(--accent); transform-origin: center;
+              box-shadow: 0 0 18px rgba(0, 0, 0, 0.35); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="__DUR__" data-width="1920" data-height="1080">
+      <h1 id="title" class="clip" data-start="0" data-duration="__DUR__" data-track-index="0">__WORDS_HTML__</h1>
+      <div id="line" class="clip" data-start="0" data-duration="__DUR__" data-track-index="1"></div>
+    </div>
+    <script>
+      const D = __DUR__;
+      const tl = gsap.timeline({ paused: true });
+      tl.fromTo("#title .w", { opacity: 0, y: 46, filter: "blur(10px)" },
+                { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, ease: "power3.out", stagger: __STAGGER__ }, 0.05);
+      tl.fromTo("#line", { scaleX: 0, opacity: 1 }, { scaleX: 1, duration: 0.6, ease: "power2.inOut" }, 0.35);
+      tl.to("#root", { opacity: 0, duration: 0.4, ease: "power2.in" }, Math.max(1.0, D - 0.45));
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

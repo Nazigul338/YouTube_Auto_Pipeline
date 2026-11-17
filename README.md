@@ -93,3 +93,17 @@ legacy/          — эски Colab блокноттору (колдонулба
 
 API ачкычтары **GitHub Secrets'те гана**; логдо email жашырылат; видео ачык жерге (artifact)
 коюлбайт — Drive'га гана; видео YouTube'га **автоматтык жарыяланбайт**.
+
+## 🎞 Cinematic режими — СЫНАК (TEST гана)
+
+Негизги өндүрүшкө КОШУЛГАН ЭМЕС: колдонуучунун уруксатысыз production'го өтпөйт.
+- Иштетүү: Actions → **🎞 Cinematic сынак (TEST гана)** → `video_id` (мис. `Video_003`). Ар дайым `YouTube_Auto_TEST`'ке жазат,
+  жыйынтык `Final_Videos/<ID>_cinematic.mp4` (эски `<ID>.mp4` сакталат), салыштыруу барагы `_diagnose/<ID>_compare.jpg`.
+- Код коргоосу: `YTA_CINEMATIC=1` + папка `YouTube_Auto_TEST` болгондо гана күйөт (`pipeline/cinematic.py: enabled`).
+- Эффекттер: жумшак S-ийри (контраст, highlights/shadows), концепция түсү, жумшак glow (luma), film grain, кадрлардын жарык/түсүн
+  бирдейлөө, 16:9'га туура келбеген материалга blur фон (кара тилке жок), кинематографиялык өтүүлөр (0.7 сек).
+- HyperFrames (`tools/hyperframes`, Node 22, бекитилген 0.9.61) — орусча анимацияланган карточкалар (тунук фон, ProRes 4444);
+  иштебесе — ASS карточкалары. Телеметрия өчүк.
+- FFmpeg Skill (`.claude/skills/ffmpeg-skill`, MIT, v3.10.1): Claude сессияларында колдонулат; `check.py --platform youtube`
+  cinematic сынагынын QA'сына кирет.
+

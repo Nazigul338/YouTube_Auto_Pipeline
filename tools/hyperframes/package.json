@@ -1,0 +1,12 @@
+{
+  "name": "yta-hyperframes-tools",
+  "private": true,
+  "description": "HyperFrames CLI жана карточка ресурстары (cinematic СЫНАК режими үчүн гана). Версиялар бекитилген.",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "hyperframes": "0.9.61",
+    "gsap": "3.15.0",
+    "@fontsource/montserrat": "5.2.8"
+  }
+}

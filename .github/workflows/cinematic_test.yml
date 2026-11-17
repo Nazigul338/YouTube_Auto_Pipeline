@@ -1,0 +1,110 @@
+name: 🎞 Cinematic сынак (TEST гана)
+
+# Cinematic түс/жарык/grain/glow, кинематографиялык өтүүлөр, blur фон, HyperFrames карточкалары.
+# КООПСУЗДУК: бул workflow ар дайым YouTube_Auto_TEST папкасына гана жазат. Негизги (YouTube_Auto)
+# өндүрүшкө өтүү үчүн колдонуучунун уруксаты керек — код production папкасында режимди өзү өчүрөт.
+# Жыйынтык: Final_Videos/<ID>_cinematic.mp4 (эски <ID>.mp4 сакталат — салыштыруу үчүн).
+on:
+  workflow_dispatch:
+    inputs:
+      video_id:
+        description: "TEST папкасындагы бар видео (мис. Video_003) — эски монтаж менен салыштыруу үчүн"
+        required: true
+        default: Video_003
+        type: string
+      rerun_from:
+        description: "Ушул этаптан кайра (s6 — өтүүлөр/карточкалар да жаңырат)"
+        required: true
+        default: s6_animation
+        type: choice
+        options: [s6_animation, s8_render]
+      hyperframes:
+        description: "HyperFrames карточкалары (иштебесе — ASS карточкалары)"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: make-video
+  cancel-in-progress: false
+
+jobs:
+  cinematic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: FFmpeg жана шрифттер
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core fonts-montserrat || \
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          ffmpeg -version | head -1
+
+      - name: Whisper модели (кэш)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-small-v1
+
+      - name: Китепканалар
+        run: pip install -q -r requirements.txt
+
+      - name: HyperFrames (бекитилген версия) + браузер
+        if: ${{ inputs.hyperframes }}
+        continue-on-error: true       # иштебесе да видео ASS карточкалары менен жасалат
+        env:
+          HYPERFRAMES_NO_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+        run: |
+          cd tools/hyperframes
+          npm ci --no-fund --no-audit
+          npx hyperframes --version
+          npx hyperframes browser ensure
+
+      - name: Тесттер
+        env:
+          YTA_SKIP_SLOW: "1"
+        run: python -m unittest discover tests
+
+      - name: Cinematic видео (TEST)
+        env:
+          VIDEO_ID: ${{ inputs.video_id }}
+          VIDEO_NICHE: motivation
+          VIDEO_RERUN_FROM: ${{ inputs.rerun_from }}
+          VIDEO_STOP_AFTER: none
+          YTA_DRIVE_FOLDER: YouTube_Auto_TEST
+          YTA_CINEMATIC: "1"
+          YTA_HYPERFRAMES: ${{ inputs.hyperframes && '1' || '0' }}
+          HYPERFRAMES_NO_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.ci
+
+      - name: Эски ↔ жаңы салыштыруу
+        if: ${{ success() }}
+        env:
+          VIDEO_ID: ${{ inputs.video_id }}
+          YTA_DRIVE_FOLDER: YouTube_Auto_TEST
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.compare_videos

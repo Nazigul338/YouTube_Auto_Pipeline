@@ -56,6 +56,29 @@ def choose_concept(registry: dict, video_id: str) -> str:
     return min(CONCEPTS, key=lambda k: (used[k], (hash(k) ^ seed) % 997))
 
 
+def card_items(scenes: list[dict], scene_times: dict[int, dict]) -> list[dict]:
+    """Карточкалар: [{start, end, text}] (ASS жана HyperFrames экөө тең ушуну колдонот)."""
+    items = []
+    last_end = -99.0
+    for s in scenes:
+        txt = (s.get("on_screen_text") or "").strip().replace("{", "").replace("}", "")
+        t = scene_times.get(s["id"])
+        if not txt or not t or t["start"] - last_end < 12:   # карточкалар сейрек болсун
+            continue
+        start = t["start"] + 0.25
+        end = min(start + 2.6, t["end"])
+        if end - start < 1.2:
+            continue
+        items.append({"start": round(start, 3), "end": round(end, 3), "text": txt.upper()})
+        last_end = end
+    return items
+
+
+def card_line(c: dict) -> str:
+    return (f"Dialogue: 1,{ts_ass(c['start'])},{ts_ass(c['end'])},Card,,0,0,0,,"
+            r"{\fad(260,320)\fscx92\fscy92\t(0,380,\fscx100\fscy100)\blur0.6}" + c["text"])
+
+
 def card_events(scenes: list[dict], scene_times: dict[int, dict], concept: dict) -> list[str]:
     ev = []
     last_end = -99.0
@@ -89,6 +112,11 @@ class AnimationStage(Stage):
 
         name = choose_concept(ctx.registry, ctx.video_id)
         concept = CONCEPTS[name]
+        from .. import cinematic
+        cine = cinematic.enabled(ctx.store)       # СЫНАК режими гана (TEST папкасы + желек)
+        if cinematic.blocked_reason(ctx.store):
+            ctx.log("   ⚠️ " + cinematic.blocked_reason(ctx.store))
+        prev_trans = None
         rng = random.Random(int(hashlib.md5((ctx.video_id + name).encode()).hexdigest(), 16))
         plan = []
         prev_motion = None
@@ -101,7 +129,11 @@ class AnimationStage(Stage):
             if nxt is None:
                 trans = None
             elif nxt["scene"] != sh["scene"]:
-                trans = {"type": rng.choice(concept["transitions"]), "dur": 0.5}
+                if cine:
+                    prev_trans = cinematic.pick_transition(rng, prev_trans)
+                    trans = {"type": prev_trans, "dur": cinematic.TRANSITION_SEC}
+                else:
+                    trans = {"type": rng.choice(concept["transitions"]), "dur": 0.5}
             else:
                 trans = {"type": "cut", "dur": 0.0}
             plan.append({"i": i, "motion": motion,
@@ -109,6 +141,9 @@ class AnimationStage(Stage):
                          "transition_out": trans})
 
         cards = card_events(scenes, scene_times, concept)
+        if cine:   # HyperFrames үчүн структуралуу тизме (8-этап колдонот; иштебесе ASS калат)
+            ctx.path("animation", "cards.json").write_text(
+                json.dumps(card_items(scenes, scene_times), ensure_ascii=False, indent=1), encoding="utf-8")
         header = ("[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n"
                   "ScaledBorderAndShadow: yes\n\n[V4+ Styles]\n"
                   "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "
@@ -125,9 +160,13 @@ class AnimationStage(Stage):
         if max(counts.values()) > 0.45 * len(plan):
             raise StageError(f"Кыймылдар бир түрдүү болуп калды: {counts}")
         out = ctx.path("animation", "plan.json")
-        out.write_text(json.dumps({"concept": name, "concept_params": concept, "shots": plan},
+        out.write_text(json.dumps({"concept": name, "concept_params": concept, "shots": plan,
+                                   "cinematic": cine},
                                   ensure_ascii=False, indent=1), encoding="utf-8")
         ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})["concept"] = name
-        ctx.log(f"   ✓ Концепция: {name}; текст-карточкалар: {len(cards)}; кыймылдар: {counts}")
+        ctx.log(f"   ✓ Концепция: {name}; текст-карточкалар: {len(cards)}; кыймылдар: {counts}"
+                + ("; 🎞 CINEMATIC (сынак): өтүүлөр " + str(sorted({p['transition_out']['type'] for p in plan
+                                                                    if p['transition_out'] and p['transition_out']['type'] != 'cut'}))
+                   if cine else ""))
         return {"plan_file": str(out), "overlays_file": str(ass), "concept": name,
                 "cards": len(cards)}
