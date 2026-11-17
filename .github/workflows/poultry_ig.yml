@@ -1,22 +1,76 @@
-name: "🐔 Poultry Instagram — драфт жасоо"
+name: "🐔 Poultry Instagram — START (контент → видео → бекитүүгө даяр)"
 on:
   workflow_dispatch:
     inputs:
-      days: {description: "План күнү", default: "7"}
-      n: {description: "Канча пост даярдалсын", default: "3"}
+      topic:
+        description: "Тема (бош = автоматтык айлануу)"
+        default: ""
+        type: choice
+        options:
+          - 'auto'
+          - 'broiler'
+          - 'layers'
+          - 'chicks'
+          - 'feeding'
+          - 'vitamins'
+          - 'coop'
+          - 'hygiene'
+          - 'prevention'
+          - 'vaccination'
+          - 'economics'
+          - 'start'
+          - 'daily'
+      content_type:
+        description: "Максат / түр (education=билим, sales=сатуу, ...)"
+        default: education
+        type: choice
+        options:
+          - 'education'
+          - 'viral'
+          - 'practical'
+          - 'real_farm'
+          - 'customer_q'
+          - 'sales'
+      format:
+        description: "Reels / Stories / карусель"
+        default: reel
+        type: choice
+        options:
+          - reel
+          - story
+          - carousel
+      lang:
+        description: "Тил"
+        default: ky
+        type: choice
+        options:
+          - ky
+          - ru
+      make_video:
+        description: "Reel видеосун да жаса (Veo + диктор + монтаж)"
+        type: boolean
+        default: false
 jobs:
-  draft:
+  start:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
       - run: pip install -r poultry_ig_agent/requirements.txt
-      - run: python -m unittest discover -s poultry_ig_agent/tests -t .
-      - env: {POULTRY_GEMINI_API_KEY: "${{ secrets.POULTRY_GEMINI_API_KEY }}"}
+      - name: Тесттер (Motivation'го тийбейт)
+        run: python -m unittest discover -s poultry_ig_agent/tests -t .
+      - name: START
+        env:
+          POULTRY_GEMINI_API_KEY: ${{ secrets.POULTRY_GEMINI_API_KEY }}
         run: |
-          python -m poultry_ig_agent.agent plan --days "${{ inputs.days }}"
-          python -m poultry_ig_agent.agent make --n "${{ inputs.n }}"
+          python -m poultry_ig_agent.agent check
+          ARGS="--type ${{ inputs.content_type }} --format ${{ inputs.format }} --lang ${{ inputs.lang }}"
+          if [ "${{ inputs.topic }}" != "auto" ]; then ARGS="$ARGS --topic ${{ inputs.topic }}"; fi
+          if [ "${{ inputs.make_video }}" = "true" ]; then ARGS="$ARGS --video"; fi
+          python -m poultry_ig_agent.agent run $ARGS
           python -m poultry_ig_agent.agent list
       - uses: actions/upload-artifact@v4
-        with: {name: poultry-drafts, path: poultry_ig_agent/out}
+        if: always()
+        with: {name: poultry-package, path: poultry_ig_agent/out}

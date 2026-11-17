@@ -35,3 +35,26 @@ def render_slide(title, body, idx, total, path):
     d.text((90, h - 110), f"{idx + 1}/{total}", font=_font(36), fill=fg)
     img.save(path)
     return path
+
+
+def render_story_frame(text, idx, total, path, options=None, sticker=None):
+    """9:16 Story кадры (1080x1920). Сурамжылоо/добуш — Instagram стикерин колдонуучу өзү кошот (API чектөөсү)."""
+    w, h = 1080, 1920
+    bg, fg = PALETTES[idx % len(PALETTES)]
+    img = Image.new("RGB", (w, h), bg)
+    d = ImageDraw.Draw(img)
+    y = 420
+    for line in textwrap.wrap(text, 18)[:8]:
+        d.text((90, y), line, font=_font(86), fill=fg)
+        y += 112
+    if options:
+        y += 60
+        for o in options[:4]:
+            d.rounded_rectangle((90, y, w - 90, y + 110), 30, outline=fg, width=4)
+            d.text((130, y + 24), o[:32], font=_font(48), fill=fg)
+            y += 140
+    if sticker:
+        d.text((90, h - 220), f"[{sticker} стикерин колдонуңуз]", font=_font(36), fill=fg)
+    d.text((90, h - 110), f"{idx + 1}/{total}", font=_font(36), fill=fg)
+    img.save(path)
+    return path

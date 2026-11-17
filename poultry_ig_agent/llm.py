@@ -50,3 +50,10 @@ def generate_json(prompt, models=None, retries=2):
                 last = f"{model}: жооп окулган жок ({type(e).__name__})"
                 break
     raise LLMError(f"Бардык моделдер ишке ашкан жок. Акыркы ката: {last}")
+
+
+def api_key():
+    key = os.environ.get("POULTRY_GEMINI_API_KEY")
+    if not key:
+        raise LLMError("POULTRY_GEMINI_API_KEY коюлган эмес (GitHub Secrets'ке кош).")
+    return key

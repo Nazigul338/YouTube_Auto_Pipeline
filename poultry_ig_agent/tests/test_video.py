@@ -1,0 +1,97 @@
+import json
+import os
+import shutil
+import subprocess
+import tempfile
+import unittest
+import wave
+
+from poultry_ig_agent import niche, video
+from poultry_ig_agent.tests.helpers import shots
+
+HAVE = shutil.which("ffmpeg") and shutil.which("ffprobe")
+
+
+class FakeVeo:
+    def __init__(self): self.prompts = []
+    def generate(self, prompt, seconds, out):
+        self.prompts.append(prompt)
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", f"testsrc=s=720x1280:d={seconds}:r=24", "-pix_fmt", "yuv420p", out], check=True)
+        return out
+
+
+class FakeTTS:
+    def synth(self, text, out, secs=12):
+        with wave.open(out, "wb") as w:
+            w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000)
+            w.writeframes(b"\x10\x02" * 24000 * secs)
+        return out
+
+
+def probe(path):
+    o = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_type,width,height", "-of", "json", path], capture_output=True, text=True).stdout
+    return json.loads(o)["streams"]
+
+
+class Pure(unittest.TestCase):
+    def test_srt(self):
+        s = video.srt("бир эки үч төрт беш алты жети", 7)
+        self.assertIn("00:00:00,000 -->", s); self.assertEqual(s.count("-->"), 2)
+
+    def test_real_missing_never_silently_ai(self):
+        d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "real"))
+        post = {"content_type": "education", "shots": shots(3, "real")}
+        _, missing = video.resolve_shots(post, d)
+        self.assertEqual(missing, [1, 2, 3])
+        s2, m2 = video.resolve_shots(post, d, allow_ai_fallback=True)
+        self.assertEqual(m2, []); self.assertTrue(all(x["source"] == "ai" for x in s2))
+
+    def test_real_farm_never_ai_even_with_fallback(self):
+        d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "real"))
+        _, missing = video.resolve_shots({"content_type": "real_farm", "shots": shots(2)}, d, allow_ai_fallback=True)
+        self.assertEqual(missing, [1, 2])
+
+    def test_user_footage_assigned(self):
+        d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "real"))
+        for n in ("a.mp4", "b.jpg"):
+            open(os.path.join(d, "real", n), "w").close()
+        out, missing = video.resolve_shots({"content_type": "real_farm", "shots": shots(2)}, d)
+        self.assertEqual(missing, []); self.assertTrue(out[0]["file"].endswith("a.mp4"))
+
+
+@unittest.skipUnless(HAVE, "ffmpeg жок")
+class Build(unittest.TestCase):
+    def test_full_reel_ai_and_real(self):
+        assets = tempfile.mkdtemp(); os.makedirs(os.path.join(assets, "real")); os.makedirs(os.path.join(assets, "music"))
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "color=c=green:s=640x480:d=2", "-pix_fmt", "yuv420p", os.path.join(assets, "real", "farm.mp4")], check=True)
+        sh = shots(4); sh[1]["source"] = "real"
+        post = {"lang": "ky", "content_type": "education", "voiceover": "Таң атты ферма ойгонду жумуртка чогулду", "shots": sh}
+        out = tempfile.mkdtemp(); veo = FakeVeo()
+        res = video.build(post, out, veo, FakeTTS(), assets, niche=niche.get("poultry"))
+        self.assertEqual(res["status"], "ready", res)
+        self.assertEqual(res["ai_shots"], 3)
+        self.assertEqual(len(veo.prompts), 3)                       # реал кадр үчүн Veo чакырылган жок
+        self.assertIn("Kyrgyzstan", veo.prompts[0])                 # style bible шайкештик үчүн
+        st = probe(os.path.join(out, "final.mp4"))
+        v = [s for s in st if s["codec_type"] == "video"][0]
+        self.assertEqual((v["width"], v["height"]), (1080, 1920))   # 9:16
+        self.assertTrue(any(s["codec_type"] == "audio" for s in st))
+        self.assertGreaterEqual(video.duration(os.path.join(out, "final.mp4")), 12)   # диктор (12с) кесилген жок
+
+    def test_needs_footage_no_video_built(self):
+        assets = tempfile.mkdtemp(); os.makedirs(os.path.join(assets, "real"))
+        out = tempfile.mkdtemp()
+        r = video.build({"lang": "ky", "content_type": "real_farm", "voiceover": "x", "shots": shots(3)}, out, FakeVeo(), FakeTTS(), assets)
+        self.assertEqual(r["status"], "needs_footage")
+        self.assertFalse(os.path.exists(os.path.join(out, "final.mp4")))
+
+    def test_provider_failure_logged_not_crash(self):
+        class Bad:
+            def generate(self, *a): raise video.VideoError("veo ката")
+        assets = tempfile.mkdtemp(); os.makedirs(os.path.join(assets, "real"))
+        r = video.build({"lang": "ky", "content_type": "viral", "voiceover": "x", "shots": shots(3)}, tempfile.mkdtemp(), Bad(), FakeTTS(), assets)
+        self.assertEqual(r["status"], "failed")
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,33 @@
+# Poultry Instagram Agent — PROJECT_STATUS
+(Motivation YouTube долбоорунун `PROJECT_STATUS.md` файлы өзүнчө, ага тийилген эмес.) Жаңыртылды: 2026-11-17
+
+## 1 Учурдагы абал
+Код жана жасалма-API тесттери даяр. **Чыныгы API менен бир да жолу иштетилген эмес.** Жарыялоо өчүк (dry-run), автопилот өчүк.
+
+## 2 Бүткөн этаптар
+Өзүнчө пакет; ky+ru; ниша плагини; lint/safety/sales; calc; Instagram Graph клиент; жарыялоо дарбазасы; Veo/TTS/ffmpeg видео; аналитика; START workflow; жумалык отчет workflow.
+
+## 3 Иштеп турган функциялар (жасалма провайдер менен текшерилген)
+Идея/пост/Reel/Story/карусель генерациясы · эрежелер · 9:16 монтаж (чыныгы ffmpeg) · жарыялоо дарбазасы · отчет.
+
+## 4 Өзгөртүүлөр
+Бардыгы `poultry_ig_agent/` жана `.github/workflows/poultry_ig*.yml` ичинде. Motivation файлдары өзгөртүлгөн эмес.
+
+## 5 Тесттер
+46/46 өттү (жасалма Gemini/Veo/TTS/Meta transport; видео — чыныгы ffmpeg). Motivation: 3 мурдагы ката (`googleapiclient` жок) — мен киргизген эмес.
+
+## 6 Чечилбеген / белгисиз
+- Veo модели (`config.VEO_MODEL`), REST формат, Gemini TTS кыргызча сапаты — текшерилген эмес (ASR менен текшерүү керек).
+- Meta Graph: эндпоинттер/метрикалар/DM 24с терезеси, resumable upload — документация боюнча жазылган, текшерилген эмес; App Review уруксаттары керек.
+- Булак мазмунун автоматтык тастыктоо жок (домен гана).
+- Реалдуу видео жеткирүү: азырынча `assets/real/` (ачык репо). Drive интеграциясы жок.
+- «Instagram Skill пакети» claude.ai skills тизмесинен табылган жок → расмий Meta API түз колдонулду.
+- Stories: сурамжылоо/добуш стикерин API аркылуу коюу мүмкүн эмес — кадр сүрөтү даярдалат, стикерди кол менен кошосуз.
+
+## 7 API абалы
+Gemini ❓ · Veo ❓ · TTS ❓ · Meta Graph ❓ (бардыгы чыныгы чакыруу менен текшерилбеген). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
+
+## 8 Кийинки тапшырмалар
+1. Secrets кош → START (`carousel`, видеосуз) → чыныгы Gemini текшерүү. 2. `course.json` толтур. 3. Бир Reel `--video` (Veo/TTS текшерүү). 4. Meta app + токен → `publish` dry-run → `--live`. 5. 5 кол менен жарыялоодон кийин автопилот. 6. Drive аркылуу реалдуу видео, комментарий/DM мониторинг workflow.
+
+## 9 Commit — төмөндө git log; 10 Иштетүү — README.md
