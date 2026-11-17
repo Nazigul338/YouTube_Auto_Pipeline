@@ -275,23 +275,43 @@ class VisualsStage(Stage):
 
         return frame_jpg(path, 0.0 if kind == "image" else offset + dur / 2)
 
+    RATE_PASSES = 3        # Gemini 503 («жогорку суроо») болсо — токтоп туруп кайра аракет
+    RATE_WAIT = 120
+
     def _rate(self, ctx, items: list[tuple[int, bytes, str]]) -> dict[int, int]:
-        """[(кадр, jpg, сахна тексти)] → {кадр: 1..5}. Gemini квотасы бүтсө — бош (текшерүү өткөрүлөт)."""
-        from .base import gemini_of
+        """[(кадр, jpg, сахна тексти)] → {кадр: 1..5}.
+
+        Gemini убактылуу жеткиликсиз болсо (сынакта 503 бардык моделде: 8/168 гана бааланган) — 2 катар
+        ийгиликсиз пакеттен кийин токтоп, RATE_WAIT сек күтүп, бааланбагандарды кайра аракеттейт (≤RATE_PASSES жолу).
+        """
+        import time
 
         out: dict[int, int] = {}
-        for k in range(0, len(items), self.RATE_BATCH):
-            part = [x for x in items[k:k + self.RATE_BATCH] if x[1]]
-            if not part:
-                continue
-            try:
-                scores = gemini_of(ctx).rate_frames([(j, tx) for _, j, tx in part])
-            except Exception as e:
-                ctx.log(f"   ⚠️ AI баа берген жок ({type(e).__name__}) — калган кадрлар текшерилген эмес")
+        todo = [x for x in items if x[1]]
+        for attempt in range(1, self.RATE_PASSES + 1):
+            failures = 0
+            for k in range(0, len(todo), self.RATE_BATCH):
+                part = todo[k:k + self.RATE_BATCH]
+                if all(i in out for i, _, _ in part):
+                    continue
+                try:
+                    from .base import gemini_of
+
+                    scores = gemini_of(ctx).rate_frames([(j, tx) for _, j, tx in part])
+                    failures = 0
+                except Exception as e:
+                    failures += 1
+                    ctx.log(f"   ⚠️ AI баа берген жок ({type(e).__name__}); аракет {attempt}/{self.RATE_PASSES}")
+                    if failures >= 2:
+                        break
+                    continue
+                for (i, _, _), s in zip(part, scores):
+                    if isinstance(s, int) and 1 <= s <= 5:
+                        out[i] = s
+            if all(i in out for i, _, _ in todo) or attempt == self.RATE_PASSES:
                 break
-            for (i, _, _), s in zip(part, scores):
-                if isinstance(s, int) and 1 <= s <= 5:
-                    out[i] = s
+            ctx.log(f"   ⏳ {len(todo) - len(out)} кадр бааланган жок — {self.RATE_WAIT} сек күтүп кайра")
+            time.sleep(self.RATE_WAIT)
         return out
 
     def ai_relevance(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u):

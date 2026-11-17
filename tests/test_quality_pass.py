@@ -110,10 +110,33 @@ class TestAIRelevance(unittest.TestCase):
         self.assertEqual(len(out), 3)
 
     def test_quota_failure_does_not_break(self):
-        out, st = self.run_stage(FakeGem([], fail=True), [asset(100)])
+        with mock.patch("time.sleep"):
+            out, st = self.run_stage(FakeGem([], fail=True), [asset(100)])
         self.assertEqual(st["rated"], 0)
         self.assertEqual(st["replaced"], 0)
         self.assertEqual(len(out), 3)                          # кадрлар өзгөрүүсүз
+
+    def test_rating_retries_after_outage_and_finishes(self):
+        """503 толкуну: 1-аракетте баары жыгылат, 2-аракетте Gemini оңолот → кадрлар бааланат."""
+        class Flaky:
+            calls = 0
+
+            def rate_frames(self, items):
+                Flaky.calls += 1
+                if Flaky.calls <= 1:                       # 1-аракет жыгылат, 2-аракетте Gemini оңолот
+                    raise RuntimeError("503")
+                return [4] * len(items)
+        with mock.patch("time.sleep") as sl:
+            out, st = self.run_stage(Flaky(), [])
+        self.assertEqual(st["rated"], 3)
+        sl.assert_called_once_with(VisualsStage.RATE_WAIT)
+
+    def test_rating_gives_up_after_all_passes(self):
+        with mock.patch("time.sleep") as sl:
+            out, st = self.run_stage(FakeGem([], fail=True), [])
+        self.assertEqual(st["rated"], 0)
+        self.assertEqual(sl.call_count, VisualsStage.RATE_PASSES - 1)
+        self.assertEqual(len(out), 3)
 
     def test_no_replacement_available(self):
         out, st = self.run_stage(FakeGem([1, 1, 1]), [])
