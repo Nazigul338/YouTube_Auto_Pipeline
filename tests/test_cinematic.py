@@ -65,7 +65,7 @@ class TestFilters(unittest.TestCase):
         self.assertEqual(cinematic.match_filter({"y": 0.43, "sat": 0.20}), "")
         dark = cinematic.match_filter({"y": 0.10, "sat": 0.05})
         self.assertIn("brightness=0.070", dark)          # чектелген: ±0.07
-        self.assertIn("saturation=1.180", dark)
+        self.assertIn("saturation=1.100", dark)
 
     def test_measure_reads_brightness(self):
         dark, bright = self.d / "d.mp4", self.d / "b.mp4"

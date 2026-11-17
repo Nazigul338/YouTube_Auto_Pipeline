@@ -382,7 +382,7 @@ class RenderStage(Stage):
         final = rdir / "final.mp4"
         media.run(["ffmpeg", "-y", "-v", "error", "-i", str(video), "-i", str(mix),
                    "-filter_complex", f"[0:v]{vf}[v]", "-map", "[v]", "-map", "1:a",
-                   "-t", f"{total:.3f}", "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                   "-t", f"{total:.3f}", "-c:v", "libx264", "-preset", "fast", "-crf", "22" if cine else "20",
                    "-pix_fmt", "yuv420p", "-r", str(FPS), "-c:a", "aac", "-b:a", "192k",
                    "-ar", "48000", "-movflags", "+faststart", str(final)],
                   "акыркы монтаж", timeout=7200)

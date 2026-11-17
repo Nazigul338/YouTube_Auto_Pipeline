@@ -48,12 +48,20 @@ SPEED = {"calm": 0.7, "reflective": 0.7, "sad": 0.6, "hopeful": 0.9, "tense": 1.
 
 
 def choose_concept(registry: dict, video_id: str) -> str:
+    """Эң аз колдонулган концепция. Видео кайра иштетилсе — мурунку концепция САКТАЛАТ (түс секирбейт).
+
+    Мурун тең салмакта `hash(k)` колдонулган: Python аны ар процессте башка эсептейт → rerun'до концепция
+    өзгөрүп калган (Video_003: muted_film → teal_orange, түс салыштырмасы бузулган).
+    """
+    prev = (registry.get("videos", {}).get(video_id) or {}).get("concept")
+    if prev in CONCEPTS:
+        return prev
     used = {k: 0 for k in CONCEPTS}
     for vid, v in registry.get("videos", {}).items():
         if vid != video_id and v.get("concept") in used:
             used[v["concept"]] += 1
     seed = int(hashlib.md5(video_id.encode()).hexdigest(), 16)
-    return min(CONCEPTS, key=lambda k: (used[k], (hash(k) ^ seed) % 997))
+    return min(CONCEPTS, key=lambda k: (used[k], (int(hashlib.md5(k.encode()).hexdigest(), 16) ^ seed) % 997))
 
 
 def card_items(scenes: list[dict], scene_times: dict[int, dict]) -> list[dict]:

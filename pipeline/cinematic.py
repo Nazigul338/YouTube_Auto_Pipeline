@@ -64,7 +64,7 @@ TONE = ("curves=master='0/0.025 0.2/0.17 0.5/0.5 0.8/0.83 1/0.965',"   # жум�
 GLOW = ("split=2[cna][cnb];[cnb]curves=all='0/0 0.6/0 1/1',gblur=sigma=22[cng];"
         "[cna][cng]blend=c0_mode=screen:c0_opacity=0.14:c1_mode=normal:c1_opacity=1:"
         "c2_mode=normal:c2_opacity=1")
-GRAIN = "noise=c0s=5:c0f=t+u"
+GRAIN = "noise=c0s=3:c0f=t+u"          # жеңилирээк grain (файл өлчөмү азаят)
 
 
 def look_chain(concept_grade: str) -> str:
@@ -92,7 +92,7 @@ def pick_transition(rng, prev: str | None) -> str:
 TARGET_Y = 0.43        # орточо жарык (0..1, tv-range ичинде)
 TARGET_SAT = 0.20      # орточо каныккандык (SATAVG/255)
 MAX_BRIGHT = 0.07
-SAT_RANGE = (0.85, 1.18)
+SAT_RANGE = (0.93, 1.10)             # каныккандыкты бирдейлөө жумшак (±10%)
 
 
 def measure(clip: Path, offset: float, dur: float, kind: str = "video") -> dict | None:
@@ -119,7 +119,7 @@ def match_filter(stats: dict | None) -> str:
     b = max(-MAX_BRIGHT, min(MAX_BRIGHT, (TARGET_Y - stats["y"]) * 0.5))
     s = 1.0
     if stats.get("sat"):
-        s = max(SAT_RANGE[0], min(SAT_RANGE[1], 1 + (TARGET_SAT / max(stats["sat"], 0.02) - 1) * 0.5))
+        s = max(SAT_RANGE[0], min(SAT_RANGE[1], 1 + (TARGET_SAT / max(stats["sat"], 0.02) - 1) * 0.35))
     if abs(b) < 0.005 and abs(s - 1) < 0.01:
         return ""
     return f"eq=brightness={b:.3f}:saturation={s:.3f}"

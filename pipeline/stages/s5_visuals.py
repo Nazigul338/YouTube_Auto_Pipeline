@@ -34,15 +34,51 @@ MIN_SHOT, MAX_SHOT = 2.5, 4.4
 MAX_REUSE_FRACTION = 0.05   # акыркы чара: кадрлардын ушунча үлүшү гана мурда колдонулган клип болушу мүмкүн
 
 
+STRICT_MIN, STRICT_MAX = 2.8, 4.4      # катуу режим: ар кадр ушул чекте (сөз чеги мүмкүн болсо гана жылдырылат)
+
+
+def strict_cuts(a: float, b: float, gaps: list[float]) -> list[float]:
+    """a..b аралыгын 2.8–4.4 сек кадрларга бөлөт; кесүү сөз чегине (±0.35 сек) жылдырылат, бирок чектен чыкпайт."""
+    d = b - a
+
+    def violation(k: int) -> float:
+        x = d / k
+        return max(0.0, STRICT_MIN - x, x - STRICT_MAX)
+
+    # чектен эң аз чыккан k (барабар болсо — 3.6 сек'ке жакыны): 4.6 сек сахна 2×2.3 эмес, 1 кадр болот
+    k = min(range(1, int(d / 2.0) + 2), key=lambda n: (round(violation(n), 3), abs(d / n - 3.6)))
+    cuts = [a]
+    for j in range(1, k):
+        ideal = a + j * d / k
+        lo = cuts[-1] + STRICT_MIN
+        hi = cuts[-1] + STRICT_MAX
+        rest = k - j                       # кесүүдөн кийин калган кадрлар
+        lo = max(lo, b - rest * STRICT_MAX)
+        hi = min(hi, b - rest * STRICT_MIN)
+        near = [g for g in gaps if abs(g - ideal) <= 0.35 and lo <= g <= hi]
+        cuts.append(min(near, key=lambda g: abs(g - ideal)) if near else min(max(ideal, lo), hi) if lo <= hi else ideal)
+    cuts.append(b)
+    return cuts
+
+
 def plan_shots(scene_times: list[dict], words: list[dict], total: float,
-               target: float = TARGET_SHOT) -> list[dict]:
-    """Сахналарды ~target сек кадрларга бөлөт, чектерди сөздөрдүн арасына жылдырат."""
+               target: float = TARGET_SHOT, strict: bool = False) -> list[dict]:
+    """Сахналарды ~target сек кадрларга бөлөт, чектерди сөздөрдүн арасына жылдырат.
+
+    strict=True (сынак): ар кадр 2.8–4.4 сек (мүмкүн болгон жерде), мурунку режим — эркин (2.3–4.8 чыгып калган).
+    """
     gaps = [(words[i]["e"] + words[i + 1]["s"]) / 2 for i in range(len(words) - 1)]
     shots = []
     for i, sc in enumerate(scene_times):
         a = 0.0 if i == 0 else sc["start"]
         b = scene_times[i + 1]["start"] if i + 1 < len(scene_times) else total
         d = b - a
+        if strict:
+            cuts = strict_cuts(a, b, gaps)
+            for s, e in zip(cuts, cuts[1:]):
+                shots.append({"i": len(shots), "scene": sc["id"], "start": round(s, 3),
+                              "end": round(e, 3), "dur": round(e - s, 3)})
+            continue
         k = max(1, round(d / target))
         while k > 1 and d / k < MIN_SHOT + 0.3:
             k -= 1
@@ -93,7 +129,9 @@ class VisualsStage(Stage):
                   json.loads(ctx.path("scenes.json").read_text(encoding="utf-8"))["scenes"]}
         timing = json.loads(ctx.path("subtitles", "timings.json").read_text(encoding="utf-8"))
         total = timing["duration"] + TAIL_SEC
-        shots = plan_shots(timing["scenes"], timing["words"], total)
+        from .. import cinematic
+        quality = cinematic.enabled(ctx.store)           # СЫНАК: катуу темп (2.8–4.4) + AI маани текшерүүсү
+        shots = plan_shots(timing["scenes"], timing["words"], total, strict=quality)
         stock = ctx.services.get("stock") or from_env()
         rng = random.Random(int(hashlib.md5(ctx.video_id.encode()).hexdigest(), 16))
 
@@ -165,6 +203,17 @@ class VisualsStage(Stage):
         with ThreadPoolExecutor(4) as ex:
             results = list(ex.map(fetch, range(len(shots))))
 
+        def off_u(i: int) -> float:
+            """Кадрдын кесүү орду үчүн туруктуу кокус сан (AI баалаган кадр ЧЫНЫГЫ көрүнө турган кадр болсун)."""
+            return random.Random(f"{ctx.video_id}:{i}").random()
+
+        ai_stats: dict = {}
+        if quality:
+            results, ai_stats = self.ai_relevance(ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u)
+            ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
+                    f"{ai_stats.get('low', 0)}, алмаштырылды {ai_stats.get('replaced', 0)}, "
+                    f"орточо {ai_stats.get('avg', 0):.2f}/5")
+
         licenses = []
         images_used = extended = 0
         for i, a, path, real, tier, score in results:
@@ -174,10 +223,12 @@ class VisualsStage(Stage):
                        "query": a.query, "url": a.url, "page_url": a.page_url, "tier": tier,
                        "theme": sc.get("theme", ""), "match": round(score, 2),
                        "reused": tier == "reused" or a.id in finder.others})
+            if ai_stats:
+                sh["ai_score"] = ai_stats["scores"].get(i)
             images_used += a.kind == "image"
             if a.kind == "video":
                 sh["real_duration"] = round(real, 2)
-                sh["offset"] = pick_offset(real, sh["dur"], rng.random())
+                sh["offset"] = pick_offset(real, sh["dur"], off_u(i) if quality else rng.random())
                 if real < sh["dur"] + MIN_CLIP_ROOM:
                     sh["extend"] = True          # s8 бул кадрды кайталап узартат
                     extended += 1
@@ -206,9 +257,81 @@ class VisualsStage(Stage):
         ctx.log(f"   ✓ {len(shots)} кадр, {len(ids)} уникалдуу материал "
                 f"(видео: {len(shots) - images_used}, сүрөт: {images_used}); жаңы: {len(shots) - n_reused}, "
                 f"кайра колдонулган: {n_reused}; узартылуучу: {extended}; темалар: {', '.join(themes)}")
-        return {"shots_file": str(out), "licenses_file": str(lic), "shots": len(shots),
-                "unique": len(ids), "images": images_used, "reused": n_reused,
-                "extended": extended, "search_calls": finder.calls}
+        res = {"shots_file": str(out), "licenses_file": str(lic), "shots": len(shots),
+               "unique": len(ids), "images": images_used, "reused": n_reused,
+               "extended": extended, "search_calls": finder.calls}
+        if ai_stats:
+            res["ai_avg"] = round(ai_stats["avg"], 2)
+            res["ai_replaced"] = ai_stats["replaced"]
+        return res
+
+    LOW_SCORE = 2          # ≤2/5 — клип сахнанын текстине дал келбейт
+    MAX_REPLACE = 25
+    RATE_BATCH = 8
+
+    @staticmethod
+    def _frame(path: Path, kind: str, offset: float, dur: float) -> bytes:
+        from .s9_qa import frame_jpg
+
+        return frame_jpg(path, 0.0 if kind == "image" else offset + dur / 2)
+
+    def _rate(self, ctx, items: list[tuple[int, bytes, str]]) -> dict[int, int]:
+        """[(кадр, jpg, сахна тексти)] → {кадр: 1..5}. Gemini квотасы бүтсө — бош (текшерүү өткөрүлөт)."""
+        from .base import gemini_of
+
+        out: dict[int, int] = {}
+        for k in range(0, len(items), self.RATE_BATCH):
+            part = [x for x in items[k:k + self.RATE_BATCH] if x[1]]
+            if not part:
+                continue
+            try:
+                scores = gemini_of(ctx).rate_frames([(j, tx) for _, j, tx in part])
+            except Exception as e:
+                ctx.log(f"   ⚠️ AI баа берген жок ({type(e).__name__}) — калган кадрлар текшерилген эмес")
+                break
+            for (i, _, _), s in zip(part, scores):
+                if isinstance(s, int) and 1 <= s <= 5:
+                    out[i] = s
+        return out
+
+    def ai_relevance(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u):
+        """Ар кадрды (клиптин ортосунан) сахнанын текстине Gemini менен баалайт; ≤2/5 болсо — ошол сахнанын
+        кийинки жаңы клибине алмаштырат (жакшыраса гана)."""
+        by_i = {r[0]: r for r in results}
+        text = lambda i: scenes[shots[i]["scene"]]["text"]
+        items = []
+        for i, a, path, real, tier, score in results:
+            sh = shots[i]
+            off = pick_offset(real, sh["dur"], off_u(i)) if real else 0.0
+            items.append((i, self._frame(path, a.kind, off, sh["dur"]), text(i)))
+        scores = self._rate(ctx, items)
+        low = sorted((i for i, s in scores.items() if s <= self.LOW_SCORE), key=lambda i: scores[i])
+        replaced = 0
+        trial: dict[int, tuple] = {}
+        for i in low[: self.MAX_REPLACE]:
+            nxt = finder.replacement(pool_of[i], shots[i]["dur"])
+            if nxt is None:
+                continue
+            chosen[i] = (nxt, "fresh", 0.0)
+            try:
+                trial[i] = fetch(i)
+            except Exception:
+                continue
+        if trial:
+            new_items = []
+            for i, r in trial.items():
+                sh = shots[i]
+                off = pick_offset(r[3], sh["dur"], off_u(i)) if r[3] else 0.0
+                new_items.append((i, self._frame(r[2], r[1].kind, off, sh["dur"]), text(i)))
+            new_scores = self._rate(ctx, new_items)
+            for i, r in trial.items():
+                if new_scores.get(i, 0) > scores.get(i, 5):
+                    by_i[i] = r
+                    scores[i] = new_scores[i]
+                    replaced += 1
+        out = [by_i[i] for i in sorted(by_i)]
+        avg = sum(scores.values()) / len(scores) if scores else 0.0
+        return out, {"rated": len(scores), "low": len(low), "replaced": replaced, "avg": avg, "scores": scores}
 
     def verify(self, ctx: Context, outputs: dict[str, Any] | None) -> None:
         super().verify(ctx, outputs)

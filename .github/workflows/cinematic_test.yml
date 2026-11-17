@@ -17,7 +17,7 @@ on:
         required: true
         default: s6_animation
         type: choice
-        options: [s6_animation, s8_render, s3_voice]
+        options: [s5_visuals, s6_animation, s8_render, s3_voice]
       hyperframes:
         description: "HyperFrames карточкалары (иштебесе — ASS карточкалары)"
         required: false

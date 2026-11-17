@@ -181,6 +181,10 @@ class QAStage(Stage):
         want_lo, want_hi = int(total / 4.4), int(total / 2.8) + 1
         rep.add("shot_count", f"Кадр саны ~{want_lo}–{want_hi} (орточо 3–4 сек)",
                 want_lo <= len(shots) <= want_hi, f"{len(shots)} кадр / {total:.0f} сек", required=False)
+        out_of_range = [d for d in durs if not 2.7 <= d <= 4.5]
+        rep.add("pacing_strict", "Кадрлардын ≥97% 3–4 сек (2.7–4.5)", len(out_of_range) <= 0.03 * len(durs),
+                f"чектен тышкары {len(out_of_range)}/{len(durs)} (мин {min(durs):.2f}, макс {max(durs):.2f})",
+                required=False)
         self.check_repetition(ctx, rep, shots)
 
         # 8. Субтитр
@@ -209,8 +213,10 @@ class QAStage(Stage):
 
         # 11. Кадрлар сценарийге дал келеби (Gemini көрүү менен) — кошумча текшерүү
         self.check_relevance(ctx, rep, final, shots)
-        if self._cinematic(ctx):            # СЫНАК режими гана: FFmpeg Skill'дин YouTube текшерүүсү
+        if self._cinematic(ctx):            # СЫНАК режими гана: FFmpeg Skill'дин YouTube текшерүүсү + мүнөт сайын бирдейлик
             self.check_platform(ctx, rep, final)
+            self.check_uniformity(ctx, rep, final, timing, total)
+        self.check_subtitle_layout(ctx, rep)
         return self.finish(ctx, rep, final, meta, music, clip_lic)
 
     @staticmethod
@@ -222,6 +228,36 @@ class QAStage(Stage):
         except Exception:
             return False
         return bool(plan.get("cinematic")) and cinematic.enabled(ctx.store)
+
+    def check_uniformity(self, ctx, rep, final: Path, timing: dict, total: float) -> None:
+        """Видео башынан аягына чейин бирдей: ар мүнөт (жарык, түс, курчтук, катуулук, темп)."""
+        from .. import uniformity
+
+        try:
+            rows = uniformity.analyze(final, total, timing["words"])
+        except Exception as e:
+            rep.add("uniform", "Сапат 8 мүнөт бою бирдей (мүнөт сайын)", None, f"текшерилген жок: {type(e).__name__}",
+                    required=False)
+            return
+        ctx.path("uniformity.json").write_text(json.dumps(rows, ensure_ascii=False, indent=1), encoding="utf-8")
+        ok, note = uniformity.summary(rows)
+        rep.add("uniform", "Сапат 8 мүнөт бою бирдей (мүнөт сайын)", ok, note, required=False)
+
+    def check_subtitle_layout(self, ctx, rep) -> None:
+        """Субтитр: чоң, 2 сапка батат, экрандын коопсуз зонасында (ASS стили боюнча)."""
+        try:
+            ass = ctx.path("subtitles", "subtitles.ass").read_text(encoding="utf-8")
+            from .s4_subtitles import FONT_SIZE, LINE_CHARS, MARGIN_V
+            style = next(l for l in ass.splitlines() if l.startswith("Style: Sub,"))
+            size, marg = int(style.split(",")[2]), int(style.split(",")[21])
+            cues = [l.split(",,0,0,0,,", 1)[-1] for l in ass.splitlines() if l.startswith("Dialogue:")]
+            plain = [re.sub(r"\{[^}]*\}", "", c) for c in cues]
+            longest = max((len(c) for c in plain), default=0)
+            ok = size >= 64 and 60 <= marg <= 140 and longest <= 2 * LINE_CHARS
+            rep.add("subs_layout", "Субтитр чоң (≥64 px), ылдыйдан 60–140 px, ≤2 сап", ok,
+                    f"{size} px, түбүнөн {marg} px, эң узун {longest} белги (чек {2 * LINE_CHARS})", required=False)
+        except Exception as e:
+            rep.add("subs_layout", "Субтитр жайгашуусу", None, f"текшерилген жок: {type(e).__name__}", required=False)
 
     def check_platform(self, ctx, rep, final: Path) -> None:
         """ffmpeg-skill `check.py --platform youtube` (.claude/skills/ffmpeg-skill). FAIL → QA өтпөйт."""
