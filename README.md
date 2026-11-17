@@ -107,3 +107,12 @@ API ачкычтары **GitHub Secrets'те гана**; логдо email жаш
 - FFmpeg Skill (`.claude/skills/ffmpeg-skill`, MIT, v3.10.1): Claude сессияларында колдонулат; `check.py --platform youtube`
   cinematic сынагынын QA'сына кирет.
 
+## 🎙 Мотивациялык диктор — СЫНАК (TEST гана)
+
+- **Үн лабораториясы:** Actions → **🎙 Үн лабораториясы** → бир эле орусча текст 4 вариантта (Algenib учурдагы / Algenib
+  мотивациялык / Orus / Charon). Drive → `YouTube_Auto_TEST/_voice_test/` (үн жана музыка менен MP3), run бетинде таблица:
+  темп, Whisper дикциясы, паузалар, F0 (тереңдик), интонация өзгөрүлмөлүүлүгү, «үн − музыка» LU.
+- **Видеодо:** `🎞 Cinematic сынак` → `rerun_from=s3_voice`, `motivational_voice` ✓ (`YTA_VOICE_STYLE=motivational`).
+  `pipeline/voice_style.py`: режиссёрдук нускама, сахнанын `keywords` боюнча басым, паузалар (сөздөр өзгөрбөйт).
+  Production'до (YouTube_Auto) өчүк — учурдагы Algenib + `tts_style` өзгөрүүсүз.
+

@@ -1,0 +1,43 @@
+name: 🎙 Үн лабораториясы (TEST гана)
+
+# Бир эле орусча мотивациялык текстти 4 вариантта окутуп салыштырат (Algenib учурдагы / Algenib мотивациялык /
+# Orus / Charon). Ар бири = 1 TTS суроо. Натыйжа: Drive → YouTube_Auto_TEST/_voice_test/ (MP3: үн жана музыка менен)
+# жана run бетинде таблица. Production'го эч нерсе жазылбайт, учурдагы TTS өзгөрбөйт.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: voice-lab
+  cancel-in-progress: false
+
+jobs:
+  voice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Whisper модели (кэш)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-small-v1
+      - run: pip install -q -r requirements.txt
+      - name: Үн үлгүлөрү
+        env:
+          YTA_DRIVE_FOLDER: YouTube_Auto_TEST
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.voice_lab

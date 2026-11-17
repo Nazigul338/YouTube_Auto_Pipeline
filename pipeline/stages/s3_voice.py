@@ -32,6 +32,22 @@ GAP_SCENE = 0.45                   # бөлүктөрдүн ортосундаг
 MAX_INNER_SILENCE = 2.2
 
 
+def chunk_keywords(scenes: list[dict]) -> list[list[str]]:
+    """make_chunks менен бирдей топтоо — ар бөлүктүн сахналарынын ачкыч сөздөрү (басым үчүн)."""
+    out, cur, kws = [], "", []
+    for s in scenes:
+        t = s["text"].strip()
+        if cur and len(cur) + 1 + len(t) > CHUNK_CHARS:
+            out.append(kws)
+            cur, kws = t, list(s.get("keywords") or [])
+        else:
+            cur = f"{cur} {t}".strip()
+            kws += list(s.get("keywords") or [])
+    if cur:
+        out.append(kws)
+    return out
+
+
 def make_chunks(scenes: list[dict]) -> list[str]:
     chunks, cur = [], ""
     for s in scenes:
@@ -56,6 +72,11 @@ class VoiceStage(Stage):
         scenes = json.loads(ctx.path("scenes.json").read_text(encoding="utf-8"))["scenes"]
         chunks = make_chunks(scenes)
         style = cfg.niche_data.get("tts_style", "Deep, calm, confident male voice.")
+        from .. import voice_style
+        motivational = voice_style.enabled(ctx.store)     # СЫНАК гана (TEST папкасы + желек)
+        kw_per_chunk = chunk_keywords(scenes) if motivational else []
+        if motivational:
+            ctx.log("   🎙 МОТИВАЦИЯЛЫК стиль (сынак): режиссура + паузалар + басым")
         g = gemini_of(ctx)
         cdir = ctx.path("audio", "chunks")
         cdir.mkdir(parents=True, exist_ok=True)
@@ -71,10 +92,16 @@ class VoiceStage(Stage):
             meta = cdir / f"chunk_{i:02d}.json"
             if wav.exists() and meta.exists():
                 old = json.loads(meta.read_text())
-                if old["text"] == text and old.get("model") == self.pinned:
+                same_style = (old.get("style") == "motivational") == motivational   # стиль алмашса — кайра
+                if old["text"] == text and old.get("model") == self.pinned and same_style:
                     report.append(old)
                     continue  # мурунку иштетүүдөн калган — кайра жаратпайбыз
-            info = self.make_chunk(ctx, g, text, style, wav, i, len(chunks))
+            if motivational:
+                info = self.make_chunk(ctx, g, text, voice_style.direction(kw_per_chunk[i - 1]), wav, i,
+                                       len(chunks), tts_text=voice_style.shape_text(text))
+                info["style"] = "motivational"
+            else:
+                info = self.make_chunk(ctx, g, text, style, wav, i, len(chunks))
             if not self.pinned:
                 self.pinned = info["model"]
                 pin_file.write_text(self.pinned)
@@ -115,12 +142,13 @@ class VoiceStage(Stage):
             ctx.store.publish("Audio", voice, f"{ctx.video_id}_voice.wav")
         return {"voice_path": str(voice), "duration": round(dur, 2), "wpm": round(wpm, 1)}
 
-    def make_chunk(self, ctx, g, text: str, style: str, wav: Path, i: int, n: int) -> dict:
+    def make_chunk(self, ctx, g, text: str, style: str, wav: Path, i: int, n: int,
+                   tts_text: str | None = None) -> dict:
         problems = []
         listen = asr.get(ctx)
         expect = [asr.norm_word(w) for w in text.split() if asr.norm_word(w)]
         for attempt, variant in enumerate((0, 2, 0, 2), 1):
-            pcm, rate = g.tts(text, voice=ctx.cfg.tts_voice, style=style, variant=variant,
+            pcm, rate = g.tts(tts_text or text, voice=ctx.cfg.tts_voice, style=style, variant=variant,
                               models=[self.pinned] if self.pinned else None)
             used = next((u["model"] for u in reversed(getattr(g, "usage", []))
                          if u.get("purpose") == "tts"), self.pinned or "?")
