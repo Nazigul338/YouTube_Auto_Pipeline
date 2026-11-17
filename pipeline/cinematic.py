@@ -74,7 +74,8 @@ def look_chain(concept_grade: str) -> str:
 
 # ---------------------------------------------------------------- өтүүлөр
 
-TRANSITIONS = ["dissolve", "fade", "dissolve", "fade", "smoothleft", "smoothright", "fadeblack"]
+# fadeblack («караңгы аркылуу») — сейрек (~7%): run #44097307823'дө 1/7 салмак 19% берип, ашыкча караңгы болгон
+TRANSITIONS = ["dissolve", "fade"] * 5 + ["smoothleft", "smoothright", "smoothleft", "fadeblack"]
 TRANSITION_SEC = 0.7
 
 

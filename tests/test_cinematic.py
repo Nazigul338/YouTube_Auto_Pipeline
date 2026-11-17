@@ -100,12 +100,13 @@ class TestFilters(unittest.TestCase):
 
     def test_transitions_vary_and_no_double_fadeblack(self):
         rng, prev, seq = random.Random(1), None, []
-        for _ in range(200):
+        for _ in range(600):
             prev = cinematic.pick_transition(rng, prev)
             seq.append(prev)
         self.assertGreater(len(set(seq)), 3)
         self.assertFalse(any(a == b == "fadeblack" for a, b in zip(seq, seq[1:])))
-        self.assertGreater(seq.count("dissolve") + seq.count("fade"), len(seq) * 0.4)
+        self.assertGreater(seq.count("dissolve") + seq.count("fade"), len(seq) * 0.55)
+        self.assertLess(seq.count("fadeblack"), len(seq) * 0.11)          # караңгы өтүү сейрек
 
     def test_card_overlay_in_render_shot(self):
         clip, card = self.d / "c.mp4", self.d / "card.mov"
@@ -148,6 +149,25 @@ class TestHFTemplate(unittest.TestCase):
             logs = []
             self.assertEqual(hfcards.render_all([{"text": "A", "dur": 2}], Path("/tmp/x_hf"), "#fff", logs.append), {})
             self.assertIn("ASS", logs[0])
+
+    def test_relative_workdir_is_resolved(self):
+        """Runner'деги ката: салыштырмалуу жол → CLI файлды башка жерге жазган. Эми ар дайым абсолюттук."""
+        seen = {}
+
+        def fake_run(cmd, cwd=None, **kw):
+            seen["out"], seen["cwd"] = cmd[cmd.index("-o") + 1], cwd
+            raise subprocess.TimeoutExpired(cmd, 1)
+        with tempfile.TemporaryDirectory() as d, mock.patch.object(hfcards, "make_project",
+                                                                    side_effect=lambda t, du, dest, a: dest), \
+                mock.patch("subprocess.run", fake_run):
+            old = os.getcwd()
+            os.chdir(d)
+            try:
+                hfcards.render_card("А", 2.0, Path("rel/card_00"))
+            finally:
+                os.chdir(old)
+        self.assertTrue(Path(seen["out"]).is_absolute())
+        self.assertTrue(Path(seen["cwd"]).is_absolute())
 
     @unittest.skipUnless(os.environ.get("YTA_HF_LIVE"), "HyperFrames орнотулган чөйрөдө гана")
     def test_live_render_russian_card(self):

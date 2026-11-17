@@ -113,8 +113,12 @@ def validate(path: Path, dur: float) -> tuple[bool, str]:
 
 def render_card(text: str, dur: float, workdir: Path, accent: str = "#f2c14e",
                 timeout: int = RENDER_TIMEOUT) -> tuple[Path | None, str]:
-    """Бир карточканы рендерлейт. (mov_path же None, түшүндүрмө)."""
-    proj = make_project(text, dur, workdir, accent)
+    """Бир карточканы рендерлейт. (mov_path же None, түшүндүрмө).
+
+    Жол АБСОЛЮТТУК болушу шарт: CLI `cwd=proj` менен иштейт, ошондуктан салыштырмалуу `-o` долбоордун ичине
+    эки эсе уяланып жазылат (runner'де 9 карточканын баары ушундан «жок» болуп калган, run #44097307823).
+    """
+    proj = make_project(text, dur, Path(workdir).resolve(), accent)
     out = proj / "card.mov"
     env = dict(os.environ, HYPERFRAMES_NO_TELEMETRY="1", DO_NOT_TRACK="1", HYPERFRAMES_SKIP_SKILLS="1")
     try:
