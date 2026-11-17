@@ -5,7 +5,7 @@ import time
 import urllib.error
 import urllib.request
 
-import config
+from . import config
 
 
 class LLMError(RuntimeError):
@@ -22,9 +22,9 @@ def _extract_json(text):
 
 def generate_json(prompt, models=None, retries=2):
     """Prompt жөнөтөт, JSON кайтарат. Квота/503 болсо кийинки моделге өтөт."""
-    key = os.environ.get("GEMINI_API_KEY")
+    key = os.environ.get("POULTRY_GEMINI_API_KEY")
     if not key:
-        raise LLMError("GEMINI_API_KEY коюлган эмес (GitHub Secrets'ке кош).")
+        raise LLMError("POULTRY_GEMINI_API_KEY коюлган эмес (GitHub Secrets'ке кош).")
     body = json.dumps({
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"responseMimeType": "application/json", "temperature": 0.9},

@@ -1,24 +1,22 @@
 """Poultry Farm Instagram Agent.
 
 Командалар:
-  python agent.py plan  [--days 7]        → апталык контент планы (plan.json)
-  python agent.py make  [--n 3]           → планга ылайык постторду (draft) даярдайт
-  python agent.py list                    → draft'тардын абалы
-  python agent.py approve <id>            → мен бекитем (approved)
-  python agent.py reject  <id>            → четке кагуу
+  python -m poultry_ig_agent.agent plan  [--days 7]        → апталык контент планы (plan.json)
+  python -m poultry_ig_agent.agent make  [--n 3]           → планга ылайык постторду (draft) даярдайт
+  python -m poultry_ig_agent.agent list                    → draft'тардын абалы
+  python -m poultry_ig_agent.agent approve <id>            → мен бекитем (approved)
+  python -m poultry_ig_agent.agent reject  <id>            → четке кагуу
 
 Жарыялоо ТОЛУКТАЙ автоматтык эмес: статусу 'approved' болгон пост гана жөнөтүлөт.
 """
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import re
 
-import config
-import lint
-import llm
-import render
+from . import config, lint, llm, render
 
 PLAN_FILE = "plan.json"
 
@@ -28,7 +26,8 @@ def _path(*p):
 
 
 def _slug(s):
-    return re.sub(r"[^a-z0-9]+", "-", s.lower())[:30].strip("-") or "post"
+    # кирилл темалар үчүн кыска хэш (ID кагылышпасын)
+    return hashlib.sha1(s.encode("utf-8")).hexdigest()[:8]
 
 
 def _load_plan():
@@ -56,6 +55,7 @@ def cmd_plan(days=7, generate=llm.generate_json):
 Тирөөчтөр:\n{pillars}
 Мурунку hook'тор (кайталаба): {_existing_hooks()[-20:]}
 {days} күнгө план түз. Reel жана карусель аралаш, тирөөчтөр айкалышсын.
+Ар идея ky ЖАНА ru тилинде өзүнчө жазылат (бир идея = эки тил, ар тилге өз бурчу).
 JSON кайтар: {{"items":[{{"day":1,"pillar":"...","format":"reel|carousel","topic":"...","angle":"..."}}]}}"""
     plan = generate(prompt)
     os.makedirs(config.OUT_DIR, exist_ok=True)
@@ -73,7 +73,7 @@ def _post_prompt(item):
     return f"""Сен Instagram тоок фермасынын автору. Тил: кыргыз. {config.BRAND_VOICE}
 Эрежелер:\n{rules}
 Тирөөч: {item['pillar']} ({config.PILLARS.get(item['pillar'], '')})
-Формат: {fmt}. Тема: {item['topic']}. Бурч: {item.get('angle', '')}
+Тил: {config.LANG_NAMES[item.get('lang','ky')]} (бардык текст ушул тилде). Формат: {fmt}. Тема: {item['topic']}. Бурч: {item.get('angle', '')}
 Биринчи сап (hook) күчтүү жана оригиналдуу болсун. Аягында комментарийге чакырык.
 {'Каруселде 6-8 слайд.' if fmt == 'carousel' else ''}
 Бул JSON түзүмүндө кайтар: {shape}"""
@@ -86,7 +86,7 @@ def make_post(item, generate=llm.generate_json, tries=2):
         if issues:
             prompt += f"\nМурунку вариантта ката бар, оңдо: {issues}"
         post = generate(prompt)
-        post.update(format=item["format"], pillar=item["pillar"], topic=item["topic"])
+        post.update(format=item["format"], pillar=item["pillar"], topic=item["topic"], lang=item.get("lang", "ky"))
         issues = lint.lint_post(post)
         if not issues:
             break
@@ -97,7 +97,7 @@ def make_post(item, generate=llm.generate_json, tries=2):
 
 def save_post(post, today=None):
     today = today or dt.date.today().isoformat()
-    pid = f"{today}-{_slug(post.get('topic', ''))}-{post['format']}"
+    pid = f"{today}-{_slug(post.get('topic', ''))}-{post['format']}-{post.get('lang', 'ky')}"
     d = _path(pid)
     os.makedirs(d, exist_ok=True)
     post["id"] = pid
@@ -117,7 +117,8 @@ def cmd_make(n=3, generate=llm.generate_json):
     plan = _load_plan()
     ids = []
     for item in plan["items"][:n]:
-        ids.append(save_post(make_post(item, generate)))
+        for lang in config.LANGS:  # ар идея ky + ru
+            ids.append(save_post(make_post({**item, "lang": lang}, generate)))
     return ids
 
 

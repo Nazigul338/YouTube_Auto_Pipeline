@@ -7,17 +7,16 @@ on:
 jobs:
   draft:
     runs-on: ubuntu-latest
-    defaults: {run: {working-directory: poultry_ig_agent}}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: pip install -r requirements.txt
-      - run: python -m unittest discover tests
-      - env: {GEMINI_API_KEY: "${{ secrets.GEMINI_API_KEY }}"}
+      - run: pip install -r poultry_ig_agent/requirements.txt
+      - run: python -m unittest discover -s poultry_ig_agent/tests -t .
+      - env: {POULTRY_GEMINI_API_KEY: "${{ secrets.POULTRY_GEMINI_API_KEY }}"}
         run: |
-          python agent.py plan --days "${{ inputs.days }}"
-          python agent.py make --n "${{ inputs.n }}"
-          python agent.py list
+          python -m poultry_ig_agent.agent plan --days "${{ inputs.days }}"
+          python -m poultry_ig_agent.agent make --n "${{ inputs.n }}"
+          python -m poultry_ig_agent.agent list
       - uses: actions/upload-artifact@v4
         with: {name: poultry-drafts, path: poultry_ig_agent/out}

@@ -1,7 +1,7 @@
 """Постту жарыялоо алдында автоматтык текшерүү (эрежелер бузулса — 'needs_fix')."""
 import re
 
-import config
+from . import config
 
 
 def lint_post(post):

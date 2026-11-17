@@ -3,7 +3,7 @@ import textwrap
 
 from PIL import Image, ImageDraw, ImageFont
 
-import config
+from . import config
 
 FONTS = ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
          "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]
