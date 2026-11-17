@@ -122,7 +122,7 @@ def run_ci(topic: str, niche: str, workdir: Path, *, store: Store | None,
             store.publish("Logs", log_file, f"{video_id}.log")
 
     state = execute(ctx, rerun_from=rerun_from, stop_after=stop_after, checkpoint=checkpoint)
-    _write_summary(state, video_id)
+    _write_summary(state, video_id, registry["videos"].get(video_id, {}).get("final_url"))
     return 1 if any(state.status(n) == FAILED for n in STAGE_NAMES) else 0
 
 
@@ -134,9 +134,11 @@ def _status(state: VideoState) -> str:
     return "in_progress"
 
 
-def _write_summary(state: VideoState, video_id: str) -> None:
+def _write_summary(state: VideoState, video_id: str, url: str | None = None) -> None:
     titles = {s.name: s.title for s in STAGES}
     lines = [f"## 🎬 {video_id}: {state.topic}", ""]
+    if url and _status(state) == "ready":    # шилтеме эң башында — телефондон бир басуу менен ачылат
+        lines += [f"### ▶️ [ВИДЕОНУ КӨРҮҮ (Google Drive)]({url})", "", url, ""]
     for name in STAGE_NAMES:
         st = state.stage(name)
         err = f" — `{st['error'].splitlines()[0][:200]}`" if st["status"] == FAILED else ""
@@ -144,7 +146,7 @@ def _write_summary(state: VideoState, video_id: str) -> None:
     lines += ["", f"📁 Drive: `{DRIVE_ROOT_NAME}/Projects/{video_id}/`"]
     status = _status(state)
     if status == "ready":
-        lines.append(f"✅ Даяр видео: `{DRIVE_ROOT_NAME}/Final_Videos/{video_id}.mp4`")
+        lines.append(f"✅ Даяр видео: `Final_Videos/{video_id}.mp4`" + (f" — {url}" if url else ""))
     else:
         lines.append(f"\nℹ️ Улантуу үчүн: Run workflow → **video_id** = `{video_id}`")
     _summary("\n".join(lines))

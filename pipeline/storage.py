@@ -74,7 +74,7 @@ class Store:
     def pull_project(self, video_id: str, dest: Path) -> bool: ...
     def push_project(self, src: Path, video_id: str, log: Callable[[str], None] = print) -> int: ...
     def pull_music(self, dest: Path) -> int: ...
-    def publish(self, folder: str, local: Path, name: str) -> None: ...
+    def publish(self, folder: str, local: Path, name: str) -> str | None: ...   # шилтеме (Drive) же None
     def read_text(self, folder: str, name: str) -> str | None: ...
     def describe(self) -> str: ...
 
@@ -136,9 +136,10 @@ class LocalStore(Store):
         shutil.copytree(src, dest, dirs_exist_ok=True)
         return sum(1 for p in dest.rglob("*") if p.is_file())
 
-    def publish(self, folder: str, local: Path, name: str) -> None:
+    def publish(self, folder: str, local: Path, name: str) -> str | None:
         (self.root / folder).mkdir(parents=True, exist_ok=True)
         shutil.copy2(local, self.root / folder / name)
+        return (self.root / folder / name).as_uri()
 
     def read_text(self, folder: str, name: str) -> str | None:
         p = self.root / folder / name
@@ -215,8 +216,10 @@ class DriveStore(Store):
                 n += 1
         return n
 
-    def publish(self, folder: str, local: Path, name: str) -> None:
-        self.drive.put_file(local, self._folder(folder), name)
+    def publish(self, folder: str, local: Path, name: str) -> str | None:
+        """Жүктөйт жана файлдын Drive шилтемесин кайтарат (колдонуучу издебей ачышы үчүн)."""
+        fid = self.drive.put_file(local, self._folder(folder), name)
+        return f"https://drive.google.com/file/d/{fid}/view" if fid else None
 
     def read_text(self, folder: str, name: str) -> str | None:
         item = self.drive.find_file(name, self._folder(folder))

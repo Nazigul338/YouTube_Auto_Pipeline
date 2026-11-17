@@ -77,6 +77,7 @@
 
 | Commit | Эмне |
 |---|---|
+| (жаңы) | **Видеонун шилтемеси автоматтык:** `publish()` Drive шилтемесин кайтарат → логдо «▶️ ВИДЕОНУН ШИЛТЕМЕСИ», registry `final_url`, GitHub run бетинин башында «▶️ ВИДЕОНУ КӨРҮҮ». Тест: `tests/test_video_link.py` (4) |
 | (жаңы) | **Smart Video Memory & Anti-Repetition** (4а-бөлүк төмөн) |
 | (жаңы) | `s8.stitch()` — чоң xfade топтору ЖОК, кадр-так сегменттер + concat; `plan_segments`, `pts_summary`; `tests/test_assemble.py` (8) |
 | `a260ffc` | Smart Video Memory + `s8.assemble()` (чыныгы runner'де жетишсиз болду — алмаштырылды) |

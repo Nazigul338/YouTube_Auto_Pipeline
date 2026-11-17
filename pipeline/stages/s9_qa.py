@@ -274,11 +274,15 @@ class QAStage(Stage):
         if not passed:
             raise StageError("QA өткөн жок: " + "; ".join(f"{i['title']} ({i['note']})"
                                                          for i in rep.failed))
+        url = None
         if ctx.store:
-            ctx.store.publish("Final_Videos", final, f"{ctx.video_id}.mp4")
+            url = ctx.store.publish("Final_Videos", final, f"{ctx.video_id}.mp4")
             ctx.store.publish("Licenses", lic, f"{ctx.video_id}_LICENSE.txt")
         entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
         entry["final"] = f"Final_Videos/{ctx.video_id}.mp4"
+        if url:
+            entry["final_url"] = url
+            ctx.log(f"   ▶️ ВИДЕОНУН ШИЛТЕМЕСИ: {url}")
         try:                                       # клиптер «жарыялангандай» белгиленет
             mem = ClipMemory.load(ctx.store, ctx.registry)
             if mem.mark_published(ctx.video_id):
