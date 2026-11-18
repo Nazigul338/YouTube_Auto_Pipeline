@@ -20,7 +20,7 @@
 
 | Secret | Милдеттүүбү | Эмне үчүн |
 |---|---|---|
-| `GOOGLE_API_KEY` | ✅ | Gemini: сценарий, үн (TTS), музыка/кадр анализи |
+| `GOOGLE_API_KEY` | ✅ | Gemini: сценарий, үн (TTS), музыка/кадр анализи; AI-сүрөт (СЫНАК) үчүн ачкычтын долбоорунда **billing** күйгүзүлүшү керек |
 | `PIXABAY_API_KEY` | ✅ | видео/сүрөт клиптер |
 | `GDRIVE_CLIENT_ID` | ✅ | Google Drive OAuth |
 | `GDRIVE_CLIENT_SECRET` | ✅ | Google Drive OAuth |
@@ -58,9 +58,10 @@ pipeline/
   storage.py     — Drive'дагы YouTube_Auto/ түзүлүшү жана реестр
   drive.py       — Google Drive API (OAuth)
   auth_check.py  — OAuth/Drive текшерүү
-  gemini.py      — Gemini: текст, TTS, embedding, аудио/сүрөт анализ (запас моделдер, квота, timeout)
+  gemini.py      — Gemini: текст, TTS, embedding, аудио/сүрөт анализ (запас моделдер, квота, timeout). Veo колдонулбайт
   asr.py         — Whisper (PyAV'сыз)
   stock.py       — Pixabay / Pexels (беттөө менен)
+  ai_images.py   — Gemini AI-сүрөттөр (СЫНАК): prompt, 16:9, бюджет/баа, Drive AI_Images/ кэши
   clipmemory.py  — Smart Video Memory: колдонулган клиптердин Drive базасы (JSON + CSV)
   clipsearch.py  — акылдуу издөө: сахнанын темасы/маанисине жараша, кайталанбастан
   music.py       — музыка китепканасы (булак папкадан, лицензия)
@@ -115,4 +116,20 @@ API ачкычтары **GitHub Secrets'те гана**; логдо email жаш
 - **Видеодо:** `🎞 Cinematic сынак` → `rerun_from=s3_voice`, `motivational_voice` ✓ (`YTA_VOICE_STYLE=motivational`).
   `pipeline/voice_style.py`: режиссёрдук нускама, сахнанын `keywords` боюнча басым, паузалар (сөздөр өзгөрбөйт).
   Production'до (YouTube_Auto) өчүк — учурдагы Algenib + `tts_style` өзгөрүүсүз.
+
+## 🖼 AI-сүрөттөр (Gemini API) — СЫНАК (TEST гана)
+
+- **Иштетүү:** `🎞 Cinematic сынак` → `rerun_from=s5_visuals` (же жаңы видео), `ai_images` ✓, `ai_image_max` (демейки 12),
+  `ai_image_budget` (демейки $0.50). Код коргоосу: `YTA_AI_IMAGES=1` + `YouTube_Auto_TEST` (production'да өчүк).
+- **Эмне кылат:** негизги материал — Pixabay/Pexels видеолору. Gemini ар кадрды сценарийге баалайт; сток туура келбеген
+  (≤2/5) жана сахнанын маанилүү кадрларына гана AI-сүрөт жаратылат (катар эмес, сахнада ≤2, видеонун ≤20%).
+  AI-сүрөт да бааланат — стоктон жакшы болсо гана коюлат. Ар видеонун өз визуалдык стили (мурункуну кайталабайт).
+  Сүрөттөр 16:9 жаратылып, 1920×1080'ге толтурулат жана кадр кыймылын (Ken Burns, zoom, dolly in/out) алат.
+- **Чыгым:** баа `pipeline/ai_images.py: PRICE_USD` (gemini-2.5-flash-image ≈ $0.039/сүрөт) → 12 сүрөт ≈ **$0.47/видео**
+  (чек ашпайт). Отчет: `Projects/<ID>/clips/ai_images.json`, QA `ai_images`. Кэш: Drive `AI_Images/` — кайра иштетүүдө
+  акча кайра кетпейт; башка видеонун сүрөтү колдонулбайт.
+- **Каталар:** 429 (акысыз ачкычта сүрөт квотасы 0 — 2026-11-18 чыныгы текшерүү, probe run #44355771363), billing жок,
+  5xx → AI-сүрөттөр токтойт, кадрлар сток бойдон калат, видео токтобойт.
+- **YouTube:** AI-сүрөт болсо QA «Altered or synthetic content = Yes» сунуштайт; LICENSE жана сүрөттөмөгө AI белгиси кошулат.
+- **Текшерүү:** Actions → `🔬 Мүмкүнчүлүктөрдү сыноо` → `only=image` (1 сүрөт ≈ $0.04).
 

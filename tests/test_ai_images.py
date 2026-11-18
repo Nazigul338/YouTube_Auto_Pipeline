@@ -44,6 +44,9 @@ class FakeGem:
         self.g = Gemini("x", text_models=["t"], tts_models=["s"], log=lambda m: None, sleep=lambda s: None,
                         client=SimpleNamespace(models=self.models))
         self.client = self.g.client
+        self.usage = []
+        self.slept = []
+        self.sleep = self.slept.append
         self.scores = scores
         self.prompts = 0
 
@@ -156,6 +159,34 @@ class TestProduce(unittest.TestCase):
         self.assertTrue(budget.stopped)
         self.assertEqual(budget.spent, 0.0)
         self.assertFalse(budget.can("gemini-2.5-flash-image"))
+
+    def test_minute_limit_waits_once_then_stops(self):
+        err = RuntimeError("429 RESOURCE_EXHAUSTED please check your plan and billing details")
+        err.code = 429
+        gem = FakeGem(self.data, fail=err)
+        budget = ai.Budget()
+        self.assertIsNone(ai.produce(gem, ai.Cache(self.store), budget, "V", "p", self.work, log=lambda m: None))
+        self.assertEqual(gem.models.calls, 2)            # 1 күтүү (≤60 сек) + 1 кайра, андан ары эмес
+        self.assertTrue(all(s <= 62 for s in gem.slept))
+        self.assertTrue(budget.stopped)
+
+    def test_server_error_retries_then_succeeds(self):
+        gem = FakeGem(self.data)
+        calls = {"n": 0}
+        real = gem.models.generate_content
+
+        def flaky(*a, **k):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                e = RuntimeError("503 UNAVAILABLE")
+                e.code = 503
+                raise e
+            return real(*a, **k)
+        gem.models.generate_content = flaky
+        budget = ai.Budget()
+        self.assertIsNotNone(ai.produce(gem, ai.Cache(self.store), budget, "V", "p", self.work, log=lambda m: None))
+        self.assertEqual(budget.generated, 1)
+        self.assertEqual(gem.usage[-1]["purpose"], "ai_image")
 
     def test_budget_exhausted_returns_none_without_call(self):
         gem = FakeGem(self.data)

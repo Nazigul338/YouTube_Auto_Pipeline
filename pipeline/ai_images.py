@@ -270,6 +270,45 @@ def make_asset(key: str, model: str, prompt: str):
                  extra={"model": model, "prompt": prompt})
 
 
+def call_image(gemini, model: str, prompt: str, budget: Budget,
+               log: Callable[[str], None] = print) -> bytes | None:
+    """Бир сүрөт суроосу, ката боюнча чечим (узак күтүү ЖОК — сүрөт милдеттүү эмес, сток бар):
+    429 + күнүмдүк/«limit: 0»/billing → бардык AI-сүрөт токтойт; 429 мүнөттүк → ≤60 сек күтүп 1 жолу кайра;
+    5xx/тармак → 2 жолу кайра; 400 (коопсуздук чыпкасы ж.б.) → ушул кадр гана өткөрүлөт."""
+    from .gemini import _code, quota_info
+
+    sleep = getattr(gemini, "sleep", time.sleep)
+    for attempt in range(3):
+        try:
+            data = generate_bytes(gemini.client, model, prompt)
+            if hasattr(gemini, "usage"):
+                gemini.usage.append({"purpose": "ai_image", "model": model})
+            return data
+        except Exception as e:
+            code, text = _code(e), str(e)
+            short = f"{type(e).__name__} [{code}]: {text[:160]}"
+            if code == 429:
+                q = quota_info(e)
+                hard = q["per_day"] or "limit: 0" in text
+                if hard or attempt >= 1:
+                    budget.failed += 1
+                    budget.stopped = ("квота/billing (429): акысыз ачкычта сүрөт квотасы жок же бүттү — "
+                                      "AI-сүрөттөр токтоду, сток калат")
+                    log(f"   ⚠️ AI-сүрөт ({model}): {short}")
+                    return None
+                sleep(min(60.0, (q["delay"] or 20.0) + 2))
+                continue
+            if (code is None or code >= 500) and attempt < 2:
+                sleep(10.0 * (attempt + 1))
+                continue
+            budget.failed += 1
+            if budget.failed >= 3:
+                budget.stopped = f"катар каталар ({type(e).__name__})"
+            log(f"   ⚠️ AI-сүрөт ({model}) жаратылган жок: {short}")
+            return None
+    return None
+
+
 def produce(gemini, cache: Cache, budget: Budget, video_id: str, prompt: str, dest_dir: Path,
             log: Callable[[str], None] = print) -> tuple[Any, Path] | None:
     """Бир кадр үчүн AI-сүрөт: кэштен же жаңы. (Asset, jpg) же None (бюджет/ката → сток калат)."""
@@ -289,22 +328,10 @@ def produce(gemini, cache: Cache, budget: Budget, video_id: str, prompt: str, de
                 budget.stopped = f"бюджет чеги ${budget.max_usd:.2f}"
             return None
         raw = dest_dir / f"gemini_{key}.raw"
-
-        def fn(m: str, _p=prompt) -> bytes:
-            return generate_bytes(gemini.client, m, _p)
-
-        try:
-            data = gemini._call([model], fn, "ai_image", attempts=2)
-        except Exception as e:
-            from .errors import QuotaExhausted
-
-            budget.failed += 1
-            msg = str(e)
-            if isinstance(e, QuotaExhausted) or "429" in msg or "RESOURCE_EXHAUSTED" in msg or "billing" in msg.lower():
-                budget.stopped = "квота/billing (429) — AI-сүрөттөр токтоду, сток калат"
-            elif budget.failed >= 3:
-                budget.stopped = f"катар каталар ({type(e).__name__})"
-            log(f"   ⚠️ AI-сүрөт ({model}) жаратылган жок: {type(e).__name__}: {msg[:160]}")
+        data = call_image(gemini, model, prompt, budget, log)
+        if data is None:
+            if budget.stopped:
+                return None
             continue
         raw.write_bytes(data)
         try:
