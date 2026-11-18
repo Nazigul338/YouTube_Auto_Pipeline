@@ -12,7 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {pkg: kani-tts, tf: "-U transformers"}
           - {pkg: kani-tts-2, tf: "transformers==4.56.0"}
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +32,14 @@ jobs:
           mkdir -p probe_out
           python poultry_ig_agent/tools/kani_probe.py --model nineninesix/kani-tts-400m-ky \
             --text-file poultry_ig_agent/voice_probe/text_ky.txt --out probe_out/ky_${{ matrix.pkg }}.wav 2>&1 | tail -40
+      - name: Тыныгууларды өлчөө (үн сапатын текшерүү)
+        if: always()
+        shell: bash
+        run: |
+          for f in probe_out/*.wav; do
+            echo "== $f"; ffprobe -v error -show_entries format=duration -of csv=p=0 "$f"
+            ffmpeg -hide_banner -nostats -i "$f" -af silencedetect=noise=-35dB:d=0.6 -f null - 2>&1 | grep -E "silence_(start|end)" | head -40
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with: {name: "kani-voice-${{ matrix.pkg }}", path: probe_out}
