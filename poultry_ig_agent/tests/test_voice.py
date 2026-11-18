@@ -75,3 +75,32 @@ class FileVoice(unittest.TestCase):
         out = tmp_out()
         pid = agent.save_post({"format": "reel", "lang": "ky", "topic": "t", "hook": "h", "voiceover": "Таң атты.", "shots": shots()})
         self.assertEqual(open(os.path.join(out, pid, "voiceover.txt"), encoding="utf-8").read().strip(), "Таң атты.")
+
+
+class Kani(unittest.TestCase):
+    def test_selected_from_settings(self):
+        t = video.tts_from_settings({"voice": {"provider": "kani"}})
+        self.assertIsInstance(t, video.KaniTTS)
+        self.assertEqual(t.model_name, "nineninesix/kani-tts-400m-ky")
+
+    def test_clone_needs_consent(self):
+        with self.assertRaises(video.VideoError):
+            video.tts_from_settings({"voice": {"provider": "kani", "kani_ref_audio": "ref.wav", "owner_consent_confirmed": False}})
+
+    @unittest.skipUnless(__import__("shutil").which("ffmpeg"), "ffmpeg жок")
+    def test_synth_with_fake_model_loaded_once(self):
+        import subprocess
+        loads = []
+
+        class FakeModel:
+            def __call__(self, text, **kw):
+                return "AUDIO", text
+            def save_audio(self, audio, path):
+                subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "sine=d=1.5", "-ar", "22050", path], check=True)
+
+        t = video.KaniTTS(loader=lambda name: loads.append(name) or FakeModel())
+        d = tempfile.mkdtemp()
+        for i in range(2):
+            out = t.synth("Салам", os.path.join(d, f"v{i}.wav"))
+        self.assertEqual(len(loads), 1)
+        self.assertAlmostEqual(video.duration(out), 1.5, delta=0.2)

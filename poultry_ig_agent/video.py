@@ -124,6 +124,42 @@ class ElevenLabsTTS:
         return out_path
 
 
+class KaniTTS:
+    """Kani TTS (NineNineSix, Apache-2.0) — бекер, кыргызча модель. Модель бир жолу жүктөлөт.
+    Оор китепканалар (torch, nemo) керек: requirements-kani.txt. ref_audio берилсе (kani-tts-2) үн клондолот —
+    үн ээсинин уруксаты менен гана."""
+
+    def __init__(self, model="nineninesix/kani-tts-400m-ky", ref_audio=None, consent=False, loader=None):
+        if ref_audio and not consent:
+            raise VideoError("Клон үчүн үн ээсинин уруксаты тастыкталган эмес (voice.owner_consent_confirmed)")
+        self.model_name, self.ref = model, ref_audio
+        self._loader, self._model, self._emb = loader, None, None
+
+    def _load(self):
+        if self._model is None:
+            if self._loader:
+                self._model = self._loader(self.model_name)
+            else:
+                try:
+                    from kani_tts import KaniTTS as _K
+                except ImportError:
+                    raise VideoError("kani-tts орнотулган эмес: pip install -r poultry_ig_agent/requirements-kani.txt")
+                self._model = _K(self.model_name)
+                if self.ref:
+                    from kani_tts import SpeakerEmbedder
+                    self._emb = SpeakerEmbedder(device="cpu").embed_audio_file(self.ref)
+        return self._model
+
+    def synth(self, text, out_path):
+        m = self._load()
+        kw = {"speaker_emb": self._emb} if self._emb is not None else {}
+        audio, _ = m(text, **kw)
+        raw = out_path + ".kani.wav"
+        m.save_audio(audio, raw)
+        _run(["ffmpeg", "-y", "-v", "error", "-i", raw, "-ar", "24000", "-ac", "1", out_path])
+        return out_path
+
+
 def drive_direct(url):
     """Google Drive бөлүшүү шилтемесин түз жүктөө шилтемесине айлантат."""
     import re
@@ -165,6 +201,9 @@ def tts_from_settings(cfg=None, voice_file=None):
         return FileTTS(voice_file, v.get("owner_consent_confirmed", False))
     """settings.json'догу voice.provider боюнча диктор тандалат (дайыма бир эле үн)."""
     v = (cfg or settings.load_settings())["voice"]
+    if v.get("provider") == "kani":
+        return KaniTTS(v.get("kani_model", "nineninesix/kani-tts-400m-ky"), v.get("kani_ref_audio"),
+                       v.get("owner_consent_confirmed", False))
     if v.get("provider") == "elevenlabs":
         return ElevenLabsTTS(v.get("elevenlabs_voice_id"), v.get("elevenlabs_model", "eleven_v3"),
                              v.get("owner_consent_confirmed", False))
