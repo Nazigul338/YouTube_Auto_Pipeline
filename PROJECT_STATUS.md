@@ -240,6 +240,8 @@ billing керек); Veo — тизмеде жок; Google AI Pro (Gemini кол
 `gemini-3.8-flash-tts` 02:45'те КАЙРА иштеди (01:51'деги «күнүмдүк квота» 429'у туруктуу эмес болгон) → MASTER сынак кайра башталды.
 
 **MASTER сынак #2 (run #44226224657, 02:51–02:54 UTC) ❌ ошол эле TTS күнүмдүк квота** (probe'догу 1 суроо өттү, андан кийинки суроолор 429). Демек квота чындап эле ~08:00 UTC'де жаңыланат. Код катасы ЖОК, этаптар 0–2 ✅, үн бөлүктөрү 1–4 кэште. Кийинки кадам: 08:12 UTC эскертмеси (trig_01RnvZ1VUPp3V1mLYei8USR2) → cinematic_test (Video_003, rerun_from=s3_voice, hyperframes=true, motivational_voice=true). Колдонуучунун чечими күтүлүүдө: AI_Media жарым-автомат папкасы (1) же AI'сыз улантуу (2).
+
+**MASTER сынак #3 (run #44265101683, 08:13 UTC башталды)** — квота жаңыланган соң. Текшерүү: `curl https://api.github.com/repos/Nazigul338/YouTube_Auto_Pipeline/actions/runs/44265101683`.
 Текст моделдер ошол учурда 503/504 (Gemini жүктөлгөн); `gemini-4-hydrogen` жана `gemini-3.5-flash-lite` иштеди.
 
 ### 8г. САПАТ ӨТҮҮСҮНҮН ЧЫНЫГЫ СЫНАГЫ (run #44149459540, d3ffb6f, Video_003, s5→s9, 19:36 UTC, TEST) — ЧАЛА ИЙГИЛИК
