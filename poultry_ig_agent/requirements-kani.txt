@@ -3,4 +3,5 @@
 # Пакет/transformers версиясы GitHub Actions сыноосунун натыйжасы боюнча тактала турат.
 kani-tts
 pyarrow<18   # numpy<2 (NeMo) менен шайкештик
+datasets<4   # pyarrow<18 менен шайкештик
 soundfile
