@@ -14,6 +14,7 @@ import subprocess
 import tempfile
 import textwrap
 import time
+import urllib.error
 import urllib.request
 import wave
 
@@ -91,8 +92,10 @@ class GeminiTTS:
                 with wave.open(out_path, "wb") as w:
                     w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
                 return out_path
-            except Exception as e:  # кийинки моделге
-                last = f"{m}: {type(e).__name__}"
+            except urllib.error.HTTPError as e:  # кийинки моделге (ачкыч логго чыкпайт)
+                last = f"{m}: HTTP {e.code} {e.read().decode('utf-8', 'replace')[:200]}"
+            except Exception as e:
+                last = f"{m}: {type(e).__name__}: {str(e)[:200]}"
         raise VideoError("TTS ишке ашкан жок: " + str(last))
 
 
@@ -204,6 +207,8 @@ def tts_from_settings(cfg=None, voice_file=None):
     if v.get("provider") == "kani":
         return KaniTTS(v.get("kani_model", "nineninesix/kani-tts-400m-ky"), v.get("kani_ref_audio"),
                        v.get("owner_consent_confirmed", False))
+    if v.get("provider", "gemini") == "gemini":
+        return GeminiTTS(v.get("gemini_voice"))
     if v.get("provider") == "elevenlabs":
         return ElevenLabsTTS(v.get("elevenlabs_voice_id"), v.get("elevenlabs_model", "eleven_v3"),
                              v.get("owner_consent_confirmed", False))

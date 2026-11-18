@@ -1,9 +1,6 @@
 name: "🎧 Poultry — Kani кыргызча үн сыноосу"
 on:
   workflow_dispatch:
-  push:
-    branches: [ccr-e9f49a12-c7fuhx]
-    paths: [poultry_ig_agent/voice_probe/**, poultry_ig_agent/tools/kani_probe.py]
 jobs:
   probe:
     runs-on: ubuntu-latest
