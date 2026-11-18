@@ -25,7 +25,7 @@ jobs:
           pip install -q "${{ matrix.pkg }}" soundfile
           pip install -q ${{ matrix.tf }}
           pip install -q "pyarrow<18" "datasets<4"   # NeMo numpy<2: жаңы pyarrow numpy>=2, жаңы datasets pyarrow.json_ талап кылат
-          python -c "import numpy, pyarrow; import datasets; print("numpy", numpy.__version__, "pyarrow", pyarrow.__version__, "datasets", datasets.__version__)"
+          python -c 'import numpy, pyarrow, datasets; print("numpy", numpy.__version__, "pyarrow", pyarrow.__version__, "datasets", datasets.__version__)'
       - name: Үн чыгаруу
         shell: bash
         run: |
