@@ -219,6 +219,7 @@ class QAStage(Stage):
             self.check_motion(ctx, rep)
             self.check_originality(ctx, rep, music, meta)
             self.check_policy(ctx, rep, clip_lic, music, meta)
+            self.check_ai_images(ctx, rep, shots)
         self.check_subtitle_layout(ctx, rep)
         return self.finish(ctx, rep, final, meta, music, clip_lic)
 
@@ -278,6 +279,28 @@ class QAStage(Stage):
             f"{v}: айырма {d}, бирдей {s or '-'}" for v, d, s in rows[:4]) or "салыштырууга мурунку видео жок")
         rep.add("original_video", "Видео мурункулардан визуалдык/мазмундук айырмаланат", ok, note)
 
+    @staticmethod
+    def ai_images_info(ctx) -> dict:
+        try:
+            return json.loads(ctx.path("clips", "ai_images.json").read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    def check_ai_images(self, ctx, rep, shots) -> None:
+        """AI-сүрөттөр (кошумча): бюджет чегинде, сток негизги бойдон, катар коюлган эмес, лицензиясы бар."""
+        info = self.ai_images_info(ctx)
+        if not info:
+            return
+        ai = [s for s in shots if s.get("source") == "gemini"]
+        idx = [s["i"] for s in ai]
+        adjacent = sum(1 for a, b in zip(idx, idx[1:]) if b - a == 1)
+        share = len(ai) / max(1, len(shots))
+        ok = info.get("cost_usd", 0) <= info.get("budget_usd", 0) + 1e-6 and adjacent == 0 and share <= 0.2
+        rep.add("ai_images", "AI-сүрөттөр (Gemini): бюджет, үлүш ≤20%, катар эмес", ok,
+                f"коюлду {len(ai)}/{len(shots)} ({share:.0%}), жаратылды {info.get('generated', 0)}, кэштен "
+                f"{info.get('cached', 0)}, чыгым ${info.get('cost_usd', 0):.3f} / чек ${info.get('budget_usd', 0):.2f}"
+                + (f"; {info['stopped']}" if info.get("stopped") else ""), required=False)
+
     def check_policy(self, ctx, rep, clip_lic: list, music: dict, meta: dict) -> None:
         """YouTube Partner Program боюнча белгилүү тобокелдиктер (кошумча, policy_report.json)."""
         risks, good = [], []
@@ -291,6 +314,11 @@ class QAStage(Stage):
         good.append("клиптер ар видеодо жаңы (Smart Video Memory), кадрлар сценарийге AI менен дал келтирилет")
         risks.append("Reused content тобокелдиги: сток-видеолор колдонулат — баалуулук оригиналдуу баяндоо, монтаж жана "
                      "түшүндүрмөдөн келет; бир эле форматты массалык кайталабоо керек")
+        n_ai = sum(1 for l in clip_lic if l.get("source") == "gemini")
+        if n_ai:
+            risks.append(f"AI-сүрөттөр: {n_ai} кадр Gemini менен жаратылган (SynthID белгиси бар). Реалдуу "
+                         "көрүнүшү мүмкүн → YouTube Studio'до «Altered or synthetic content» = «Yes» коюу сунушталат; "
+                         "сүрөттөмөдө AI колдонулганы жазылды")
         risks.append("Синтетикалык үн (Gemini TTS): чыныгы адамдын үнүн туурабайт; YouTube «altered or synthetic "
                      "content» белгиси адатта талап кылынбайт — акыркы чечим каналдын ээсинде")
         out = {"ok": good, "risks": risks}
@@ -436,6 +464,20 @@ class QAStage(Stage):
     def ai_usage(self, ctx) -> dict:
         g = ctx.services.get("gemini")
         used = sorted({f"{u['purpose']}: {u['model']}" for u in getattr(g, "usage", [])})
+        info = self.ai_images_info(ctx)
+        if info.get("used"):
+            return {
+                "tools": ["Gemini (сценарий, факт текшерүү, сахналар)", "Gemini TTS (синтетикалык үн, Algenib)",
+                          "Whisper (субтитр убактысы)", "Gemini (музыканын маанайы, кадр баалоо)",
+                          "Gemini API (AI-сүрөттөр)"],
+                "models_this_run": used,
+                "visuals": (f"сток-видео (Pixabay/Pexels) + {info['used']} AI-сүрөт (Gemini, SynthID); "
+                            f"чыгым ${info.get('cost_usd', 0):.3f}"),
+                "recommendation": ("YouTube Studio → «Altered or synthetic content»: сунуш — «Yes». Себеби: видеодо "
+                                   f"{info['used']} AI менен жаратылган реалдуу көрүнүшү мүмкүн сүрөт бар. Белгилөө "
+                                   "монетизацияга таасир этпейт; белгилебөө эрежени бузуу болушу мүмкүн. "
+                                   "Акыркы чечимди сиз кабыл аласыз."),
+            }
         return {
             "tools": ["Gemini (сценарий, факт текшерүү, сахналар)", "Gemini TTS (синтетикалык үн, Algenib)",
                       "Whisper (субтитр убактысы)", "Gemini (музыканын маанайы, кадр баалоо)"],
@@ -465,6 +507,10 @@ class QAStage(Stage):
                          f"{l['page_url']} | {l['license']}")
         lines += ["", "== AI КУРАЛДАРЫ ==", "Gemini (сценарий, факт текшерүү, сахналар), "
                   "Gemini TTS (диктор үнү), Whisper (субтитр убактысы)."]
+        ai = [l for l in clip_lic if l.get("source") == "gemini"]
+        if ai:
+            lines += ["", "== AI-СҮРӨТТӨР ==", f"{len(ai)} кадр — Google Gemini API менен жаратылган "
+                      "(Generative AI Additional Terms, SynthID белгиси): https://ai.google.dev/gemini-api/terms"]
         out = ctx.path("LICENSE.txt")
         out.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return out
@@ -476,4 +522,6 @@ class QAStage(Stage):
         if music.get("attribution"):
             lines.append(music["attribution"])
         lines.append("Видеоматериалы: Pixabay (Pixabay Content License).")
+        if self.ai_images_info(ctx).get("used"):
+            lines.append("Часть изображений создана с помощью ИИ (Google Gemini).")
         ctx.path("youtube_description.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")

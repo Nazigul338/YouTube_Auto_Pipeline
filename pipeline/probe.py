@@ -322,7 +322,46 @@ def probe_whisper(tts) -> None:
         rec("Whisper", "fail", err(e))
 
 
+def probe_images() -> None:
+    """AI-сүрөт (16:9) ЧЫНЫГЫ сыноо: Gemini сүрөт моделдерин кезек менен; биринчи ийгиликтүүдө токтойт
+    (чыгым ≤ 1 сүрөт ≈ $0.04). Veo сыналбайт."""
+    from google import genai
+    from google.genai import types
+    from . import ai_images
+
+    key = os.environ.get("GOOGLE_API_KEY", "").strip()
+    if not key:
+        rec("AI-сүрөт", "fail", "GOOGLE_API_KEY жок")
+        return
+    beta = genai.Client(api_key=key, http_options=types.HttpOptions(api_version="v1beta", timeout=120_000))
+    names = [m.name.replace("models/", "") for m in beta.models.list()]
+    cands = [n for n in names if "image" in n and n.startswith("gemini")]
+    order = [m for m in ai_images.DEFAULT_MODELS if m in cands] + [m for m in cands if m not in ai_images.DEFAULT_MODELS]
+    rec("Сүрөт моделдери (тизмеде)", "info", ", ".join(cands) or "жок", full=True)
+    for model in order[:4]:
+        try:
+            data = ai_images.generate_bytes(beta, model, "A lone traveler on a misty mountain ridge at sunrise, "
+                                            "seen from behind, cinematic photograph, no text")
+            p = Path("probe_image.png")
+            p.write_bytes(data)
+            out = Path("probe_image.jpg")
+            ai_images.to_frame(p, out)
+            rec(f"AI-сүрөт: {model}", "ok", f"{len(data) // 1024} КБ → 1920×1080; баасы ≈ ${ai_images.price(model):.3f}")
+            return
+        except Exception as e:
+            rec(f"AI-сүрөт: {model}", "fail", err(e))
+
+
 def main() -> int:
+    if os.environ.get("PROBE_ONLY") == "image":
+        probe_images()
+        md = ["## 🖼 AI-сүрөт сыноосу", "", "| Текшерүү | | Жыйынтык |", "|---|---|---|"]
+        for name, status, note in RESULTS:
+            md.append(f"| {name} | {dict(ok='✅', fail='❌', info='ℹ️')[status]} | {note.replace('|', '/')} |")
+        summary = os.environ.get("GITHUB_STEP_SUMMARY")
+        if summary:
+            Path(summary).write_text("\n".join(md) + "\n", encoding="utf-8")
+        return 0
     only_tts = os.environ.get("PROBE_ONLY") == "tts"
     if not only_tts:
         probe_runner()

@@ -83,7 +83,7 @@ class TestPlan(unittest.TestCase):
     def test_images_get_ken_burns_family(self):
         plan = motion.plan_motions(self.shots(10, kinds={k: "image" for k in range(10)}),
                                    {s: {"emotion": "calm"} for s in range(1, 4)}, random.Random(4))
-        self.assertTrue(all(motion.parse(p["motion"])[0] in ("ken_burns", "zoom_in", "zoom_out", "dolly")
+        self.assertTrue(all(motion.parse(p["motion"])[0] in ("ken_burns", "zoom_in", "zoom_out", "dolly", "dolly_out")
                             for p in plan))
 
 

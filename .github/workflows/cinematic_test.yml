@@ -28,6 +28,21 @@ on:
         required: false
         default: false
         type: boolean
+      ai_images:
+        description: "Gemini AI-сүрөттөр (rerun_from=s5_visuals же андан мурун; billing керек)"
+        required: false
+        default: false
+        type: boolean
+      ai_image_max:
+        description: "Бир видеого AI-сүрөттүн эң көп саны"
+        required: false
+        default: "12"
+        type: string
+      ai_image_budget:
+        description: "Бир видеого AI-сүрөт чыгымынын чеги, USD"
+        required: false
+        default: "0.50"
+        type: string
 
 permissions:
   contents: read
@@ -95,6 +110,9 @@ jobs:
           YTA_CINEMATIC: "1"
           YTA_HYPERFRAMES: ${{ inputs.hyperframes && '1' || '0' }}
           YTA_VOICE_STYLE: ${{ inputs.motivational_voice && 'motivational' || '' }}
+          YTA_AI_IMAGES: ${{ inputs.ai_images && '1' || '0' }}
+          YTA_AI_IMAGE_MAX: ${{ inputs.ai_image_max }}
+          YTA_AI_IMAGE_BUDGET: ${{ inputs.ai_image_budget }}
           HYPERFRAMES_NO_TELEMETRY: "1"
           DO_NOT_TRACK: "1"
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}

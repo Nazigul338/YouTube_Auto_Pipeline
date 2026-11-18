@@ -5,7 +5,8 @@
   pan_left, pan_right    — солго/оңго жылуу (бир аз чоңойтулган кадрда)
   pan_up, pan_down       — өйдө/төмөн
   ken_burns              — жакындоо + диагоналдык жылуу (бурчтан бурчка)
-  dolly                  — жакындоо + каршы жакка жылуу (тереңдик сезими; ЧЫНЫГЫ параллакс эмес)
+  dolly (dolly in)       — жакындоо + капталга жылуу (тереңдик сезими; ЧЫНЫГЫ параллакс эмес)
+  dolly_out              — алыстоо + капталга жылуу (dolly in'дин тескериси)
   handheld               — табигый «колдогу камера»: төмөн жыштыктагы жумшак тербелүү
 ЧЫНЫГЫ parallax (алдыңкы/арткы план өзүнчө жылышы) тереңдик картасын (ML) талап кылат — бекер CPU runner'де
 кошулган жок; `dolly` анын жакын жөнөкөй алмашуусу.
@@ -23,7 +24,8 @@ import random
 W, H, FPS = 1920, 1080, 30
 UPSCALE = 2                      # zoompan 2× чоң кадрда — бүтүн пикселдик кадам 0.5 px болот (жылмакай)
 
-TYPES = ["zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down", "ken_burns", "dolly", "handheld"]
+TYPES = ["zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down", "ken_burns", "dolly", "dolly_out",
+         "handheld"]
 LATERAL = {"pan_left": -1, "pan_right": 1}
 
 # эмоция → ылайыктуу кыймылдар (биринчиси эң мүнөздүү)
@@ -31,13 +33,13 @@ BY_EMOTION = {
     "calm": ["pan_right", "pan_left", "ken_burns", "zoom_in"],
     "reflective": ["zoom_in", "ken_burns", "pan_left", "pan_down"],
     "sad": ["zoom_in", "pan_down", "ken_burns", "zoom_out"],
-    "hopeful": ["zoom_out", "pan_up", "ken_burns", "pan_right"],
-    "inspired": ["pan_up", "zoom_out", "ken_burns", "dolly"],
+    "hopeful": ["zoom_out", "pan_up", "dolly_out", "pan_right"],
+    "inspired": ["pan_up", "dolly_out", "ken_burns", "dolly"],
     "determined": ["pan_right", "dolly", "zoom_in", "pan_up"],
     "tense": ["handheld", "zoom_in", "dolly", "pan_left"],
     "dramatic": ["handheld", "zoom_in", "zoom_out", "dolly"],
 }
-ESTABLISHING = ["zoom_out", "ken_burns", "pan_right", "pan_left"]     # сахнанын биринчи кадры
+ESTABLISHING = ["zoom_out", "ken_burns", "dolly_out", "pan_right", "pan_left"]     # сахнанын биринчи кадры
 SPEED = {"calm": 0.75, "reflective": 0.7, "sad": 0.6, "hopeful": 0.9, "tense": 1.15,
          "determined": 1.05, "inspired": 1.0, "dramatic": 1.2}
 MAX_SHARE = 0.30
@@ -88,9 +90,9 @@ def build(motion: str, dur: float, intensity: float = 1.0, seed: int = 0) -> str
         z = f"1+{amp * 0.4:.4f}+{amp * 0.6:.4f}*{e}"
         x = f"{free_x}*({sx}+({ex}-{sx})*{e})"
         y = f"{free_y}*({sy}+({ey}-{sy})*{e})"
-    elif motion == "dolly":
+    elif motion in ("dolly", "dolly_out"):
         d = rnd.choice([-1, 1])
-        z = f"1+{amp:.4f}*{e}"
+        z = f"1+{amp:.4f}*{e}" if motion == "dolly" else f"1+{amp:.4f}*(1-{e})"
         x = f"{free_x}*(0.5+{0.35 * d}*{e})"
         y = cy
     elif motion == "handheld":
@@ -117,7 +119,7 @@ def plan_motions(shots: list[dict], scenes: dict, rng: random.Random) -> list[di
         pool += [t for t in TYPES if t not in pool]                 # запас — бардык түрлөр
         cand = [t for t in pool if t != prev and counts[t] < limit]
         if sh.get("kind") == "image":                                # сүрөт — Ken Burns кыймылы табигый
-            cand = [t for t in cand if t in ("ken_burns", "zoom_in", "zoom_out", "dolly")] or cand
+            cand = [t for t in cand if t in ("ken_burns", "zoom_in", "zoom_out", "dolly", "dolly_out")] or cand
         # сахна ичинде капталдагы жылуунун багыты бирдей (кесүү үзгүлтүксүз сезилет)
         d = scene_dir.get(sh["scene"])
         if d is not None:

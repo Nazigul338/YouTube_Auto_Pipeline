@@ -8,7 +8,7 @@ on:
         description: "Эмнени сынаш керек"
         default: all
         type: choice
-        options: [all, tts]
+        options: [all, tts, image]
 
 permissions:
   contents: read

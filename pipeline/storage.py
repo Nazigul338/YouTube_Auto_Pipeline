@@ -76,6 +76,7 @@ class Store:
     def pull_music(self, dest: Path) -> int: ...
     def publish(self, folder: str, local: Path, name: str) -> str | None: ...   # шилтеме (Drive) же None
     def read_text(self, folder: str, name: str) -> str | None: ...
+    def fetch(self, folder: str, name: str, dest: Path) -> bool: ...   # файлды жүктөп алуу (AI-сүрөт кэши)
     def describe(self) -> str: ...
 
 
@@ -144,6 +145,14 @@ class LocalStore(Store):
     def read_text(self, folder: str, name: str) -> str | None:
         p = self.root / folder / name
         return p.read_text(encoding="utf-8") if p.exists() else None
+
+    def fetch(self, folder: str, name: str, dest: Path) -> bool:
+        p = self.root / folder / name
+        if not p.exists():
+            return False
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(p, dest)
+        return True
 
     def save_music_tags(self, data: dict) -> None:
         p = self.root / "Music" / "_tags.json"
@@ -229,6 +238,13 @@ class DriveStore(Store):
 
         with tempfile.TemporaryDirectory() as d:
             return self.drive.download_file(item["id"], Path(d) / name).read_text(encoding="utf-8")
+
+    def fetch(self, folder: str, name: str, dest: Path) -> bool:
+        item = self.drive.find_file(name, self._folder(folder))
+        if not item:
+            return False
+        self.drive.download_file(item["id"], dest)
+        return dest.exists()
 
     # Музыканын маанай белгилерин сактоо (Music/ ичиндеги системанын бир гана файлы)
     def save_music_tags(self, data: dict) -> None:

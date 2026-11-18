@@ -37,8 +37,19 @@ MAX_REUSE_FRACTION = 0.05   # акыркы чара: кадрлардын ушу
 STRICT_MIN, STRICT_MAX = 2.8, 4.4      # катуу режим: ар кадр ушул чекте (сөз чеги мүмкүн болсо гана жылдырылат)
 
 
-def strict_cuts(a: float, b: float, gaps: list[float]) -> list[float]:
-    """a..b аралыгын 2.8–4.4 сек кадрларга бөлөт; кесүү сөз чегине (±0.35 сек) жылдырылат, бирок чектен чыкпайт."""
+# сценарийге жараша темп: тынч/ойлуу сахна — узунураак кадр, чыңалган/чечкиндүү — кыскараак (2.8–4.4 ичинде)
+PACE = {"calm": 4.0, "reflective": 3.9, "sad": 4.0, "hopeful": 3.6, "inspired": 3.4,
+        "determined": 3.2, "tense": 3.0, "dramatic": 3.1}
+
+
+def scene_targets(scenes: dict) -> dict:
+    """{сахна id: кадрдын максаттуу узактыгы} — эмоцияга жараша."""
+    return {sid: PACE.get(sc.get("emotion", ""), 3.6) for sid, sc in scenes.items()}
+
+
+def strict_cuts(a: float, b: float, gaps: list[float], target: float = 3.6) -> list[float]:
+    """a..b аралыгын 2.8–4.4 сек кадрларга бөлөт; кесүү сөз чегине (±0.35 сек) жылдырылат, бирок чектен чыкпайт.
+    target — сахнанын темпи (тынч ≈4.0, чыңалган ≈3.0)."""
     d = b - a
 
     def violation(k: int) -> float:
@@ -46,7 +57,7 @@ def strict_cuts(a: float, b: float, gaps: list[float]) -> list[float]:
         return max(0.0, STRICT_MIN - x, x - STRICT_MAX)
 
     # чектен эң аз чыккан k (барабар болсо — 3.6 сек'ке жакыны): 4.6 сек сахна 2×2.3 эмес, 1 кадр болот
-    k = min(range(1, int(d / 2.0) + 2), key=lambda n: (round(violation(n), 3), abs(d / n - 3.6)))
+    k = min(range(1, int(d / 2.0) + 2), key=lambda n: (round(violation(n), 3), abs(d / n - target)))
     cuts = [a]
     for j in range(1, k):
         ideal = a + j * d / k
@@ -62,7 +73,8 @@ def strict_cuts(a: float, b: float, gaps: list[float]) -> list[float]:
 
 
 def plan_shots(scene_times: list[dict], words: list[dict], total: float,
-               target: float = TARGET_SHOT, strict: bool = False) -> list[dict]:
+               target: float = TARGET_SHOT, strict: bool = False,
+               targets: dict | None = None) -> list[dict]:
     """Сахналарды ~target сек кадрларга бөлөт, чектерди сөздөрдүн арасына жылдырат.
 
     strict=True (сынак): ар кадр 2.8–4.4 сек (мүмкүн болгон жерде), мурунку режим — эркин (2.3–4.8 чыгып калган).
@@ -74,7 +86,7 @@ def plan_shots(scene_times: list[dict], words: list[dict], total: float,
         b = scene_times[i + 1]["start"] if i + 1 < len(scene_times) else total
         d = b - a
         if strict:
-            cuts = strict_cuts(a, b, gaps)
+            cuts = strict_cuts(a, b, gaps, (targets or {}).get(sc["id"], 3.6))
             for s, e in zip(cuts, cuts[1:]):
                 shots.append({"i": len(shots), "scene": sc["id"], "start": round(s, 3),
                               "end": round(e, 3), "dur": round(e - s, 3)})
@@ -131,7 +143,8 @@ class VisualsStage(Stage):
         total = timing["duration"] + TAIL_SEC
         from .. import cinematic
         quality = cinematic.enabled(ctx.store)           # СЫНАК: катуу темп (2.8–4.4) + AI маани текшерүүсү
-        shots = plan_shots(timing["scenes"], timing["words"], total, strict=quality)
+        shots = plan_shots(timing["scenes"], timing["words"], total, strict=quality,
+                           targets=scene_targets(scenes) if quality else None)
         stock = ctx.services.get("stock") or from_env()
         rng = random.Random(int(hashlib.md5(ctx.video_id.encode()).hexdigest(), 16))
 
@@ -213,6 +226,10 @@ class VisualsStage(Stage):
             ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
                     f"{ai_stats.get('low', 0)}, алмаштырылды {ai_stats.get('replaced', 0)}, "
                     f"орточо {ai_stats.get('avg', 0):.2f}/5")
+        ai_img: dict = {}
+        from .. import ai_images
+        if quality and ai_stats and ai_images.enabled(ctx.store):
+            results, ai_img = self.add_ai_images(ctx, results, shots, scenes, ai_stats)
 
         licenses = []
         images_used = extended = 0
@@ -263,7 +280,77 @@ class VisualsStage(Stage):
         if ai_stats:
             res["ai_avg"] = round(ai_stats["avg"], 2)
             res["ai_replaced"] = ai_stats["replaced"]
+        if ai_img:
+            res["ai_images"] = ai_img["used"]
+            res["ai_images_cost_usd"] = ai_img["cost_usd"]
         return res
+
+    def add_ai_images(self, ctx, results, shots, scenes, ai_stats):
+        """Gemini AI-сүрөттөрү (СЫНАК): сток мааниге туура келбеген кадрларга гана, бюджет чегинде.
+        AI-сүрөт да Gemini менен бааланат — стоктон жакшы болсо гана коюлат."""
+        from .. import ai_images as ai
+
+        g = ctx.services.get("gemini")
+        budget = ai.Budget.from_env()
+        style = ai.pick_style(ctx.video_id, ctx.registry)
+        scores = dict(ai_stats["scores"])
+        slots = ai.select_slots(shots, scores, budget.max_images, self.LOW_SCORE)
+        info = {"style": style, "slots": slots, "used": 0, "kept": [], "rejected": []}
+        text = lambda i: scenes[shots[i]["scene"]]["text"]
+        if not slots or g is None:
+            ctx.log("   🖼 AI-сүрөт: керек болгон кадр жок" if g else "   🖼 AI-сүрөт: Gemini жок")
+            info.update(budget.report())
+            info["cost_usd"] = 0.0
+            return results, info
+        try:
+            prompts = ai.write_prompts(g, [(i, text(i)) for i in slots], style)
+        except Exception as e:
+            ctx.log(f"   ⚠️ AI-сүрөт prompt'тору жазылган жок ({type(e).__name__}) — сток калат")
+            prompts = {}
+        cache = ai.Cache(ctx.store, ctx.log)
+        cand = {}
+        for i in slots:
+            if i not in prompts:
+                continue
+            got = ai.produce(g, cache, budget, ctx.video_id, prompts[i], ctx.path("clips"), ctx.log)
+            if got is None:
+                if budget.stopped:
+                    ctx.log(f"   🖼 AI-сүрөт токтоду: {budget.stopped}")
+                    break
+                continue
+            cand[i] = got
+        by_i = {r[0]: r for r in results}
+        if cand:
+            new = self._rate(ctx, [(i, self._frame(p, "image", 0.0, shots[i]["dur"]), text(i))
+                                   for i, (a, p) in cand.items()])
+            for i, (a, p) in cand.items():
+                old, sn = scores.get(i, 0), new.get(i)
+                ok = (sn is not None and sn > old and sn >= 3) or (sn is None and old <= self.LOW_SCORE)
+                row = {"shot": i, "stock_score": old, "ai_score": sn, "prompt": a.extra["prompt"],
+                       "file": p.name, "model": a.extra["model"]}
+                if ok:
+                    by_i[i] = (i, a, p, None, "ai", 0.0)
+                    if sn is not None:
+                        scores[i] = sn
+                    info["kept"].append(row)
+                else:
+                    info["rejected"].append(row)
+        try:
+            cache.save(ctx.path("clips"))
+        except Exception as e:
+            ctx.log(f"   ⚠️ AI-сүрөт индекси сакталган жок: {type(e).__name__}")
+        ai_stats["scores"] = scores
+        if scores:
+            ai_stats["avg"] = sum(scores.values()) / len(scores)
+        ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})["ai_style"] = style
+        info.update(budget.report())
+        info["used"] = len(info["kept"])
+        ctx.path("clips", "ai_images.json").write_text(json.dumps(info, ensure_ascii=False, indent=1),
+                                                       encoding="utf-8")
+        ctx.log(f"   🖼 AI-сүрөт (Gemini): орун {len(slots)}, жаратылды {budget.generated}, кэштен {budget.cached}, "
+                f"коюлду {info['used']}, четке кагылды {len(info['rejected'])}; чыгым ${budget.spent:.3f} "
+                f"(чек ${budget.max_usd:.2f}){'; ' + budget.stopped if budget.stopped else ''}")
+        return [by_i[i] for i in sorted(by_i)], info
 
     LOW_SCORE = 2          # ≤2/5 — клип сахнанын текстине дал келбейт
     MAX_REPLACE = 25
@@ -273,7 +360,13 @@ class VisualsStage(Stage):
     def _frame(path: Path, kind: str, offset: float, dur: float) -> bytes:
         from .s9_qa import frame_jpg
 
-        return frame_jpg(path, 0.0 if kind == "image" else offset + dur / 2)
+        if kind == "image":       # жалгыз сүрөттө `-ss` колдонулбайт (FFmpeg 6.1 бош кайтарат)
+            import subprocess
+
+            r = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-frames:v", "1", "-vf", "scale=640:-2",
+                                "-f", "image2", "-c:v", "mjpeg", "-"], capture_output=True, timeout=60)
+            return r.stdout
+        return frame_jpg(path, offset + dur / 2)
 
     RATE_PASSES = 3        # Gemini 503 («жогорку суроо») болсо — токтоп туруп кайра аракет
     RATE_WAIT = 120
@@ -368,6 +461,11 @@ def ensure_media(ctx: Context) -> list[dict]:
         ctx.log(f"   ⬇ {len(missing)} материал кайра жүктөлүүдө (мурунку иштетүүдөн)")
 
         def get(s):
+            if s.get("source") == "gemini":            # AI-сүрөт: Drive кэшинен (кайра жаратылбайт)
+                from ..ai_images import FOLDER
+                if ctx.store is None or not ctx.store.fetch(FOLDER, s["file"], ctx.path("clips", s["file"])):
+                    raise StageError(f"AI-сүрөт кэште жок: {s['file']}")
+                return
             a = Asset(s["source"], s["kind"], s["asset"], s["url"], 1920, 1080, 0.0, "", "", "", "")
             stock.download(a, ctx.path("clips", s["file"]))
 
