@@ -1,0 +1,32 @@
+name: "🎧 Poultry — сыноо үнүн mp3 кылып сактоо"
+on:
+  workflow_dispatch:
+  push:
+    branches: [ccr-e9f49a12-c7fuhx]
+    paths: [poultry_ig_agent/voice_probe/samples_request.txt]
+permissions:
+  actions: read
+  contents: write
+jobs:
+  save:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: kani-voice-kani-tts-2
+          path: art
+          run-id: 44299479888
+          github-token: ${{ github.token }}
+      - name: mp3'кө айлантуу жана commit
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          mkdir -p poultry_ig_agent/voice_probe/samples
+          for f in art/*.wav; do
+            ffmpeg -y -v error -i "$f" -ac 1 -b:a 96k "poultry_ig_agent/voice_probe/samples/kani_$(basename "${f%.wav}").mp3"
+          done
+          ls -la poultry_ig_agent/voice_probe/samples
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add poultry_ig_agent/voice_probe/samples
+          git commit -m "Kani сыноо үндөрү (mp3, run 44299479888)" && git push
