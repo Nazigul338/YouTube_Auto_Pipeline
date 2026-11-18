@@ -27,6 +27,24 @@ def pick_start(cards: list[dict], total: float, length: float) -> float:
     return round(min(start, max(0.0, total - length)), 2)
 
 
+def sheet_times(total: float, n: int = 20) -> list[float]:
+    """Бүт видео боюнча бирдей аралыктагы n кадрдын убактысы (көз менен текшерүү барагы үчүн)."""
+    return [round(total * (i + 0.5) / n, 2) for i in range(n)] if total > 0 else []
+
+
+def contact_sheet(src: Path, total: float, out: Path, n: int = 20, cols: int = 4) -> Path:
+    """Бүт видеодон n кадр (4 мамыча, 480×270) — бир JPG. Видео өзгөрбөйт."""
+    tmp = out.parent / "sheet_frames"
+    tmp.mkdir(exist_ok=True)
+    for k, t in enumerate(sheet_times(total, n)):
+        media.run(["ffmpeg", "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", str(src), "-frames:v", "1",
+                   "-vf", "scale=480:270", str(tmp / f"f{k:03d}.png")], "кадр", timeout=120)
+    rows = -(-n // cols)
+    media.run(["ffmpeg", "-y", "-v", "error", "-framerate", "1", "-i", str(tmp / "f%03d.png"),
+               "-vf", f"tile={cols}x{rows}", "-frames:v", "1", "-q:v", "3", str(out)], "барак", timeout=120)
+    return out
+
+
 def main() -> int:
     root = os.environ.get("YTA_DRIVE_FOLDER", "YouTube_Auto_TEST")
     vid = os.environ.get("VIDEO_ID", "Video_003").strip()
@@ -66,6 +84,14 @@ def main() -> int:
         url = f"https://drive.google.com/file/d/{pid}/view"
         msg = (f"✓ Үзүндү: {start:.0f}–{start + length:.0f} сек (карточкалар: {len(cards)}), видео {sd['video']:.2f} сек, "
                f"аудио {sd['audio']:.2f} сек, {size:.1f} МБ\n▶️ ҮЗҮНДҮНҮН ШИЛТЕМЕСИ: {url}")
+        try:
+            sh = contact_sheet(src, total, d / f"{Path(name).stem}_sheet.jpg")
+            sid = drive.put_file(sh, folder, sh.name)
+            surl = f"https://drive.google.com/file/d/{sid}/view"
+            times = ", ".join(f"{t:.0f}" for t in sheet_times(total))
+            msg += f"\n🖼 БҮТ ВИДЕОНУН КАДРЛАРЫ (20, сек: {times}): {surl}"
+        except Exception as e:  # барак кошумча — үзүндүгө таасир этпейт
+            msg += f"\n⚠️ Кадрлар барагы жасалган жок: {type(e).__name__}"
         print(msg)
         path = os.environ.get("GITHUB_STEP_SUMMARY")
         if path:

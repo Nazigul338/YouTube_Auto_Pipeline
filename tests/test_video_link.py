@@ -56,3 +56,13 @@ class TestVideoLink(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestPreviewSheet(unittest.TestCase):
+    def test_sheet_times_even(self):
+        from pipeline.make_preview import sheet_times
+        t = sheet_times(540.0, 20)
+        self.assertEqual(len(t), 20)
+        self.assertAlmostEqual(t[0], 13.5)
+        self.assertAlmostEqual(t[-1], 526.5)
+        self.assertEqual(sheet_times(0.0), [])
