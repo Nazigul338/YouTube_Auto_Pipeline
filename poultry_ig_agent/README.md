@@ -30,6 +30,11 @@ GitHub → Actions → **«🐔 Poultry Instagram — START»** → Run workflow
 3. Реалдуу видео/сүрөт: `poultry_ig_agent/assets/real/`, музыка: `assets/music/`.
    ⚠️ Репозиторий ачык — жеке/маанилүү файлдарды ушунда сактабаңыз (Drive интеграциясы кийинки этап).
 
+## Диктор үнү (дайыма бир үн)
+`settings.json → voice`: `provider: "elevenlabs"`, `elevenlabs_voice_id: "<ID>"`, `owner_consent_confirmed: true`
+(үн ээси уруксат бергенде гана). Ачкыч — GitHub Secret `POULTRY_ELEVENLABS_API_KEY`. Ар Reel'дин caption'ына
+«🎙 Диктордун үнү AI менен түзүлгөн» деген ачыктоо автоматтык кошулат (`disclose_ai_voice`).
+
 ## Коопсуздук жана чындык
 - Дозасы, дары сунуштоо, диагноз — тыюу. Ден соолук посту: ветеринар эскертүүсү автоматтык, булак ишенимдүү домендер тизмесинен,
   `needs_vet_review` → `approve <id> --vet-reviewed` менен гана бекитилет. **Булактын мазмуну автоматтык тастыкталбайт — текшерүү сизде/ветеринарда.**

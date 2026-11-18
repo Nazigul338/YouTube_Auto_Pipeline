@@ -64,6 +64,7 @@ jobs:
       - name: START
         env:
           POULTRY_GEMINI_API_KEY: ${{ secrets.POULTRY_GEMINI_API_KEY }}
+          POULTRY_ELEVENLABS_API_KEY: ${{ secrets.POULTRY_ELEVENLABS_API_KEY }}
         run: |
           python -m poultry_ig_agent.agent check
           ARGS="--type ${{ inputs.content_type }} --format ${{ inputs.format }} --lang ${{ inputs.lang }}"

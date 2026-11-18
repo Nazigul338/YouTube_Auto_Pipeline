@@ -96,6 +96,43 @@ class GeminiTTS:
         raise VideoError("TTS ишке ашкан жок: " + str(last))
 
 
+class ElevenLabsTTS:
+    """Клондолгон/тандалган ElevenLabs үнү. Ачкыч: POULTRY_ELEVENLABS_API_KEY (GitHub Secret).
+    Үн ээсинин уруксаты settings.json → voice.owner_consent_confirmed=true болмоюнча ИШТЕБЕЙТ.
+    Кыргызча сапаты модельге жараша (default eleven_v3) — чыныгы API менен текшерилген эмес."""
+
+    API = "https://api.elevenlabs.io/v1/text-to-speech"
+
+    def __init__(self, voice_id, model="eleven_v3", consent=False):
+        if not consent:
+            raise VideoError("Үн ээсинин уруксаты тастыкталган эмес (settings.json → voice.owner_consent_confirmed)")
+        if not voice_id:
+            raise VideoError("voice.elevenlabs_voice_id коюлган эмес")
+        self.voice_id, self.model = voice_id, model
+
+    def synth(self, text, out_path):
+        key = os.environ.get("POULTRY_ELEVENLABS_API_KEY")
+        if not key:
+            raise VideoError("POULTRY_ELEVENLABS_API_KEY коюлган эмес")
+        body = json.dumps({"text": text, "model_id": self.model}).encode()
+        req = urllib.request.Request(f"{self.API}/{self.voice_id}?output_format=mp3_44100_128", body,
+                                     {"Content-Type": "application/json", "xi-api-key": key, "Accept": "audio/mpeg"})
+        mp3 = out_path + ".mp3"
+        with urllib.request.urlopen(req, timeout=180) as r, open(mp3, "wb") as f:
+            f.write(r.read())
+        _run(["ffmpeg", "-y", "-v", "error", "-i", mp3, "-ar", "24000", "-ac", "1", out_path])
+        return out_path
+
+
+def tts_from_settings(cfg=None):
+    """settings.json'догу voice.provider боюнча диктор тандалат (дайыма бир эле үн)."""
+    v = (cfg or settings.load_settings())["voice"]
+    if v.get("provider") == "elevenlabs":
+        return ElevenLabsTTS(v.get("elevenlabs_voice_id"), v.get("elevenlabs_model", "eleven_v3"),
+                             v.get("owner_consent_confirmed", False))
+    return GeminiTTS()
+
+
 # ---------------- кадрларды чечмелөө ----------------
 def list_real_assets(assets_dir):
     files = sorted(f for f in glob.glob(os.path.join(assets_dir, "real", "*")) if f.lower().endswith(VID_EXT + IMG_EXT))

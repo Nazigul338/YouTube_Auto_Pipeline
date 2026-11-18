@@ -6,6 +6,8 @@ HERE = os.path.dirname(__file__)
 DEFAULTS = {
     "default_lang": "ky", "graph_version": "v23.0", "publish_live": False,
     "autopilot": {"enabled": False, "required_approved_publishes": 5},
+    "voice": {"provider": "gemini", "elevenlabs_voice_id": None, "elevenlabs_model": "eleven_v3",
+              "owner_consent_confirmed": False, "disclose_ai_voice": True},
     "video": {"min_seconds": 15, "max_seconds": 60,
               "ai_label": {"ky": "AI иллюстрация", "ru": "AI-иллюстрация"}},
 }

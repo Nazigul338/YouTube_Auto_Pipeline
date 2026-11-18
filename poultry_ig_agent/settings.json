@@ -2,6 +2,7 @@
   "default_lang": "ky",
   "graph_version": "v23.0",
   "publish_live": false,
+  "voice": {"provider": "gemini", "elevenlabs_voice_id": null, "elevenlabs_model": "eleven_v3", "owner_consent_confirmed": false, "disclose_ai_voice": true},
   "autopilot": {"enabled": false, "required_approved_publishes": 5},
   "video": {"min_seconds": 15, "max_seconds": 60, "ai_label": {"ky": "AI иллюстрация", "ru": "AI-иллюстрация"}}
 }

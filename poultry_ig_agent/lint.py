@@ -11,7 +11,7 @@ def _blob(post):
     texts += [sh.get("onscreen", "") for sh in post.get("shots", [])]
     texts += [post.get("cta", {}).get("text", "")]
     blob = "\n".join(t for t in texts if t)
-    for note in safety.AI_NOTE.values():      # милдеттүү AI ачыктоосу тыюу эмес
+    for note in list(safety.AI_NOTE.values()) + list(safety.AI_VOICE_NOTE.values()):      # милдеттүү AI ачыктоосу тыюу эмес
         blob = blob.replace(note, "")
     return blob
 

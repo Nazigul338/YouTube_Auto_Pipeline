@@ -12,6 +12,12 @@ AI_NOTE = {
 }
 
 
+AI_VOICE_NOTE = {
+    "ky": "🎙 Диктордун үнү AI менен түзүлгөн (үн ээсинин уруксаты менен).",
+    "ru": "🎙 Голос диктора создан с помощью AI (с согласия владельца голоса).",
+}
+
+
 def _text(post):
     parts = [post.get("topic", ""), post.get("hook", ""), post.get("caption", ""), post.get("voiceover", "")]
     parts += [s.get("title", "") + " " + s.get("body", "") for s in post.get("slides", [])]
@@ -49,6 +55,8 @@ def ensure_disclaimers(post, niche):
             cap += f"\n{label}: " + ", ".join(urlparse(s["url"]).hostname for s in srcs)
     if any(s.get("source") == "ai" for s in post.get("shots", [])) and AI_NOTE[lang] not in cap:
         cap += "\n\n" + AI_NOTE[lang]
+    if post.get("ai_voice") and AI_VOICE_NOTE[lang] not in cap:
+        cap += "\n" + AI_VOICE_NOTE[lang]
     post["caption"] = cap
     return post
 

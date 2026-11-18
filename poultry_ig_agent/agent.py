@@ -167,7 +167,9 @@ def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False):
     d = _path(pid)
     with open(os.path.join(d, "post.json"), encoding="utf-8") as f:
         post = json.load(f)
-    res = video.build(post, d, veo or video.VeoProvider(), tts or video.GeminiTTS(),
+    tts = tts or video.tts_from_settings()
+    post["ai_voice"] = settings.load_settings()["voice"].get("disclose_ai_voice", True)
+    res = video.build(post, d, veo or video.VeoProvider(), tts,
                       os.path.join(os.path.dirname(__file__), "assets"), allow_ai_fallback, NICHE)
     if res["status"] == "ready":
         post["shots"] = res["shots"]
@@ -246,7 +248,7 @@ def cmd_report(client, today=None):
 
 
 def cmd_check():
-    names = ["POULTRY_GEMINI_API_KEY", "POULTRY_IG_ACCESS_TOKEN", "POULTRY_IG_USER_ID"]
+    names = ["POULTRY_GEMINI_API_KEY", "POULTRY_IG_ACCESS_TOKEN", "POULTRY_IG_USER_ID", "POULTRY_ELEVENLABS_API_KEY"]
     course = settings.load_course()
     return {**{n: bool(os.environ.get(n)) for n in names}, "course_filled": sales.ready(course),
             "real_footage_files": len(video.list_real_assets(os.path.join(os.path.dirname(__file__), "assets")))}
