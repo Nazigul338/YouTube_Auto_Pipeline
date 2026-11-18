@@ -124,7 +124,45 @@ class ElevenLabsTTS:
         return out_path
 
 
-def tts_from_settings(cfg=None):
+def drive_direct(url):
+    """Google Drive бөлүшүү шилтемесин түз жүктөө шилтемесине айлантат."""
+    import re
+    m = re.search(r"/file/d/([\w-]+)", url) or re.search(r"[?&]id=([\w-]+)", url)
+    if "drive.google.com" in url and m:
+        return f"https://drive.google.com/uc?export=download&id={m.group(1)}"
+    return url
+
+
+class FileTTS:
+    """Даяр үн файлы (мис. Akylai'да клондолгон үн менен жасалган mp3/wav). Текстти өзү окубайт —
+    файл ушул Reel'дин voiceover.txt текстинен жасалган болушу керек. Файл репозиторийге САКТАЛБАЙТ."""
+
+    def __init__(self, source, consent=False):
+        if not consent:
+            raise VideoError("Үн ээсинин уруксаты тастыкталган эмес (settings.json → voice.owner_consent_confirmed)")
+        if not source:
+            raise VideoError("Үн файлынын шилтемеси/жолу берилген жок")
+        self.source = source
+
+    def synth(self, text, out_path):
+        src = self.source
+        if src.startswith("http"):
+            raw = out_path + ".src"
+            req = urllib.request.Request(drive_direct(src), headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=180) as r, open(raw, "wb") as f:
+                data = r.read()
+                if data[:15].lower().startswith((b"<!doctype", b"<html")):
+                    raise VideoError("Шилтеме аудио эмес, HTML берди: Drive'да «Шилтемеси бар бардык адамдар» уруксатын коюңуз")
+                f.write(data)
+            src = raw
+        _run(["ffmpeg", "-y", "-v", "error", "-i", src, "-ar", "24000", "-ac", "1", out_path])
+        return out_path
+
+
+def tts_from_settings(cfg=None, voice_file=None):
+    if voice_file:
+        v = (cfg or settings.load_settings())["voice"]
+        return FileTTS(voice_file, v.get("owner_consent_confirmed", False))
     """settings.json'догу voice.provider боюнча диктор тандалат (дайыма бир эле үн)."""
     v = (cfg or settings.load_settings())["voice"]
     if v.get("provider") == "elevenlabs":

@@ -156,6 +156,9 @@ def save_post(post, today=None):
             render.render_story_frame(f.get("text", ""), i, len(fr), os.path.join(d, f"story_{i + 1:02d}.png"),
                                       f.get("options") if f.get("sticker") in ("poll", "question") else None,
                                       f.get("sticker") if f.get("sticker") not in (None, "none") else None)
+    if post.get("voiceover"):   # Akylai/башка кызматка көчүрүү үчүн таза текст
+        with open(os.path.join(d, "voiceover.txt"), "w", encoding="utf-8") as f:
+            f.write(post["voiceover"].strip() + "\n")
     with open(os.path.join(d, "caption.txt"), "w", encoding="utf-8") as f:
         f.write(post.get("caption", "") + "\n\n" + " ".join(post.get("hashtags", [])))
     with open(os.path.join(d, "post.json"), "w", encoding="utf-8") as f:
@@ -163,11 +166,11 @@ def save_post(post, today=None):
     return pid
 
 
-def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False):
+def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False, voice_file=None):
     d = _path(pid)
     with open(os.path.join(d, "post.json"), encoding="utf-8") as f:
         post = json.load(f)
-    tts = tts or video.tts_from_settings()
+    tts = tts or video.tts_from_settings(voice_file=voice_file)
     post["ai_voice"] = settings.load_settings()["voice"].get("disclose_ai_voice", True)
     res = video.build(post, d, veo or video.VeoProvider(), tts,
                       os.path.join(os.path.dirname(__file__), "assets"), allow_ai_fallback, NICHE)
@@ -271,6 +274,8 @@ def main(argv=None):
     sub.add_parser("reject").add_argument("id")
     pb = sub.add_parser("publish"); pb.add_argument("id"); pb.add_argument("--live", action="store_true")
     dm = sub.add_parser("dm"); dm.add_argument("text"); dm.add_argument("--lang", default="ky")
+    vd = sub.add_parser("video"); vd.add_argument("id"); vd.add_argument("--voice-file", default=None)
+    vd.add_argument("--allow-ai-fallback", action="store_true")
     c = sub.add_parser("calc"); c.add_argument("--inputs", required=True); c.add_argument("--lang", default="ky")
     a = ap.parse_args(argv)
     L = log.get()
@@ -297,6 +302,8 @@ def main(argv=None):
             print(cmd_report(InstagramClient(version=settings.load_settings()["graph_version"])))
         elif a.cmd == "dm":
             print(json.dumps(sales.draft_dm_reply(a.text, settings.load_course(), a.lang, llm.generate_json if os.environ.get("POULTRY_GEMINI_API_KEY") else None), ensure_ascii=False, indent=2))
+        elif a.cmd == "video":
+            print(json.dumps(attach_video(a.id, allow_ai_fallback=a.allow_ai_fallback, voice_file=a.voice_file)["status"]))
         elif a.cmd == "calc":
             cur = settings.load_course().get("currency") or ""
             cp = calc.to_post(calc.load(a.inputs), a.lang, cur)

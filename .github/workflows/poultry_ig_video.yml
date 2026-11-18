@@ -1,0 +1,47 @@
+name: "🎙 Poultry Instagram — видео (даяр үн файлы менен)"
+on:
+  workflow_dispatch:
+    inputs:
+      start_run_id:
+        description: "START run'дун ID'си (Actions барагынын URL'индеги сан)"
+        required: true
+      post_id:
+        description: "Пост ID (poultry-package ичиндеги папканын аты)"
+        required: true
+      voice_url:
+        description: "Үн файлынын шилтемеси (Google Drive — «шилтемеси бар бардык адамдар»)"
+        required: true
+      allow_ai_fallback:
+        description: "Реалдуу видео жетишпесе AI кадр колдонулсун (белгиси менен)"
+        type: boolean
+        default: false
+permissions:
+  actions: read
+  contents: read
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+      - run: pip install -r poultry_ig_agent/requirements.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: poultry-package
+          path: poultry_ig_agent/out
+          run-id: ${{ inputs.start_run_id }}
+          github-token: ${{ github.token }}
+      - name: Видео жасоо
+        env:
+          POULTRY_GEMINI_API_KEY: ${{ secrets.POULTRY_GEMINI_API_KEY }}
+          VOICE_URL: ${{ inputs.voice_url }}
+          POST_ID: ${{ inputs.post_id }}
+        run: |
+          ARGS=""
+          if [ "${{ inputs.allow_ai_fallback }}" = "true" ]; then ARGS="--allow-ai-fallback"; fi
+          python -m poultry_ig_agent.agent video "$POST_ID" --voice-file "$VOICE_URL" $ARGS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: poultry-video, path: poultry_ig_agent/out}

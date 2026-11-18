@@ -49,3 +49,29 @@ class Voice(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FileVoice(unittest.TestCase):
+    def test_drive_link_normalized(self):
+        self.assertEqual(video.drive_direct("https://drive.google.com/file/d/AbC_12-x/view?usp=sharing"),
+                         "https://drive.google.com/uc?export=download&id=AbC_12-x")
+        self.assertEqual(video.drive_direct("https://example.com/a.mp3"), "https://example.com/a.mp3")
+
+    def test_file_voice_requires_consent(self):
+        with self.assertRaises(video.VideoError):
+            video.tts_from_settings({"voice": {"owner_consent_confirmed": False}}, voice_file="x.mp3")
+
+    @unittest.skipUnless(__import__("shutil").which("ffmpeg"), "ffmpeg жок")
+    def test_local_file_converted(self):
+        import subprocess
+        d = tempfile.mkdtemp(); src = os.path.join(d, "akylai.mp3")
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "sine=d=2", src], check=True)
+        out = video.tts_from_settings({"voice": {"owner_consent_confirmed": True}}, voice_file=src).synth("", os.path.join(d, "v.wav"))
+        self.assertAlmostEqual(video.duration(out), 2, delta=0.2)
+
+    def test_voiceover_txt_written(self):
+        from poultry_ig_agent import agent
+        from poultry_ig_agent.tests.helpers import shots, tmp_out
+        out = tmp_out()
+        pid = agent.save_post({"format": "reel", "lang": "ky", "topic": "t", "hook": "h", "voiceover": "Таң атты.", "shots": shots()})
+        self.assertEqual(open(os.path.join(out, pid, "voiceover.txt"), encoding="utf-8").read().strip(), "Таң атты.")
