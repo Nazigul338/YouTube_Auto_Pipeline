@@ -229,6 +229,7 @@ gemini-3-pro-image(-preview), gemini-3.1-flash-image(-preview), gemini-3.1-flash
 **429 RESOURCE_EXHAUSTED** — акысыз ачкычта сүрөт квотасы 0. ⇒ AI-сүрөт үчүн Google AI Studio'до ачкычтын долбооруна
 billing кошуу керек (колдонуучунун чечими; мурун «төлөм кошпойм» деген). Billing жок болсо система стокко кайтат.
 Болжолдуу чыгым: 12 сүрөт × $0.039 ≈ $0.47/видео (чек ашпайт), prompt'тор жана баалоо — акысыз текст квотасынан.
+**Чыныгы интеграция сынагы:** run #44356971412 (Video_001, TEST, rerun_from=s5_visuals, ai_images ✓) — күтүлгөнү: AI-сүрөт 429 → сток калат, видео бүтөт. Текшерүү: `curl https://api.github.com/repos/Nazigul338/YouTube_Auto_Pipeline/actions/runs/44356971412`.
 
 ### 8д. MASTER TASK (2026-11-18): КАМЕРА КЫЙМЫЛЫ v2 + ОРИГИНАЛДУУЛУК + YOUTUBE САЯСАТЫ (TEST гана)
 Анализ: мурун ар кадрда 6 кыймылдын бири КОКУС, сызыктуу ылдамдык (easing жок), pan_down/ken burns/handheld жок,
