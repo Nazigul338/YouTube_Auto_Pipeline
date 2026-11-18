@@ -87,6 +87,23 @@ def pick_transition(rng, prev: str | None) -> str:
     return rng.choice(options)
 
 
+_GROUP = {"calm": "low", "reflective": "low", "sad": "low", "hopeful": "up", "inspired": "up",
+          "determined": "up", "tense": "high", "dramatic": "high"}
+
+
+def transition_for(rng, prev: str | None, emo_a: str, emo_b: str, used_black: int, total: int) -> str:
+    """Сахналар ортосундагы өтүү — эмоциянын өзгөрүшүнө жараша (мазмунга ылайык):
+    ошол эле маанай → dissolve/fade; энергия көтөрүлсө → slide; чыңалуудан тынчтыкка (бурулуш) → караңгы аркылуу
+    (fadeblack, ≤8% жана катар эмес)."""
+    a, b = _GROUP.get(emo_a, "low"), _GROUP.get(emo_b, "low")
+    black_ok = prev != "fadeblack" and used_black < max(1, int(0.08 * total))
+    if a == "high" and b == "low" and black_ok and rng.random() < 0.6:
+        return "fadeblack"
+    if a != b and (b in ("up", "high")):
+        return rng.choice(["smoothleft", "smoothright"])
+    return rng.choice(["dissolve", "fade", "dissolve"])
+
+
 # ---------------------------------------------------------------- кадр-кадр бирдейлөө
 
 TARGET_Y = 0.43        # орточо жарык (0..1, tv-range ичинде)

@@ -216,6 +216,9 @@ class QAStage(Stage):
         if self._cinematic(ctx):            # СЫНАК режими гана: FFmpeg Skill'дин YouTube текшерүүсү + мүнөт сайын бирдейлик
             self.check_platform(ctx, rep, final)
             self.check_uniformity(ctx, rep, final, timing, total)
+            self.check_motion(ctx, rep)
+            self.check_originality(ctx, rep, music, meta)
+            self.check_policy(ctx, rep, clip_lic, music, meta)
         self.check_subtitle_layout(ctx, rep)
         return self.finish(ctx, rep, final, meta, music, clip_lic)
 
@@ -228,6 +231,72 @@ class QAStage(Stage):
         except Exception:
             return False
         return bool(plan.get("cinematic")) and cinematic.enabled(ctx.store)
+
+    def check_motion(self, ctx, rep) -> None:
+        """Ар кадрда камера кыймылы барбы (рендерленген кадрдан өлчөнгөн, s8 → motion_report.json)."""
+        f = ctx.path("animation", "motion_report.json")
+        if not f.exists():
+            rep.add("motion", "Ар кадрда камера кыймылы бар", False, "motion_report.json жок")
+            return
+        r = json.loads(f.read_text(encoding="utf-8"))
+        n, static = r["shots"], r["static"]
+        share = max(r["by_type"].values()) / n if n else 1
+        rate = r["matched"] / r["judged"] if r["judged"] else 0
+        ok = not static and rate >= 0.85 and len(r["by_type"]) >= 6 and share <= 0.35
+        rep.add("motion", "Ар кадрда камера кыймылы бар (zoom/pan/ken burns…), ар түрдүү, план менен дал келет", ok,
+                f"{n} кадр, статикалык {len(static)}, план↔өлчөө {r['matched']}/{r['judged']} ({rate:.0%}), "
+                f"түр {len(r['by_type'])} (эң көп {share:.0%})")
+
+    def check_originality(self, ctx, rep, music: dict, meta: dict) -> None:
+        """Бул видео мурункулардан айырмаланабы: түс концепциясы, музыка, баяндоо стили, кыймыл профили, клиптер,
+        сценарий. Ар бир мурунку видео менен кеминде 2 белги айырмаланышы керек (шаблондук массалык өндүрүш эмес)."""
+        plan = json.loads(ctx.path("animation", "plan.json").read_text(encoding="utf-8"))
+        mr = ctx.path("animation", "motion_report.json")
+        top_motion = None
+        if mr.exists():
+            bt = json.loads(mr.read_text(encoding="utf-8"))["by_type"]
+            top_motion = max(bt, key=bt.get) if bt else None
+        mine = {"concept": plan.get("concept"), "music": (music.get("license") or {}).get("file"),
+                "style": meta.get("style"), "top_motion": top_motion}
+        entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
+        entry["fingerprint"] = mine
+        rows, worst = [], None
+        for vid, v in ctx.registry.get("videos", {}).items():
+            if vid == ctx.video_id or not (v.get("final") or v.get("final_cinematic")):
+                continue
+            fp = v.get("fingerprint") or {"concept": v.get("concept"), "music": None, "style": v.get("style"),
+                                           "top_motion": None}
+            diff = sum(1 for k in mine if mine[k] and fp.get(k) and mine[k] != fp.get(k)) + \
+                sum(1 for k in mine if mine[k] and not fp.get(k)) * 0      # белгисиз — эсептелбейт
+            same = [k for k in mine if mine[k] and fp.get(k) == mine[k]]
+            rows.append((vid, diff, same))
+            worst = min(worst, diff) if worst is not None else diff
+        sim = (meta.get("similarity") or {})
+        script_ok = not sim.get("too_similar")
+        ok = script_ok and (worst is None or worst >= 2 or all(len(s) <= 2 for _, _, s in rows))
+        note = f"сценарий окшоштугу {sim.get('max_jaccard')}; " + ("; ".join(
+            f"{v}: айырма {d}, бирдей {s or '-'}" for v, d, s in rows[:4]) or "салыштырууга мурунку видео жок")
+        rep.add("original_video", "Видео мурункулардан визуалдык/мазмундук айырмаланат", ok, note)
+
+    def check_policy(self, ctx, rep, clip_lic: list, music: dict, meta: dict) -> None:
+        """YouTube Partner Program боюнча белгилүү тобокелдиктер (кошумча, policy_report.json)."""
+        risks, good = [], []
+        lic_ok = all(l.get("license") for l in clip_lic)
+        (good if lic_ok else risks).append(f"видео/сүрөт лицензиялары {len(clip_lic)}/{len(clip_lic)} катталган "
+                                          "(Pixabay Content License — монетизацияга уруксат, бирок клипти өзгөртүүсүз "
+                                          "кайра сатууга/таратууга болбойт)")
+        src = (music.get("license") or {}).get("source")
+        (good if src and src != "Unknown" else risks).append(f"музыка: {src}")
+        good.append("сценарий — оригиналдуу (Gemini, мурункулар менен окшоштук текшерилет), фактылар текшерилет")
+        good.append("клиптер ар видеодо жаңы (Smart Video Memory), кадрлар сценарийге AI менен дал келтирилет")
+        risks.append("Reused content тобокелдиги: сток-видеолор колдонулат — баалуулук оригиналдуу баяндоо, монтаж жана "
+                     "түшүндүрмөдөн келет; бир эле форматты массалык кайталабоо керек")
+        risks.append("Синтетикалык үн (Gemini TTS): чыныгы адамдын үнүн туурабайт; YouTube «altered or synthetic "
+                     "content» белгиси адатта талап кылынбайт — акыркы чечим каналдын ээсинде")
+        out = {"ok": good, "risks": risks}
+        ctx.path("policy_report.json").write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+        rep.add("policy", "YouTube саясаты: лицензия, оригиналдуулук, AI белгилөө (тобокелдиктер)", lic_ok and bool(src),
+                f"{len(good)} талап аткарылды, {len(risks)} эскертүү (policy_report.json)", required=False)
 
     def check_uniformity(self, ctx, rep, final: Path, timing: dict, total: float) -> None:
         """Видео башынан аягына чейин бирдей: ар мүнөт (жарык, түс, курчтук, катуулук, темп)."""

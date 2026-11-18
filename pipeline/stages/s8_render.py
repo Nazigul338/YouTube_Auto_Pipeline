@@ -36,6 +36,11 @@ ENC = ["-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv4
 
 def motion_filter(motion: str, dur: float, intensity: float) -> str:
     """Кадрдын кыймылы. Кирүү: ар кандай өлчөм → чыгуу: 1920×1080, 30 fps."""
+    if motion.startswith("v2:"):            # cinematic СЫНАК: жумшак, мааниге жараша кыймыл (pipeline/motion.py)
+        from .. import motion as motion_v2
+
+        name, seed = motion_v2.parse(motion)
+        return motion_v2.build(name, dur, intensity, seed)
     n = max(1, int(round(dur * FPS)))
     amp = 0.07 * intensity
     cover = (f"scale={int(W * 1.25)}:{int(H * 1.25)}:force_original_aspect_ratio=increase,"
@@ -333,9 +338,18 @@ class RenderStage(Stage):
                 idx = int(out.stem.split("_")[1])
                 infos[idx] = info
                 render_shot(clip, out, kind, off, d, motion, inten, prefilter=pre, card=card_for_shot.get(idx))
+                if motion.startswith("v2:"):        # кыймыл чындап барбы — рендерленген кадрдан өлчөө
+                    from .. import motion as motion_v2
+
+                    m = motion_v2.measure(out, d)
+                    det = motion_v2.classify(m)
+                    info["motion"] = {"planned": motion_v2.parse(motion)[0], "detected": det,
+                                      "match": motion_v2.matches(motion, det),
+                                      **{k: m.get(k) for k in ("dx", "dy", "scale", "diff")}}
 
             with ThreadPoolExecutor(workers) as ex:
                 list(ex.map(job, jobs))
+            self._motion_report(ctx, infos, sdir, rdir)
             blur_n = sum(1 for v in infos.values() if v.get("blur_bg"))
             match_n = sum(1 for v in infos.values() if v.get("match"))
             debug.append({"label": "cinematic_shots", "blur_bg": blur_n, "matched": match_n,
@@ -405,6 +419,57 @@ class RenderStage(Stage):
         if cine:
             res["cinematic"] = True
         return res
+
+    def _motion_report(self, ctx, infos: dict, sdir: Path, rdir: Path) -> None:
+        """animation/motion_report.json + мисалдар сүрөтү (ар кыймыл түрү: башы | аягы) → Drive _diagnose/."""
+        rows = {str(k): v["motion"] for k, v in sorted(infos.items()) if v.get("motion")}
+        if not rows:
+            return
+        static = [k for k, r in rows.items() if r["detected"] == "static"]
+        judged = [r for r in rows.values() if r["match"] is not None]
+        ok = sum(1 for r in judged if r["match"])
+        rep = {"shots": len(rows), "static": static, "matched": ok, "judged": len(judged),
+               "by_type": {}, "rows": rows}
+        for r in rows.values():
+            rep["by_type"][r["planned"]] = rep["by_type"].get(r["planned"], 0) + 1
+        ctx.log(f"   🎥 кыймыл: {len(rows)} кадр, статикалык {len(static)}, план↔өлчөө дал келди {ok}/{len(judged)}; "
+                f"түрлөр {rep['by_type']}")
+        # мисалдар: ар түрдөн бирден (≤8)
+        picks, seen = [], set()
+        for k, r in rows.items():
+            if r["planned"] not in seen and r["match"]:
+                seen.add(r["planned"])
+                picks.append((int(k), r))
+        tiles = []
+        font = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+        for k, r in picks[:8]:
+            f = sdir / f"shot_{k:03d}.mp4"
+            d = video_len(f) or 3.0
+            out = rdir / f"mex_{k:03d}.jpg"
+            label = f"{r['planned']}  #{k}  scale {r['scale']}  dx {r['dx']}  dy {r['dy']}"
+            dt = (f",drawtext=fontfile={font}:text='{label}':x=12:y=12:fontsize=22:fontcolor=white:"
+                  f"box=1:boxcolor=black@0.6") if Path(font).exists() else ""
+            try:
+                media.run(["ffmpeg", "-y", "-v", "error", "-ss", f"{d * 0.12:.2f}", "-i", str(f), "-ss", f"{d * 0.88:.2f}",
+                           "-i", str(f), "-filter_complex",
+                           f"[0:v]scale=480:270[a];[1:v]scale=480:270[b];[a][b]hstack{dt}", "-frames:v", "1",
+                           str(out)], "кыймыл мисалы")
+                tiles.append(out)
+            except StageError:
+                pass
+        if tiles:
+            sheet = rdir / "motion_examples.jpg"
+            inputs = []
+            for p in tiles:
+                inputs += ["-i", str(p)]
+            media.run(["ffmpeg", "-y", "-v", "error", *inputs, "-filter_complex",
+                       "".join(f"[{i}:v]" for i in range(len(tiles))) + f"vstack=inputs={len(tiles)}" if len(tiles) > 1
+                       else "[0:v]null", "-frames:v", "1", str(sheet)], "кыймыл мисалдары")
+            if ctx.store:
+                rep["examples_url"] = ctx.store.publish("_diagnose", sheet, f"{ctx.video_id}_motion_examples.jpg")
+                ctx.log(f"   🎥 кыймыл мисалдары (башы | аягы): {rep.get('examples_url')}")
+        ctx.path("animation", "motion_report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1),
+                                                               encoding="utf-8")
 
     def _cinematic_cards(self, ctx, shots, motions, plan, rdir):
         """Карточкаларды кадрларга жайгаштырып, HyperFrames менен рендерлейт (сынак).

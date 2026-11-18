@@ -47,7 +47,25 @@ SPEED = {"calm": 0.7, "reflective": 0.7, "sad": 0.6, "hopeful": 0.9, "tense": 1.
          "determined": 1.1, "inspired": 1.0, "dramatic": 1.3}
 
 
-def choose_concept(registry: dict, video_id: str) -> str:
+THEME_CONCEPTS = {   # cinematic СЫНАК: теманын маанайына ылайык түс концепциялары
+    "fear": ["cool_moody", "muted_film"], "stress": ["cool_moody", "muted_film"],
+    "failure": ["muted_film", "cool_moody"], "laziness": ["muted_film", "warm_cinematic"],
+    "time": ["muted_film", "golden_hour"], "success": ["golden_hour", "warm_cinematic", "teal_orange"],
+    "motivation": ["golden_hour", "teal_orange", "warm_cinematic"], "confidence": ["teal_orange", "golden_hour"],
+    "discipline": ["teal_orange", "warm_cinematic"], "psychology": ["teal_orange", "cool_moody"],
+    "change": ["teal_orange", "golden_hour"], "relationships": ["warm_cinematic", "golden_hour"],
+    "health": ["warm_cinematic", "golden_hour"], "money": ["teal_orange", "cool_moody"],
+}
+
+
+def dominant_theme(scenes: list[dict]) -> str:
+    from collections import Counter
+
+    c = Counter(s.get("theme") for s in scenes if s.get("theme") and s.get("theme") != "general")
+    return c.most_common(1)[0][0] if c else "general"
+
+
+def choose_concept(registry: dict, video_id: str, theme: str | None = None) -> str:
     """Эң аз колдонулган концепция. Видео кайра иштетилсе — мурунку концепция САКТАЛАТ (түс секирбейт).
 
     Мурун тең салмакта `hash(k)` колдонулган: Python аны ар процессте башка эсептейт → rerun'до концепция
@@ -56,12 +74,13 @@ def choose_concept(registry: dict, video_id: str) -> str:
     prev = (registry.get("videos", {}).get(video_id) or {}).get("concept")
     if prev in CONCEPTS:
         return prev
+    allowed = THEME_CONCEPTS.get(theme or "", list(CONCEPTS))
     used = {k: 0 for k in CONCEPTS}
     for vid, v in registry.get("videos", {}).items():
         if vid != video_id and v.get("concept") in used:
             used[v["concept"]] += 1
     seed = int(hashlib.md5(video_id.encode()).hexdigest(), 16)
-    return min(CONCEPTS, key=lambda k: (used[k], (int(hashlib.md5(k.encode()).hexdigest(), 16) ^ seed) % 997))
+    return min(allowed, key=lambda k: (used[k], (int(hashlib.md5(k.encode()).hexdigest(), 16) ^ seed) % 997))
 
 
 def card_items(scenes: list[dict], scene_times: dict[int, dict]) -> list[dict]:
@@ -118,10 +137,11 @@ class AnimationStage(Stage):
         timing = json.loads(ctx.path("subtitles", "timings.json").read_text(encoding="utf-8"))
         scene_times = {s["id"]: s for s in timing["scenes"]}
 
-        name = choose_concept(ctx.registry, ctx.video_id)
-        concept = CONCEPTS[name]
         from .. import cinematic
         cine = cinematic.enabled(ctx.store)       # СЫНАК режими гана (TEST папкасы + желек)
+        theme = dominant_theme(scenes) if cine else None
+        name = choose_concept(ctx.registry, ctx.video_id, theme)
+        concept = CONCEPTS[name]
         if cinematic.blocked_reason(ctx.store):
             ctx.log("   ⚠️ " + cinematic.blocked_reason(ctx.store))
         prev_trans = None
@@ -138,7 +158,10 @@ class AnimationStage(Stage):
                 trans = None
             elif nxt["scene"] != sh["scene"]:
                 if cine:
-                    prev_trans = cinematic.pick_transition(rng, prev_trans)
+                    n_scenes = len({s["scene"] for s in shots})
+                    used_black = sum(1 for p_ in plan if (p_["transition_out"] or {}).get("type") == "fadeblack")
+                    prev_trans = cinematic.transition_for(rng, prev_trans, sc["emotion"],
+                                                          by_id[nxt["scene"]]["emotion"], used_black, n_scenes)
                     trans = {"type": prev_trans, "dur": cinematic.TRANSITION_SEC}
                 else:
                     trans = {"type": rng.choice(concept["transitions"]), "dur": 0.5}
@@ -147,6 +170,13 @@ class AnimationStage(Stage):
             plan.append({"i": i, "motion": motion,
                          "intensity": round(SPEED.get(sc["emotion"], 1.0) * (1.25 if sh["kind"] == "image" else 1.0), 2),
                          "transition_out": trans})
+
+        if cine:   # кыймыл v2: мааниге жараша, жумшак, ар түрдүү (pipeline/motion.py)
+            from .. import motion as motion_v2
+
+            mrng = random.Random(int(hashlib.md5((ctx.video_id + "motion").encode()).hexdigest(), 16))
+            for p_, m in zip(plan, motion_v2.plan_motions(shots, by_id, mrng)):
+                p_["motion"], p_["intensity"] = m["motion"], m["intensity"]
 
         cards = card_events(scenes, scene_times, concept)
         if cine:   # HyperFrames үчүн структуралуу тизме (8-этап колдонот; иштебесе ASS калат)
@@ -164,12 +194,17 @@ class AnimationStage(Stage):
         ass = ctx.path("animation", "overlays.ass")
         ass.write_text(header + "\n".join(cards) + "\n", encoding="utf-8")
 
-        counts = {m: sum(p["motion"] == m for p in plan) for m in MOTIONS}
+        if cine:
+            from .. import motion as motion_v2
+
+            counts = {m: sum(motion_v2.parse(p["motion"])[0] == m for p in plan) for m in motion_v2.TYPES}
+        else:
+            counts = {m: sum(p["motion"] == m for p in plan) for m in MOTIONS}
         if max(counts.values()) > 0.45 * len(plan):
             raise StageError(f"Кыймылдар бир түрдүү болуп калды: {counts}")
         out = ctx.path("animation", "plan.json")
         out.write_text(json.dumps({"concept": name, "concept_params": concept, "shots": plan,
-                                   "cinematic": cine},
+                                   "cinematic": cine, "theme": theme},
                                   ensure_ascii=False, indent=1), encoding="utf-8")
         ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})["concept"] = name
         ctx.log(f"   ✓ Концепция: {name}; текст-карточкалар: {len(cards)}; кыймылдар: {counts}"
