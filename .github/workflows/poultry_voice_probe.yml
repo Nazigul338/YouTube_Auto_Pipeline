@@ -31,7 +31,7 @@ jobs:
           set -o pipefail
           mkdir -p probe_out
           python poultry_ig_agent/tools/kani_probe.py --model nineninesix/kani-tts-400m-ky \
-            --text-file poultry_ig_agent/voice_probe/text_ky.txt --out probe_out/ky_${{ matrix.pkg }}.wav 2>&1 | tail -40
+            --text-file poultry_ig_agent/voice_probe/text_ky.txt --outdir probe_out 2>&1 | tail -60
       - name: Тыныгууларды өлчөө (үн сапатын текшерүү)
         if: always()
         shell: bash
