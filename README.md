@@ -60,7 +60,7 @@ pipeline/
   auth_check.py  — OAuth/Drive текшерүү
   gemini.py      — Gemini: текст, TTS, embedding, аудио/сүрөт анализ (запас моделдер, квота, timeout). Veo колдонулбайт
   asr.py         — Whisper (PyAV'сыз)
-  stock.py       — Pixabay / Pexels (беттөө менен)
+  stock.py       — Pixabay / Pexels (беттөө менен; бренд/логотиптүү клиптер чыпкаланат)
   ai_images.py   — Gemini AI-сүрөттөр (СЫНАК): prompt, 16:9, бюджет/баа, Drive AI_Images/ кэши
   clipmemory.py  — Smart Video Memory: колдонулган клиптердин Drive базасы (JSON + CSV)
   clipsearch.py  — акылдуу издөө: сахнанын темасы/маанисине жараша, кайталанбастан

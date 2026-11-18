@@ -231,7 +231,11 @@ class Gemini:
             contents: list[Any] = [
                 "You check a video edit. For each numbered frame, rate 1-5 how well the image "
                 "illustrates the narration text next to it (5 = clearly matches the meaning, "
-                "3 = acceptable mood match, 1 = unrelated). Return JSON array of integers only."]
+                "3 = acceptable mood match, 1 = unrelated). Always rate 1 if the frame shows a "
+                "brand logo or trademark (e.g. YouTube, social networks), a watermark, or a "
+                "cartoon/clip-art illustration in the footage itself (ignore subtitles and "
+                "title-card text added by the editor). "
+                "Return JSON array of integers only."]
             for k, (jpg, text) in enumerate(items, 1):
                 contents += [f"Frame {k}. Narration (Russian): {text[:300]}",
                              types.Part.from_bytes(data=jpg, mime_type="image/jpeg")]

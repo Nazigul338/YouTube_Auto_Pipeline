@@ -8,6 +8,7 @@ Probe жыйынтыгы: Pixabay лимити 100 суроо / 60 сек; ви�
 
 from __future__ import annotations
 
+import re
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -15,6 +16,21 @@ from pathlib import Path
 import requests
 
 from .errors import StageError, TransientError
+
+# Бренддер/логотиптер (товардык белги — монетизацияга тобокел): тегинде/шилтемесинде болсо клип алынбайт.
+BRAND_WORDS = frozenset("""
+youtube logo logos trademark brand facebook instagram tiktok twitter whatsapp telegram snapchat
+google iphone samsung microsoft android netflix spotify nike adidas
+cocacola pepsi mcdonalds starbucks tesla bmw mercedes ferrari bitcoin
+""".split())
+
+
+def brand_risk(text: str) -> bool:
+    """Тег же шилтеме бренд/логотипти көрсөтсө True."""
+    w = [x for x in re.split(r"[^a-z0-9]+", (text or "").lower()) if x]
+    words = set(w) | {a + b for a, b in zip(w, w[1:])}   # «coca-cola» → «cocacola»
+    return bool(words & BRAND_WORDS)
+
 
 PIXABAY_LICENSE = ("Pixabay Content License", "https://pixabay.com/service/license-summary/")
 PEXELS_LICENSE = ("Pexels License", "https://www.pexels.com/license/")
@@ -97,6 +113,8 @@ class Stock:
                     break
             if not pick or pick["width"] <= pick["height"] or h.get("duration", 0) < min_duration:
                 continue
+            if brand_risk(h.get("tags", "")):
+                continue
             out.append(Asset("pixabay", "video", f"pixabay:{h['id']}", pick["url"], pick["width"],
                              pick["height"], float(h.get("duration", 0)), h.get("pageURL", ""),
                              h.get("user", ""), *PIXABAY_LICENSE, tags=h.get("tags", ""),
@@ -114,6 +132,8 @@ class Stock:
                            key=lambda f: f["width"])
             if not files or v.get("duration", 0) < min_duration:
                 continue
+            if brand_risk(v.get("url", "")):   # Pexels: тег жок, шилтемеде сүрөттөмө бар
+                continue
             f = files[0]
             out.append(Asset("pexels", "video", f"pexels:{v['id']}", f["link"], f["width"],
                              f["height"], float(v.get("duration", 0)), v.get("url", ""),
@@ -129,7 +149,7 @@ class Stock:
         out = []
         for h in d.get("hits", []):
             url = h.get("largeImageURL")
-            if not url:
+            if not url or brand_risk(h.get("tags", "")):
                 continue
             out.append(Asset("pixabay", "image", f"pixabay-img:{h['id']}", url,
                              h.get("imageWidth", 0), h.get("imageHeight", 0), 0.0,
