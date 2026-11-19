@@ -22,7 +22,7 @@ jobs:
       - run: pip install -q -r poultry_ig_agent/requirements.txt
       - name: Тесттер
         run: python -m unittest discover -s poultry_ig_agent/tests -t .
-      - name: Текст → пост → Aoede үнү
+      - name: Текст → пост → диктор үнү
         env:
           POULTRY_GEMINI_API_KEY: ${{ secrets.POULTRY_GEMINI_API_KEY }}
         shell: bash
@@ -49,7 +49,7 @@ jobs:
       - name: Натыйжаны commit
         if: always()
         run: |
-          bash poultry_ig_agent/tools/commit_push.sh "Өз текст пакеттери: Reel + Aoede үнү" poultry_ig_agent/deliveries poultry_ig_agent/scripts_own
+          bash poultry_ig_agent/tools/commit_push.sh "Өз текст пакеттери: Reel + диктор үнү" poultry_ig_agent/deliveries poultry_ig_agent/scripts_own
       - uses: actions/upload-artifact@v4
         if: always()
         with: {name: poultry-own-script-logs, path: poultry_ig_agent/out/logs}
