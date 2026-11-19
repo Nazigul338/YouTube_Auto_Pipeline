@@ -75,6 +75,7 @@ def match_intent(text):
     return None
 
 
+KEYWORDS = {"курс", "kurs", "course"}
 HEALTH_WORDS = ("оору", "ооруп", "өлүп", "өлдү", "ич өт", "дары", "дарыла", "болеет", "болезн", "умира", "лечить", "понос")
 HEALTH_REPLY = {
     "ky": "Тооктордун ден соолугу боюнча сырттан диагноз коё албайбыз — жакынкы ветеринарга кайрылыңыз 🙏 "
@@ -89,6 +90,13 @@ def answer(message, course, lang="ky"):
     t = message.lower()
     if any(w in t for w in HEALTH_WORDS):
         return {"reply": HEALTH_REPLY[lang], "source": "health", "needs_human": True}
+    if re.sub(r"[^a-zа-яөүң]", "", t) in KEYWORDS and ready(course):     # Reels'теги «КУРС» ачкыч сөзү
+        parts = [LABELS[lang]["name"].format(v=course["name"])]
+        if price_text(course):
+            parts.append(LABELS[lang]["price"].format(v=price_text(course)))
+        if course.get("enrollment_steps"):
+            parts.append(LABELS[lang]["enroll"].format(v=_value("enrollment_steps", course, lang)))
+        return {"reply": "\n".join(parts), "source": "keyword", "needs_human": False}
     for item in course.get("faq", []):
         kws = [w for w in re.findall(r"\w{4,}", item.get("q", "").lower())]
         if kws and sum(w in t for w in kws) >= max(1, len(kws) // 2):

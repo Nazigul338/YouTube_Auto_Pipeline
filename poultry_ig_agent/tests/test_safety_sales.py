@@ -132,3 +132,15 @@ class CourseAnswers(unittest.TestCase):
 
     def test_whatsapp_placeholder_not_saved(self):
         self.assertIsNone(self.c["contacts"]["whatsapp_group_url"])
+
+
+class Keyword(unittest.TestCase):
+    def test_kurs_keyword_full_info(self):
+        import os
+        c = json.load(open(os.path.join(os.path.dirname(__file__), "..", "course.json"), encoding="utf-8"))
+        for msg in ("КУРС", "курс", " Курс! "):
+            r = sales.answer(msg, c)
+            self.assertEqual(r["source"], "keyword", msg)
+            for part in ("нөлдөн баштап", "3000 сом", "MBank", "окуу группасына"):
+                self.assertIn(part, r["reply"])
+        self.assertNotEqual(sales.answer("КУРС", {"name": None})["source"], "keyword")   # курс жок болсо ойлоп таппайт
