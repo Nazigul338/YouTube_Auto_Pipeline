@@ -28,7 +28,9 @@ NEGATIVE = ("duck", "goose", "geese", "gosling", "swan", "sparrow", "pigeon", "o
             # тамак-аш: 'chicken' тегдүү бышырылган эт кадрлары
             "food", "meat", "grill", "grilled", "grilling", "bbq", "barbecue", "cooking", "cook", "cooked", "fried",
             "frying", "roast", "roasted", "recipe", "dish", "meal", "soup", "kitchen", "wok", "restaurant", "dinner",
-            "lunch", "kebab", "wings", "nuggets", "curry", "delicious", "eat", "fry")
+            "lunch", "kebab", "wings", "nuggets", "curry", "delicious", "eat", "fry",
+            # айыл чарба техникасы/талаа: 'farm' тегдүү, бирок тоок жок кадрлар
+            "tractor", "harvester", "combine", "machinery", "aerial", "drone", "crop", "crops", "cornfield", "wheat")
 
 
 def keywords(visual, n=5):

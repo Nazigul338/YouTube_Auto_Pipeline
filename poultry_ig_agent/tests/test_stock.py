@@ -179,3 +179,10 @@ class FoodFilter(unittest.TestCase):
         self.assertFalse(pexels.relevant("chicken, grill, food, meat"))
         self.assertFalse(pexels.relevant("chicken, wok, cooking, kitchen"))
         self.assertTrue(pexels.relevant("chicken, hen, farm, poultry"))
+
+
+class MachineryFilter(unittest.TestCase):
+    def test_tractor_rejected(self):
+        self.assertFalse(pexels.relevant("farm, tractor, agriculture, chicken"))
+        self.assertFalse(pexels.relevant("aerial, drone, farm, poultry"))
+        self.assertTrue(pexels.relevant("hens, rooster, farmyard, chicken"))
