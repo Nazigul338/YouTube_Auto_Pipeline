@@ -37,8 +37,16 @@
 «качат»). Адам укпастан автоматтык диктор катары колдонууга ЖАРАБАЙТ. Сапатын колдонуучу угуп баалашы керек
 (artifact 14427130130: A_full.wav, B_sentences.wav). Жеткиликтүү ишенимдүү жол: FileTTS (өз үнү / Akylai mp3).
 
+
+## Gemini TTS кыргызча сыноосу (2026-11-19) — ✅ ЧЫНЫГЫ API менен иштеди
+Run 44509150003 (POULTRY_GEMINI_API_KEY). Текст 173 тамга. Charon 11.96с, Orus 12.4с, Fenrir 11.64с, Kore 13.4с,
+Aoede 12.48с; ар бири ~4с'та чыкты. Узундук күтүлгөн темпке туура (Kani'дей «ашыкча сүйлөө» жок).
+mp3'тер: `voice_probe/samples/gemini_*.mp3`. Сапатын колдонуучу угуп тандайт; демейки — Charon.
+Ошол эле күнү: runner'де ffmpeg жок, apt-get осолдонду (run 44504573210 cancelled, 44507942582 timeout) →
+`tools/ensure_ffmpeg.sh` (PyPI static-ffmpeg, apt — запас) бардык poultry workflow'дорго.
+
 ## 7 API абалы
-Gemini ❓ · Veo ❓ · TTS ❓ · Meta Graph ❓ (бардыгы чыныгы чакыруу менен текшерилбеген). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
+Gemini текст ❓ · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (бардыгы чыныгы чакыруу менен текшерилбеген). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
 
 ## 8 Кийинки тапшырмалар
 1. Secrets кош → START (`carousel`, видеосуз) → чыныгы Gemini текшерүү. 2. `course.json` толтур. 3. Бир Reel `--video` (Veo/TTS текшерүү). 4. Meta app + токен → `publish` dry-run → `--live`. 5. 5 кол менен жарыялоодон кийин автопилот. 6. Drive аркылуу реалдуу видео, комментарий/DM мониторинг workflow.
