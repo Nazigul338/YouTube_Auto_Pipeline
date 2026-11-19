@@ -3,7 +3,7 @@ name: "✍️ Poultry — өз текстиңизден Reel пакети"
 on:
   workflow_dispatch:
   push:
-    branches: [ccr-e9f49a12-c7fuhx]
+    branches: [claude/youtube-auto-pipeline-87d41t, ccr-e9f49a12-c7fuhx]
     paths: [poultry_ig_agent/scripts_own/queue/**, .github/workflows/poultry_own_script.yml]
 permissions:
   contents: write
