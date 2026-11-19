@@ -221,7 +221,8 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
 ## 8. Кийинки аткарыла турган тапшырмалар (ирети менен)
 
 ### 8ж. КИЙИНКИ КАДАМДАР (2026-11-19 жаңыртылды)
-1. **Колдонуучу:** Drive `YouTube_Auto/Sound_Effects/<категория>/` ичине лицензиясы текшерилген аудио + `<файл>.metadata.json`
+1. ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
+   **Колдонуучу:** Drive `YouTube_Auto/Sound_Effects/<категория>/` ичине лицензиясы текшерилген аудио + `<файл>.metadata.json`
    салат (үлгү `assets/sound_effects/metadata.example.json`). Claude metadata толтурууга жардам берет.
 2. Video_001 TEST кайра: `🎞 Cinematic сынак`, `rerun_from=s5_visuals`, `sound_effects` ✓ (аудио болсо) — бренд чыпкасы,
    субтитр тилкеси, gamma/каныккандык бирдейлөө жана SFX бир run менен текшерилет; контакт-барак менен КӨЗ МЕНЕН текшерүү.
