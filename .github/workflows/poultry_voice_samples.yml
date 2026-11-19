@@ -20,7 +20,7 @@ jobs:
           github-token: ${{ github.token }}
       - name: mp3'кө айлантуу жана commit
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+          command -v ffmpeg >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg)
           mkdir -p poultry_ig_agent/voice_probe/samples
           for f in art/*.wav; do
             ffmpeg -y -v error -i "$f" -ac 1 -b:a 96k "poultry_ig_agent/voice_probe/samples/kani_$(basename "${f%.wav}").mp3"

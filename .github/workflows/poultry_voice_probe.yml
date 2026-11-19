@@ -14,7 +14,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.11"}
-      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg libsndfile1
+      - name: ffmpeg (бар болсо өткөрүлөт)
+        timeout-minutes: 6
+        run: command -v ffmpeg >/dev/null && echo "ffmpeg бар - $(ffmpeg -version | head -1)" || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg libsndfile1)
       - name: Орнотуу (CPU torch)
         run: |
           pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
