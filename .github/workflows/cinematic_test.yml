@@ -17,7 +17,7 @@ on:
         required: true
         default: s6_animation
         type: choice
-        options: [s5_visuals, s6_animation, s8_render, s3_voice]
+        options: [s5_visuals, s6_animation, s7_music, s8_render, s3_voice]
       hyperframes:
         description: "HyperFrames карточкалары (иштебесе — ASS карточкалары)"
         required: false
@@ -30,6 +30,11 @@ on:
         type: boolean
       ai_images:
         description: "Gemini AI-сүрөттөр (rerun_from=s5_visuals же андан мурун; billing керек)"
+        required: false
+        default: false
+        type: boolean
+      sound_effects:
+        description: "Үн эффекттери (Drive → YouTube_Auto/Sound_Effects; лицензиясы текшерилгендер гана; rerun_from=s7_music же андан мурун)"
         required: false
         default: false
         type: boolean
@@ -111,6 +116,7 @@ jobs:
           YTA_HYPERFRAMES: ${{ inputs.hyperframes && '1' || '0' }}
           YTA_VOICE_STYLE: ${{ inputs.motivational_voice && 'motivational' || '' }}
           YTA_AI_IMAGES: ${{ inputs.ai_images && '1' || '0' }}
+          YTA_SFX: ${{ inputs.sound_effects && '1' || '' }}
           YTA_AI_IMAGE_MAX: ${{ inputs.ai_image_max }}
           YTA_AI_IMAGE_BUDGET: ${{ inputs.ai_image_budget }}
           HYPERFRAMES_NO_TELEMETRY: "1"

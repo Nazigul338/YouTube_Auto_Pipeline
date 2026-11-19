@@ -42,7 +42,7 @@ def heavy(rel: str) -> bool:
         return True
     if rel.startswith(("clips/", "music/")) and not rel.endswith((".json", ".txt")):
         return True
-    if rel in ("audio/mix.wav",):
+    if rel in ("audio/mix.wav", "audio/sfx_bed.wav", "audio/sfx_hits.wav"):
         return True
     return rel.endswith(".mp4")
 
@@ -74,6 +74,9 @@ class Store:
     def pull_project(self, video_id: str, dest: Path) -> bool: ...
     def push_project(self, src: Path, video_id: str, log: Callable[[str], None] = print) -> int: ...
     def pull_music(self, dest: Path) -> int: ...
+    def pull_sfx(self, dest: Path) -> int:   # үн эффекттеринин китепканасы (sfx.py)
+        return 0
+
     def publish(self, folder: str, local: Path, name: str) -> str | None: ...   # шилтеме (Drive) же None
     def read_text(self, folder: str, name: str) -> str | None: ...
     def fetch(self, folder: str, name: str, dest: Path) -> bool: ...   # файлды жүктөп алуу (AI-сүрөт кэши)
@@ -132,6 +135,15 @@ class LocalStore(Store):
 
     def pull_music(self, dest: Path) -> int:
         src = self.root / "Music"
+        if not src.exists():
+            return 0
+        shutil.copytree(src, dest, dirs_exist_ok=True)
+        return sum(1 for p in dest.rglob("*") if p.is_file())
+
+    def pull_sfx(self, dest: Path) -> int:
+        from .sfx import FOLDER
+
+        src = self.root / FOLDER
         if not src.exists():
             return 0
         shutil.copytree(src, dest, dirs_exist_ok=True)
@@ -222,6 +234,22 @@ class DriveStore(Store):
                 target = dest / rel
                 if not target.exists():
                     self.drive.download_file(item["id"], target)
+                n += 1
+        return n
+
+    def pull_sfx(self, dest: Path) -> int:
+        """Sound_Effects/<категория>/ — негизги папкадан (музыка сыяктуу). Папкалар жок болсо
+        бош категория папкаларын ТҮЗӨТ (колдонуучу телефондон аудио салышы үчүн); эч нерсе өчүрүлбөйт."""
+        from .sfx import AUDIO_EXT, CATEGORIES, FOLDER
+
+        for cat in CATEGORIES:
+            self.drive.ensure_path(self.music_root, FOLDER, cat)
+        sid = self.drive.find_path(self.music_root, FOLDER)
+        n = 0
+        for rel, item in self.drive.walk(sid):
+            if Path(rel).suffix.lower() in AUDIO_EXT or rel.endswith(".json"):
+                target = dest / rel
+                self.drive.download_file(item["id"], target)   # metadata өзгөрүшү мүмкүн — ар дайым жаңы
                 n += 1
         return n
 

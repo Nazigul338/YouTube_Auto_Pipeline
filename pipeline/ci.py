@@ -99,11 +99,16 @@ def run_ci(topic: str, niche: str, workdir: Path, *, store: Store | None,
     entry0 = registry["videos"].setdefault(video_id, {"topic": topic, "niche": niche})
     entry0["stopped_by_user"] = bool(stop_after)   # атайын токтотулган сыноо автоматтык уланбайт
     n = store.pull_music(cfg.music_root)
+    from . import sfx as _sfx
+
+    n_sfx = store.pull_sfx(Path(cfg.drive_root) / _sfx.FOLDER) if _sfx.enabled(store) else None
     log = _make_logger(folder)
     log("=" * 56)
     log(f"🎬 {video_id}: {topic}")
     log("↩️  Мурунку абалдан улантылат." if resumed else "🆕 Жаңы видео.")
     log(f"🎵 Музыка китепканасы: {n} файл")
+    if n_sfx is not None:
+        log(f"🔊 Үн эффекттеринин китепканасы (СЫНАК): {n_sfx} файл")
     log("=" * 56)
 
     ctx = Context(cfg=cfg, state=state, folder=folder, log=log, video_id=video_id,

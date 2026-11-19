@@ -62,6 +62,7 @@ pipeline/
   asr.py         — Whisper (PyAV'сыз)
   stock.py       — Pixabay / Pexels (беттөө менен; бренд/логотиптүү клиптер чыпкаланат)
   ai_images.py   — Gemini AI-сүрөттөр (СЫНАК): prompt, 16:9, бюджет/баа, Drive AI_Images/ кэши
+  sfx.py         — Sound Effects Library (СЫНАК): лицензия капкасы, сценага жараша тандоо, паузага коюу, деңгээл
   clipmemory.py  — Smart Video Memory: колдонулган клиптердин Drive базасы (JSON + CSV)
   clipsearch.py  — акылдуу издөө: сахнанын темасы/маанисине жараша, кайталанбастан
   music.py       — музыка китепканасы (булак папкадан, лицензия)
@@ -133,3 +134,22 @@ API ачкычтары **GitHub Secrets'те гана**; логдо email жаш
 - **YouTube:** AI-сүрөт болсо QA «Altered or synthetic content = Yes» сунуштайт; LICENSE жана сүрөттөмөгө AI белгиси кошулат.
 - **Текшерүү:** Actions → `🔬 Мүмкүнчүлүктөрдү сыноо` → `only=image` (1 сүрөт ≈ $0.04).
 
+
+## 🔊 Үн эффекттери (Sound Effects Library) — СЫНАК (TEST гана)
+
+- **Иштетүү:** `🎞 Cinematic сынак` → `rerun_from=s7_music` (же андан мурунку этап), `sound_effects` ✓.
+  Код коргоосу: `YTA_SFX=1` + `YouTube_Auto_TEST` (production'да өчүк; желексиз 7-этап мурдагыдай).
+- **Аудио кайда:** Drive `YouTube_Auto/Sound_Effects/<категория>/` (cinematic, atmosphere, nature, transitions, impact,
+  emotional; папкаларды система түзөт). Репозиторийдеги `assets/sound_effects/` — структура, README, metadata үлгүсү;
+  аудио ачык репозиторийге коммит кылынбайт (`.gitignore`).
+- **Лицензия капкасы:** ар аудионун жанында `<файл>.metadata.json` (үлгү `assets/sound_effects/metadata.example.json`).
+  `commercial_use: true` + лицензия CC0 / Pixabay Content License / Mixkit Free License + толук талаалар (+ sha256 жазылса
+  дал келүү) болбосо — аудио видеого **кошулбайт** (логдо «🔇 SFX четке кагылды: … — себеби»).
+- **Тандоо:** сахна алмашуусунда whoosh (≥20 сек аралык), dramatic/tense/determined → impact (≤3), hopeful/inspired →
+  emotional/cinematic (≤3), табият кадрлары → nature фон, тынч маанай → atmosphere фон (≤50% убакыт). Бир эле үн катар
+  кайталанбайт; план видеонун ID'си боюнча туруктуу.
+- **Деңгээл:** диктордун өлчөнгөн катуулугуна салыштырмалуу: «сокку» — диктордун паузасында, 12–14 LU акырын (пик ≤ −6 dBFS);
+  фондор 22–24 LU акырын жана диктор сүйлөгөндө музыка менен бирге басаңдайт. QA `sfx_license`, `sfx_level` (≥10 LU).
+- **Отчет:** `Projects/<ID>/music/sfx.json` (окуялар, себептер, лицензиялар, четке кагылгандар); LICENSE.txt «ҮН ЭФФЕКТТЕРИ».
+- **Булактар:** аудиону сиз өзүңүз жүктөйсүз. ZvukiPro ж.б. сайттардан автоматтык жүктөө/scraping ЖОК.
+- **Чыгым:** $0 (FFmpeg гана). Кошумча убакыт ≈ 1–2 мүн.

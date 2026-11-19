@@ -154,6 +154,7 @@ class QAStage(Stage):
         rel = music.get("voice_minus_music_lu")
         rep.add("music_level", "Музыка дикторду баспайт", rel is not None and rel >= 10,
                 f"диктор музыкадан {rel} LU катуу (керек ≥ 10)")
+        self.check_sfx(ctx, rep, music)
 
         # 6. Кара экран, катып калган кадр, тынчтык
         blacks = [b for b in detect(final, "blackdetect=d=0.5:pic_th=0.98:pix_th=0.04", "black")
@@ -285,6 +286,36 @@ class QAStage(Stage):
             return json.loads(ctx.path("clips", "ai_images.json").read_text(encoding="utf-8"))
         except Exception:
             return {}
+
+    @staticmethod
+    def sfx_info(ctx) -> dict:
+        p = ctx.path("music", "sfx.json")
+        try:
+            return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+        except ValueError:
+            return {}
+
+    def check_sfx(self, ctx, rep, music: dict) -> None:
+        """Үн эффекттери (СЫНАК): лицензиясы текшерилген гана, паузада, диктордон ≥10 LU акырын."""
+        from .. import sfx
+
+        info = self.sfx_info(ctx)
+        ev = info.get("events") or []
+        if not ev:
+            return
+        lic = {l["file"]: l for l in info.get("licenses", [])}
+        bad = [e["rel"] for e in ev
+               if e["rel"] not in lic or not lic[e["rel"]].get("commercial_use")
+               or not sfx.license_name(lic[e["rel"]].get("license"))]
+        rep.add("sfx_license", "Үн эффекттеринин лицензиясы текшерилген (коммерциялык уруксат)", not bad,
+                f"{len(lic)} аудио, {len(ev)} колдонуу" + (f"; текшерилбеген: {bad[:3]}" if bad else ""))
+        hits = [e for e in ev if e["kind"] == "hit"]
+        off = [e for e in hits if not (e["pause"][0] - 0.01 <= e["t"] <= e["pause"][1])]
+        rel = (music.get("levels") or {}).get("voice_minus_sfx_lu")
+        rep.add("sfx_level", "Үн эффекттери дикторду баспайт (паузада, ≥10 LU акырын)",
+                not off and rel is not None and rel >= 10,
+                f"{len(hits)} эффект паузада ({len(off)} паузадан тышкары), {len(ev) - len(hits)} фон; "
+                f"диктор эффекттерден {rel} LU катуу")
 
     def check_ai_images(self, ctx, rep, shots) -> None:
         """AI-сүрөттөр (кошумча): бюджет чегинде, сток негизги бойдон, катар коюлган эмес, лицензиясы бар."""
@@ -500,6 +531,14 @@ class QAStage(Stage):
                  f"Негиз: {m['basis']} (каналдын ээси тректи ушул булактын папкасына салган)"]
         if music.get("attribution"):
             lines.append(f"Сүрөттөмөгө жазылуучу сап: {music['attribution']}")
+        fx = self.sfx_info(ctx).get("licenses") or []
+        if fx and self.sfx_info(ctx).get("events"):
+            lines += ["", "== ҮН ЭФФЕКТТЕРИ =="]
+            for l in fx:
+                lines.append(f"{l['file']} | «{l['title']}» | булагы: {l['source']} {l['source_url']} | "
+                             f"автор: {l.get('author') or '—'} | {l['license']} {l.get('license_url', '')} | "
+                             f"коммерциялык: ооба | текшерген: {l['verified_by']} {l['verified_at']} | "
+                             f"sha256 {l['sha256'][:12]}")
         lines += ["", "== ВИДЕОКЛИПТЕР / СҮРӨТТӨР ==",
                   "Pixabay Content License: https://pixabay.com/service/license-summary/", ""]
         for l in clip_lic:
@@ -522,6 +561,10 @@ class QAStage(Stage):
         if music.get("attribution"):
             lines.append(music["attribution"])
         lines.append("Видеоматериалы: Pixabay (Pixabay Content License).")
+        sx = self.sfx_info(ctx)
+        for l in (sx.get("licenses") or []) if sx.get("events") else []:
+            if l.get("attribution_required"):
+                lines.append(f"Звук: «{l['title']}» — {l.get('author') or l['source']} ({l['license']})")
         if self.ai_images_info(ctx).get("used"):
             lines.append("Часть изображений создана с помощью ИИ (Google Gemini).")
         ctx.path("youtube_description.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")

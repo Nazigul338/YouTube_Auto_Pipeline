@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .. import media
+from .. import media, sfx
 from ..music import attribution_text, scan
 from .base import Context, Stage, StageError, gemini_of
 
@@ -78,7 +78,8 @@ def pick_track(tracks, tags: dict, mood: str, registry: dict, video_id: str):
     return best, why
 
 
-def mix(ctx: Context, track_path: Path, total: float) -> dict:
+def mix(ctx: Context, track_path: Path, total: float, sfx_bed: Path | None = None,
+        sfx_hits: Path | None = None) -> dict:
     voice = ctx.path("audio", "voice.wav")
     bed = ctx.path("audio", "music_bed.wav")
     out = ctx.path("audio", "mix.wav")
@@ -89,16 +90,40 @@ def mix(ctx: Context, track_path: Path, total: float) -> dict:
                f"afade=t=out:st={max(0.0, total - 3.5):.3f}:d=3.5",
                "-ar", "48000", "-ac", "2", str(bed)], "музыканы даярдоо")
     # 2) диктор сүйлөгөндө басаңдатуу + аралаштыруу + акыркы деңгээл
-    media.run(["ffmpeg", "-y", "-v", "error", "-i", str(voice), "-i", str(bed), "-filter_complex",
-               "[0:a]aresample=48000,pan=stereo|c0=c0|c1=c0,apad[v];"
-               "[v]asplit=2[vk][vm];"
-               "[1:a][vk]sidechaincompress=threshold=0.02:ratio=6:attack=25:release=450:makeup=1[duck];"
-               "[vm][duck]amix=inputs=2:duration=longest:normalize=0,"
-               "loudnorm=I=-14:TP=-1.5:LRA=11[m]",
-               "-map", "[m]", "-t", f"{total:.3f}", "-ar", "48000", "-ac", "2", str(out)],
-              "аралаштыруу")
-    return {"bed_lufs": media.loudness(bed)["I"], "voice_lufs": media.loudness(voice)["I"],
-            "mix": media.loudness(out)}
+    if sfx_bed is None and sfx_hits is None:   # негизги жол (өзгөргөн жок)
+        media.run(["ffmpeg", "-y", "-v", "error", "-i", str(voice), "-i", str(bed), "-filter_complex",
+                   "[0:a]aresample=48000,pan=stereo|c0=c0|c1=c0,apad[v];"
+                   "[v]asplit=2[vk][vm];"
+                   "[1:a][vk]sidechaincompress=threshold=0.02:ratio=6:attack=25:release=450:makeup=1[duck];"
+                   "[vm][duck]amix=inputs=2:duration=longest:normalize=0,"
+                   "loudnorm=I=-14:TP=-1.5:LRA=11[m]",
+                   "-map", "[m]", "-t", f"{total:.3f}", "-ar", "48000", "-ac", "2", str(out)],
+                  "аралаштыруу")
+    else:   # СЫНАК: үн эффекттери (фон музыка менен бирге басаңдайт; «сокку» — паузада, басаңдабайт)
+        ins = ["-i", str(voice), "-i", str(bed)]
+        g = "[0:a]aresample=48000,pan=stereo|c0=c0|c1=c0,apad[v];[v]asplit=2[vk][vm];"
+        if sfx_bed is not None:
+            ins += ["-i", str(sfx_bed)]
+            g += "[1:a][2:a]amix=inputs=2:duration=first:normalize=0[bx];"
+        else:
+            g += "[1:a]anull[bx];"
+        g += "[bx][vk]sidechaincompress=threshold=0.02:ratio=6:attack=25:release=450:makeup=1[duck];"
+        if sfx_hits is not None:
+            ins += ["-i", str(sfx_hits)]
+            n = len(ins) // 2 - 1
+            g += f"[vm][duck][{n}:a]amix=inputs=3:duration=first:normalize=0,"
+        else:
+            g += "[vm][duck]amix=inputs=2:duration=first:normalize=0,"
+        g += "loudnorm=I=-14:TP=-1.5:LRA=11[m]"
+        media.run(["ffmpeg", "-y", "-v", "error", *ins, "-filter_complex", g,
+                   "-map", "[m]", "-t", f"{total:.3f}", "-ar", "48000", "-ac", "2", str(out)],
+                  "аралаштыруу (+ үн эффекттери)")
+    res = {"bed_lufs": media.loudness(bed)["I"], "voice_lufs": media.loudness(voice)["I"],
+           "mix": media.loudness(out)}
+    for key, p in (("sfx_bed_lufs", sfx_bed), ("sfx_hits_lufs", sfx_hits)):
+        if p is not None:
+            res[key] = media.loudness(p)["I"]
+    return res
 
 
 class MusicStage(Stage):
@@ -127,8 +152,22 @@ class MusicStage(Stage):
             raise StageError(f"Музыка тандалган жок: {why}")
         ctx.log(f"   Видеонун маанайы: {mood} → «{track.title}» ({why})")
 
-        levels = mix(ctx, track.path, total)
+        sfx_bed = sfx_hits = None
+        if sfx.enabled(ctx.store):   # СЫНАК гана (YTA_SFX=1 + YouTube_Auto_TEST)
+            sfx.build_sfx(ctx, scenes, total)
+            sfx_bed, sfx_hits = sfx.tracks_for_mix(ctx, total)
+        else:
+            if sfx.blocked_reason(ctx.store):
+                ctx.log("   ⚠️ " + sfx.blocked_reason(ctx.store))
+            stale = ctx.path("music", "sfx.json")
+            if stale.exists():
+                stale.unlink()   # мурунку сынактын эффекттери бул жолу колдонулбайт
+        levels = mix(ctx, track.path, total, sfx_bed, sfx_hits)
         rel = levels["voice_lufs"] - levels["bed_lufs"]
+        sfx_vals = [levels[k] for k in ("sfx_bed_lufs", "sfx_hits_lufs") if levels.get(k) is not None]
+        if sfx_vals:
+            levels["voice_minus_sfx_lu"] = round(levels["voice_lufs"] - max(sfx_vals), 1)
+            ctx.log(f"   🔊 Диктор эффекттерден {levels['voice_minus_sfx_lu']} LU катуу (керек ≥ 10)")
         ctx.log(f"   ✓ Аралаштырылды: диктор {levels['voice_lufs']:.1f} LUFS, музыка "
                 f"{levels['bed_lufs']:.1f} LUFS (айырма {rel:.1f} LU), жыйынтык {levels['mix']['I']} LUFS")
         info = {"track": track.rel, "title": track.title, "mood": mood, "why": why,
@@ -146,5 +185,6 @@ def ensure_mix(ctx: Context) -> Path:
     if not out.exists():
         info = json.loads(ctx.path("music", "music.json").read_text(encoding="utf-8"))
         total = json.loads(ctx.path("clips", "shots.json").read_text(encoding="utf-8"))["total"]
-        mix(ctx, ctx.cfg.music_root / info["track"], total)
+        bed, hits = sfx.tracks_for_mix(ctx, total)
+        mix(ctx, ctx.cfg.music_root / info["track"], total, bed, hits)
     return out
