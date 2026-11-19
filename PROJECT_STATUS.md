@@ -225,8 +225,10 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
    `pipeline/sfx_synth.py`: 15 ОРИГИНАЛДУУ эффект (синтез, CC0, metadata+sha256) түзүлдү.
    Drive'га жүктөлдү (2026-11-19 16:19 UTC): 10 «сокку» эффект + metadata (transitions 3, impact 2, cinematic 2, emotional 3).
    Колдонуучу 1-вариантты тандады → фондор 12 сек стерео (BED=12, 2.3 МБ) кайра түзүлүп, 5 фон + metadata жүктөлдү (16:22 UTC).
-   ✅ Drive'да 15/15 эффект + metadata. ▶️ SFX менен кайра жасоо: **run #44565276336** (rerun_from=s7_music, sound_effects ✓;
-   #44562653620 бүткөнчө кезекте).
+   ✅ Drive'да 15/15 эффект + metadata. SFX run #44565276336 — CANCELLED: пландалган resume_pending (#44565916680, schedule)
+   ошол эле `make-video` concurrency кезегине келип, күтүп турганды алмаштырды (GitHub бир гана pending кармайт).
+   ⏭ Кийинки: #44562653620 бүтүп, resume_pending башталгандан кийин SFX run'ду кайра коюу (rerun_from=s7_music, sound_effects ✓).
+   Эскертүү: cinematic_test'ти кезекке коюудан мурун make-video тобунда pending жок экенин текшер.
    Drive'дагы «YouTube Audio Library» файлдары — 13 музыка трек гана (Music/), үн эффекти эмес.
    ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
    **Колдонуучу:** Drive `YouTube_Auto/Sound_Effects/<категория>/` ичине лицензиясы текшерилген аудио + `<файл>.metadata.json`
