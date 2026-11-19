@@ -46,7 +46,7 @@ class Voice(unittest.TestCase):
         self.assertFalse(s["voice"]["owner_consent_confirmed"])
         self.assertTrue(s["voice"]["disclose_ai_voice"])
         self.assertEqual(s["voice"]["provider"], "gemini")
-        self.assertEqual(s["voice"]["gemini_voice"], "Aoede")   # колдонуучу тандаган үн
+        self.assertEqual(s["voice"]["gemini_voice"], "Orus")    # колдонуучу тандаган үн (2026-11-19: эркек үн)
 
     def test_settings_voice_used(self):
         t = video.tts_from_settings({"voice": {"provider": "gemini", "gemini_voice": "Aoede"}})
