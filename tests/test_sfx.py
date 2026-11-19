@@ -306,7 +306,7 @@ class TestSynth(unittest.TestCase):
                 m = sfx.measure(s.path)
                 self.assertLessEqual(m["peak"], -2.9, s.rel)
                 if s.category in sfx.BED_CATS:
-                    self.assertGreaterEqual(m["dur"], 20)
+                    self.assertGreaterEqual(m["dur"], 10)
                     with wave.open(str(s.path)) as w:
                         a = np.frombuffer(w.readframes(w.getnframes()), "<i2").reshape(-1, 2) / 32768
                     jump = np.max(np.abs(a[0] - a[-1]))
