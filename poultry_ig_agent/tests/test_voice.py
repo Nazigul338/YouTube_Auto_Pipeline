@@ -148,3 +148,18 @@ class VoiceNote(unittest.TestCase):
         p = {"lang": "ky", "caption": "Таң", "ai_voice": "clone", "topic_key": "daily"}
         safety.ensure_disclaimers(p, niche.get("poultry"))
         self.assertIn("клондолгон (үн ээсинин уруксаты менен)", p["caption"])
+
+
+class VoiceQA(unittest.TestCase):
+    def test_accuracy_metric(self):
+        from poultry_ig_agent.tools import voice_qa
+        ref = "Балапандар жылуулукка өзгөчө муктаж болушат."
+        self.assertEqual(voice_qa.accuracy(ref, ref), 100.0)
+        self.assertLess(voice_qa.accuracy(ref, "Балапандар жылуулука озгочо муктаж болушат"), 100.0)
+        self.assertLess(voice_qa.accuracy(ref, "Совсем другой текст про погоду"), 40)
+
+    def test_style_prefix_and_settings(self):
+        t = video.tts_from_settings({"voice": {"provider": "gemini", "gemini_voice": "Orus", "gemini_style": "warm"}})
+        self.assertEqual((t.voice, t.style), ("Orus", "warm"))
+        self.assertIn("TEXT:", video.GeminiTTS.STYLES["warm"])
+        self.assertIsNone(video.GeminiTTS.STYLES["plain"])

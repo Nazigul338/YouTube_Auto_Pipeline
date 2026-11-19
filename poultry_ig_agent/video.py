@@ -74,13 +74,23 @@ class VeoProvider:
 class GeminiTTS:
     """Gemini TTS → wav. Кыргызча айтылыш сапаты ASR (Whisper) менен текшерилиши керек, же башка провайдер алмаштырылат."""
 
-    def __init__(self, voice=None, tries=3, wait=4):
+    STYLES = {
+        "plain": None,
+        "warm": ("Read the following Kyrgyz text aloud in a warm, natural, conversational tone, like an experienced "
+                 "farmer kindly explaining to a friend. Use clear, correct Kyrgyz pronunciation (including ө, ү, ң), "
+                 "natural pauses and lively intonation. Read ONLY the text after 'TEXT:', never these instructions.\nTEXT:\n"),
+    }
+
+    def __init__(self, voice=None, tries=3, wait=4, style=None):
         self.voice = voice or os.environ.get("POULTRY_TTS_VOICE", "Kore")
         self.tries, self.wait = tries, wait
+        self.style = style or "plain"
+        self.last_model = None
 
     def synth(self, text, out_path):
         key = llm.api_key()
-        body = json.dumps({"contents": [{"parts": [{"text": text}]}], "generationConfig": {
+        prefix = self.STYLES.get(self.style) or ""
+        body = json.dumps({"contents": [{"parts": [{"text": prefix + text}]}], "generationConfig": {
             "responseModalities": ["AUDIO"],
             "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.voice}}}}}).encode()
         errors = []
@@ -98,8 +108,9 @@ class GeminiTTS:
                     pcm = base64.b64decode(parts[0]["inlineData"]["data"])
                     with wave.open(out_path, "wb") as w:
                         w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
-                    if errors:
-                        log.get().info("TTS %s %d-аракетте ийгиликтүү (мурунку каталар: %s)", m, attempt + 1, errors)
+                    self.last_model = m
+                    log.get().info("TTS ✅ модель=%s үн=%s стиль=%s аракет=%d%s", m, self.voice, self.style, attempt + 1,
+                                   f" (мурунку каталар: {errors})" if errors else "")
                     return out_path
                 except urllib.error.HTTPError as e:  # ачкыч логго чыкпайт
                     errors.append(f"{m}#{attempt + 1}: HTTP {e.code} {e.read().decode('utf-8', 'replace')[:120]}")
@@ -220,7 +231,7 @@ def tts_from_settings(cfg=None, voice_file=None):
         return KaniTTS(v.get("kani_model", "nineninesix/kani-tts-400m-ky"), v.get("kani_ref_audio"),
                        v.get("owner_consent_confirmed", False))
     if v.get("provider", "gemini") == "gemini":
-        return GeminiTTS(v.get("gemini_voice"))
+        return GeminiTTS(v.get("gemini_voice"), style=v.get("gemini_style"))
     if v.get("provider") == "elevenlabs":
         return ElevenLabsTTS(v.get("elevenlabs_voice_id"), v.get("elevenlabs_model", "eleven_v3"),
                              v.get("owner_consent_confirmed", False))

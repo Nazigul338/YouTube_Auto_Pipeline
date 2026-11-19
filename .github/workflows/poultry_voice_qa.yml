@@ -1,0 +1,35 @@
+name: "🎧 Poultry — диктор үнүнүн тактыгын баалоо (TTS → транскрипция)"
+on:
+  workflow_dispatch:
+    inputs:
+      voices: {description: "Үндөр (үтүр менен)", default: "Aoede,Orus,Charon,Fenrir,Iapetus,Algieba,Schedar"}
+      styles: {description: "Стилдер: plain,warm", default: "plain,warm"}
+  push:
+    branches: [claude/youtube-auto-pipeline-87d41t]
+    paths: [poultry_ig_agent/voice_probe/qa_request.txt]
+permissions:
+  contents: write
+concurrency: {group: poultry-voice-qa, cancel-in-progress: false}
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: ffmpeg
+        timeout-minutes: 6
+        run: bash poultry_ig_agent/tools/ensure_ffmpeg.sh
+      - name: Баалоо
+        env:
+          POULTRY_GEMINI_API_KEY: ${{ secrets.POULTRY_GEMINI_API_KEY }}
+          VOICES: ${{ inputs.voices || 'Aoede,Orus,Charon,Fenrir,Iapetus,Algieba,Schedar' }}
+          STYLES: ${{ inputs.styles || 'plain,warm' }}
+        run: |
+          rm -rf poultry_ig_agent/voice_probe/qa && mkdir -p poultry_ig_agent/voice_probe/qa
+          python -m poultry_ig_agent.tools.voice_qa --text-file poultry_ig_agent/voice_probe/text_qa_ky.txt \
+            --outdir poultry_ig_agent/voice_probe/qa --voices "$VOICES" --styles "$STYLES"
+      - name: Commit
+        if: always()
+        run: bash poultry_ig_agent/tools/commit_push.sh "Диктор үнүнүн тактык баалоосу (mp3 + report.json)" poultry_ig_agent/voice_probe/qa
