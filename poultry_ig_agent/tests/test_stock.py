@@ -12,17 +12,25 @@ HAVE = shutil.which("ffmpeg")
 
 
 def vid(i, h=1920, w=1080, dur=15):
-    return {"id": i, "duration": dur, "url": f"https://www.pexels.com/video/baby-chicks-{i}/", "user": {"name": f"Author{i}", "url": "u"},
+    return {"id": i, "duration": dur, "url": f"https://www.pexels.com/video/baby-chicken-{i}/", "user": {"name": f"Author{i}", "url": "u"},
             "video_files": [{"file_type": "video/mp4", "width": w, "height": h, "link": f"https://videos.pexels.com/{i}.mp4"},
                             {"file_type": "video/mp4", "width": w * 2, "height": h * 2, "link": "big"}]}
 
 
 class Pexels(unittest.TestCase):
     def test_poultry_query_short_and_anchored(self):
-        self.assertEqual(pexels.poultry_query("Close-up of fluffy chicks running in a warm brooder"), "chicks")
-        self.assertEqual(pexels.poultry_query("Chicks drinking water from the dispenser"), "chicks drinking")
-        self.assertEqual(pexels.poultry_query("A farmer smiling at the camera"), "chicks farmer")
+        self.assertEqual(pexels.poultry_query("Close-up of fluffy chicks running in a warm brooder"), "baby chicken")
+        self.assertEqual(pexels.poultry_query("Chicks drinking water from the dispenser"), "baby chicken drinking")
+        self.assertEqual(pexels.poultry_query("A farmer smiling at the camera"), "baby chicken farmer")
         self.assertEqual(pexels.poultry_query("Farmer adjusting ventilation in the coop"), "chicken coop farmer")
+
+    def test_relevance_rules(self):
+        self.assertTrue(pexels.relevant("chick, chicken, farm"))
+        self.assertTrue(pexels.relevant("hens, rooster"))
+        self.assertFalse(pexels.relevant("chick, duckling, water"))      # өрдөк балапаны
+        self.assertFalse(pexels.relevant("goose, chicks, lake"))
+        self.assertFalse(pexels.relevant("chick, bird, nest"))           # 'chick' жалгыз жетишсиз
+        self.assertTrue(pexels.relevant("https://www.pexels.com/video/baby-chicken-in-a-box-123/"))
 
     def test_irrelevant_rejected(self):
         from poultry_ig_agent import pixabay
@@ -55,14 +63,14 @@ class Pexels(unittest.TestCase):
 
         def tx(url):
             seen.append(url)
-            return {"videos": [vid(7)]} if "query=baby+chicks" in url else {"videos": []}
+            return {"videos": [vid(7)]} if "query=baby+chicken&" in url else {"videos": []}
         st = pexels.PexelsStock("K", transport=tx, downloader=lambda u, p: open(p, "wb").close())
         d = tempfile.mkdtemp()
         _, lic = st.fetch("fluffy chicks", 4, os.path.join(d, "a.mp4"))
         self.assertEqual(lic["id"], 7); self.assertEqual(lic["source"], "Pexels")
         with self.assertRaises(pexels.StockError):        # 7 мурун колдонулду → кайталанбайт
             st.fetch("fluffy chicks", 4, os.path.join(d, "b.mp4"))
-        self.assertTrue(any("baby+chicks" in u for u in seen))   # запас суроо колдонулду
+        self.assertTrue(any("baby+chicken" in u for u in seen))
 
 
 class Durations(unittest.TestCase):

@@ -9,7 +9,7 @@ import urllib.request
 from . import log
 
 API = "https://api.pexels.com/videos/search"
-FALLBACK_QUERIES = ("baby chicks", "chicks", "chickens farm", "hens", "chicken coop")
+FALLBACK_QUERIES = ("baby chicken", "chicken farm", "hens", "chicken coop", "rooster")
 STOP = {"a", "an", "the", "of", "in", "on", "with", "and", "or", "to", "for", "at", "is", "are", "close-up", "shot",
         "soft", "natural", "close", "light", "looking", "camera", "background", "out", "focus", "small", "up"}
 
@@ -21,7 +21,10 @@ class StockError(RuntimeError):
 ANCHORS = ("chick", "chicks", "chicken", "chickens", "hen", "hens", "rooster", "poultry", "coop", "brooder", "broiler")
 DETAILS = ("water", "drinking", "feed", "feeding", "eating", "egg", "eggs", "straw", "bedding", "lamp", "heat", "coop",
            "farm", "nest", "incubator", "farmer", "barn")
-RELEVANT = ("chick", "chicken", "hen", "rooster", "poultry", "coop", "brooder", "broiler", "fowl", "cockerel", "pullet")
+# 'chick' жалгыз жетишсиз: Pixabay аны өрдөк/каз балапандарына да коёт
+RELEVANT = ("chicken", "hen", "hens", "rooster", "poultry", "broiler", "fowl", "cockerel", "pullet", "brooder", "coop")
+NEGATIVE = ("duck", "goose", "geese", "gosling", "swan", "sparrow", "pigeon", "ostrich", "parrot", "penguin", "owl",
+            "eagle", "seagull", "gull", "pelican", "flamingo", "heron", "stork", "turkey", "quail", "peacock")
 
 
 def keywords(visual, n=5):
@@ -33,7 +36,9 @@ def poultry_query(visual):
     """Кыска суроо: бир тоок сөзү + бир деталь (узун суроо тиешесиз натыйжа берет: 'running' → чуркаган адам)."""
     words = re.findall(r"[a-zA-Z]+", (visual or "").lower())
     anchor = next((w for w in words if w in ANCHORS), "chicks")
-    if anchor in ("brooder", "coop") and "chick" not in " ".join(words):
+    if anchor in ("chick", "chicks"):
+        anchor = "baby chicken"            # 'chicks' жалгыз → өрдөк/каз балапандары да чыгат
+    elif anchor in ("brooder", "coop"):
         anchor = "chicken " + anchor
     detail = next((w for w in words if w in DETAILS and w not in anchor), "")
     return f"{anchor} {detail}".strip()
@@ -41,7 +46,10 @@ def poultry_query(visual):
 
 def relevant(text):
     t = (text or "").lower()
-    return any(r in t for r in RELEVANT)
+    words = set(re.findall(r"[a-z]+", t))
+    if any(n in words or n + "s" in words or n + "lings" in words or n + "ling" in words for n in NEGATIVE):
+        return False
+    return any(r in words or r + "s" in words for r in RELEVANT)
 
 
 def excluded_ids():
