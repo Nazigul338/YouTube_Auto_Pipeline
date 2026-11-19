@@ -41,7 +41,7 @@
 ## Gemini TTS кыргызча сыноосу (2026-11-19) — ✅ ЧЫНЫГЫ API менен иштеди
 Run 44509150003 (POULTRY_GEMINI_API_KEY). Текст 173 тамга. Charon 11.96с, Orus 12.4с, Fenrir 11.64с, Kore 13.4с,
 Aoede 12.48с; ар бири ~4с'та чыкты. Узундук күтүлгөн темпке туура (Kani'дей «ашыкча сүйлөө» жок).
-mp3'тер: `voice_probe/samples/gemini_*.mp3`. Сапатын колдонуучу угуп тандайт; демейки — Charon.
+mp3'тер: `voice_probe/samples/gemini_*.mp3`. Колдонуучу угуп **Aoede** тандады (2026-11-19: «кыргызча туура сүйлөйт») — демейки диктор.
 Ошол эле күнү: runner'де ffmpeg жок, apt-get осолдонду (run 44504573210 cancelled, 44507942582 timeout) →
 `tools/ensure_ffmpeg.sh` (PyPI static-ffmpeg, apt — запас) бардык poultry workflow'дорго.
 
