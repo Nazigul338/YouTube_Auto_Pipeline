@@ -140,6 +140,41 @@ def make_post(item, generate=llm.generate_json, tries=2, course=None):
     return post
 
 
+def make_post_from_text(text, item, generate=llm.generate_json, tries=2, course=None):
+    """Колдонуучунун ӨЗ диктор тексти: сөзмө-сөз сакталат. LLM кадр/жазуу/caption гана кошот."""
+    import re as _re
+    text = text.strip()
+    if not text:
+        raise ValueError("Текст бош")
+    course = course if course is not None else settings.load_course()
+    vcfg = settings.load_settings()["video"]
+    lang = item.get("lang", "ky")
+    words = len(text.split())
+    rules = "\n".join(f"- {r}" for r in config.RULES)
+    base = (f"Сен Instagram Reels монтажерусуң. Тил: {config.LANG_NAMES[lang]}. Төмөнкү диктор тексти АВТОРДУКУ — "
+            f"аны ӨЗГӨРТПӨ, кайталаба, кыскартпа. Ушул текстке гана: 4-8 кадр (ар бири 3-6 сек, жалпы ≈ {max(15, round(words / 2.3))} сек), "
+            f"экрандагы кыска жазуулар, hook_onscreen, caption, 3-8 хэштег, cta жаз.\nЭрежелер:\n{rules}\n"
+            f"ДИКТОР ТЕКСТИ:\n<<<{text}>>>\n"
+            'JSON: {"hook_onscreen":"","shots":[{"n":1,"duration":4,"source":"real|ai","visual":"англисче кадр сүрөттөмөсү","onscreen":""}],'
+            '"caption":"","hashtags":[],"cta":{"type":"comment|direct","text":""},"sources":[]}')
+    post, issues = {}, []
+    for _ in range(tries):
+        prompt = base + (f"\nМурунку вариантта ката бар, оңдо: {issues}" if issues else "")
+        post = generate(prompt)
+        first = _re.split(r"(?<=[.!?])\s+", text)[0]
+        ctype = item.get("content_type", "education")
+        post.update(format="reel", voiceover=text, hook=first, own_text=True, lang=lang,
+                    topic=item.get("topic", first[:60]), topic_key=item.get("topic_key", ""),
+                    content_type=ctype, pillar=ctype, purpose="sales" if ctype == "sales" else "education")
+        post["hashtags"] = list(dict.fromkeys(post.get("hashtags", []) + NICHE.base_hashtags[lang]))[:config.HASHTAGS_MAX]
+        issues = review(post, course, vcfg)
+        if not issues:
+            break
+    post["lint_issues"] = issues
+    post["status"] = "pending_review" if not issues else "needs_fix"
+    return post
+
+
 def save_post(post, today=None):
     today = today or dt.date.today().isoformat()
     pid = f"{today}-{_slug(post.get('topic', '') + post.get('hook', ''))}-{post['format']}-{post.get('lang', 'ky')}"
@@ -185,8 +220,17 @@ def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False, voice_file=No
 
 
 def run(topic_key=None, content_type="education", fmt="reel", lang="ky", make_video=False, generate=llm.generate_json,
-        veo=None, tts=None, allow_ai_fallback=False):
-    """START: контент → пост → (видео) → бекитүүгө даяр пакет."""
+        veo=None, tts=None, allow_ai_fallback=False, own_text=None):
+    """START: контент → пост → (видео) → бекитүүгө даяр пакет. own_text берилсе — автордун тексти сөзмө-сөз."""
+    if own_text and own_text.strip():
+        item = {"topic_key": topic_key or "", "content_type": content_type, "lang": lang}
+        if topic_key:
+            item["topic"] = NICHE.topics[topic_key]["ky"]
+        pid = save_post(make_post_from_text(own_text, item, generate))
+        res = {"id": pid, "own_text": True}
+        if make_video:
+            res["video"] = attach_video(pid, veo, tts, allow_ai_fallback)["status"]
+        return res
     topic_key = topic_key or pick_topic()
     item = {"topic_key": topic_key, "content_type": content_type, "format": fmt, "lang": lang,
             "topic": NICHE.topics[topic_key]["ky"], "angle": ""}
@@ -267,6 +311,7 @@ def main(argv=None):
     r.add_argument("--lang", default=settings.load_settings()["default_lang"], choices=list(config.LANGS))
     r.add_argument("--video", action="store_true")
     r.add_argument("--allow-ai-fallback", action="store_true")
+    r.add_argument("--own-text-file", default=None, help="өз диктор текстиңиз (сөзмө-сөз окулат)")
     sp = sub.add_parser("plan"); sp.add_argument("--days", type=int, default=7)
     sm = sub.add_parser("make"); sm.add_argument("--n", type=int, default=3)
     sub.add_parser("list"); sub.add_parser("check"); sub.add_parser("report")
@@ -281,7 +326,9 @@ def main(argv=None):
     L = log.get()
     try:
         if a.cmd == "run":
-            print(json.dumps(run(a.topic or None, a.type, a.format, a.lang, a.video, allow_ai_fallback=a.allow_ai_fallback), ensure_ascii=False))
+            own = open(a.own_text_file, encoding="utf-8").read() if a.own_text_file else None
+            print(json.dumps(run(a.topic or None, a.type, a.format, a.lang, a.video, allow_ai_fallback=a.allow_ai_fallback,
+                                 own_text=own), ensure_ascii=False))
         elif a.cmd == "plan":
             print(json.dumps(cmd_plan(a.days), ensure_ascii=False, indent=2))
         elif a.cmd == "make":

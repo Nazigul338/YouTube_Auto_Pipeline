@@ -80,3 +80,33 @@ class Isolation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OwnText(unittest.TestCase):
+    def setUp(self):
+        self.out = tmp_out()
+        os.environ["POULTRY_COURSE_FILE"] = course_file()
+
+    def _fake(self, prompt):
+        self.prompt = prompt
+        return {"hook_onscreen": "ТАҢ", "shots": shots(4), "caption": "Сиз кантесиз? 👇", "hashtags": ["#ферма"],
+                "cta": {"type": "comment", "text": "Жазыңыз"}, "voiceover": "LLM ӨЗГӨРТҮП КОЙГОН ТЕКСТ"}
+
+    def test_text_kept_verbatim(self):
+        txt = "Таң атты. Тооктор жем күтүп турат! Бүгүн суу идишин тазалайбыз."
+        r = agent.run(own_text=txt, generate=self._fake)
+        post = json.load(open(os.path.join(self.out, r["id"], "post.json"), encoding="utf-8"))
+        self.assertEqual(post["voiceover"], txt)                 # LLM алмаштыра албайт
+        self.assertEqual(post["hook"], "Таң атты.")
+        self.assertTrue(post["own_text"])
+        self.assertIn(txt, self.prompt)
+        self.assertEqual(open(os.path.join(self.out, r["id"], "voiceover.txt"), encoding="utf-8").read().strip(), txt)
+
+    def test_own_text_still_linted(self):
+        r = agent.run(own_text="Бул дары менен 10 мг берсеңиз болот.", generate=self._fake)
+        post = json.load(open(os.path.join(self.out, r["id"], "post.json"), encoding="utf-8"))
+        self.assertEqual(post["status"], "needs_fix")            # доза — автордуку болсо да тосулат
+
+    def test_empty_text_rejected(self):
+        with self.assertRaises(ValueError):
+            agent.make_post_from_text("  ", {}, self._fake)

@@ -46,6 +46,10 @@ on:
         options:
           - ky
           - ru
+      own_text:
+        description: "Өз диктор текстиңиз (бош = агент өзү жазат). Сөзмө-сөз окулат."
+        required: false
+        default: ""
       make_video:
         description: "Reel видеосун да жаса (Veo + диктор + монтаж)"
         type: boolean
@@ -66,12 +70,14 @@ jobs:
       - name: START
         env:
           POULTRY_GEMINI_API_KEY: ${{ secrets.POULTRY_GEMINI_API_KEY }}
+          OWN_TEXT: ${{ inputs.own_text }}
           POULTRY_ELEVENLABS_API_KEY: ${{ secrets.POULTRY_ELEVENLABS_API_KEY }}
         run: |
           python -m poultry_ig_agent.agent check
           ARGS="--type ${{ inputs.content_type }} --format ${{ inputs.format }} --lang ${{ inputs.lang }}"
           if [ "${{ inputs.topic }}" != "auto" ]; then ARGS="$ARGS --topic ${{ inputs.topic }}"; fi
           if [ "${{ inputs.make_video }}" = "true" ]; then ARGS="$ARGS --video"; fi
+          if [ -n "$OWN_TEXT" ]; then printf '%s' "$OWN_TEXT" > /tmp/own_text.txt; ARGS="$ARGS --own-text-file /tmp/own_text.txt"; fi
           python -m poultry_ig_agent.agent run $ARGS
           python -m poultry_ig_agent.agent list
       - uses: actions/upload-artifact@v4
