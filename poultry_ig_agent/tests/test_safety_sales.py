@@ -80,3 +80,18 @@ class Calc(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AuthorExperience(unittest.TestCase):
+    def test_experience_source_accepted_with_disclosure(self):
+        p = {"lang": "ky", "topic_key": "chicks", "caption": "Балапандар өлүп калбасын",
+             "sources": [{"type": "author_experience", "note": "балапан багуу практикасы"}]}
+        safety.ensure_disclaimers(p, N)
+        self.assertIn("өз практикасынан", p["caption"])
+        self.assertIn("ветеринар", p["caption"])
+        self.assertTrue(p["needs_vet_review"])          # адам бекитүүсү дагы эле керек
+        self.assertEqual(safety.check(p, N), [])
+
+    def test_experience_without_note_flagged(self):
+        p = {"lang": "ky", "topic_key": "chicks", "caption": "Балапандар өлүп калбасын. ветеринар", "sources": [{"type": "author_experience"}]}
+        self.assertTrue(safety.check(p, N))

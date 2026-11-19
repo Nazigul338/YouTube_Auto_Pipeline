@@ -134,3 +134,17 @@ class GeminiTTSRetry(unittest.TestCase):
             with self.assertRaises(video.VideoError) as cm:
                 video.GeminiTTS("Aoede", tries=2).synth("x", os.path.join(tempfile.mkdtemp(), "v.wav"))
         self.assertEqual(str(cm.exception).count("#"), 2 * 2)   # 2 модель × 2 аракет
+
+
+class VoiceNote(unittest.TestCase):
+    def test_prebuilt_voice_no_consent_wording_and_old_replaced(self):
+        old = "Таң\n🎙 Диктордун үнү AI менен түзүлгөн (үн ээсинин уруксаты менен)."
+        p = {"lang": "ky", "caption": old, "ai_voice": True, "topic_key": "daily"}
+        safety.ensure_disclaimers(p, niche.get("poultry"))
+        self.assertIn("🎙 Диктордун үнү AI менен түзүлгөн.", p["caption"])
+        self.assertNotIn("уруксаты", p["caption"])
+
+    def test_clone_voice_says_consent(self):
+        p = {"lang": "ky", "caption": "Таң", "ai_voice": "clone", "topic_key": "daily"}
+        safety.ensure_disclaimers(p, niche.get("poultry"))
+        self.assertIn("клондолгон (үн ээсинин уруксаты менен)", p["caption"])
