@@ -72,6 +72,8 @@ def check(post, niche):
     if not srcs:
         issues.append("Ден соолук постунда ишенимдүү булак (sources) көрсөтүлгөн эмес")
     for s in srcs:
-        if not trusted(s.get("url"), niche):
+        if not (urlparse(s.get("url") or "").hostname):
+            issues.append(f"Булак шилтеме эмес, жөн гана сүрөттөмө: «{(s.get('url') or '')[:60]}» — так сайт керек")
+        elif not trusted(s.get("url"), niche):
             issues.append(f"Ишенимсиз/белгисиз булак домени: {urlparse(s.get('url') or '').hostname}")
     return issues

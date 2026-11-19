@@ -45,8 +45,17 @@ mp3'тер: `voice_probe/samples/gemini_*.mp3`. Колдонуучу угуп **
 Ошол эле күнү: runner'де ffmpeg жок, apt-get осолдонду (run 44504573210 cancelled, 44507942582 timeout) →
 `tools/ensure_ffmpeg.sh` (PyPI static-ffmpeg, apt — запас) бардык poultry workflow'дорго.
 
+
+## Биринчи чыныгы Gemini текст генерациясы (2026-11-19, run 44533063140) — ✅ иштеди
+Колдонуучунун «балапандын 3 катасы» тексти 3 бөлүккө бөлүндү (`scripts_own/done/`), пакеттер `deliveries/`.
+Диктор тексти сөзмө-сөз сакталды (3/3). Aoede үнү: 44.3 / 33.6 / 51.9 сек.
+Табылгалар: (1) 1/3 жана 2/3'тө Gemini булакты URL эмес сүрөттөмө кылып жазды → needs_fix (туура тосулду);
+3/3'тө fao.org тамыр домени — мазмуну текшерилген эмес. (2) Кадр планы (37/28/33с) үндөн кыска — build акыркы
+кадрды узартат. (3) 2/3 экрандагы «3 жолу» жазуусу адаштырат. (4) 1/3, 2/3 caption = бүт диктор тексти.
+Ушул күнү оңдолгон каталар: TimeoutError кармалбаган (run 44528569865), sources сап тизмеси (run 44529118701).
+
 ## 7 API абалы
-Gemini текст ❓ · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (❓ = чыныгы чакыруу менен али текшерилген эмес). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
+Gemini текст ✅ (2026-11-19, run 44533063140) · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (❓ = чыныгы чакыруу менен али текшерилген эмес). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
 
 ## 8 Кийинки тапшырмалар
 1. Secrets кош → START (`carousel`, видеосуз) → чыныгы Gemini текшерүү. 2. `course.json` толтур. 3. Бир Reel `--video` (Veo/TTS текшерүү). 4. Meta app + токен → `publish` dry-run → `--live`. 5. 5 кол менен жарыялоодон кийин автопилот. 6. Drive аркылуу реалдуу видео, комментарий/DM мониторинг workflow.
