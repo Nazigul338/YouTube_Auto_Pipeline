@@ -279,7 +279,7 @@ def normalize(src, seconds, out, onscreen="", label="", tmp="."):
     for i, (text, y0, size) in enumerate([(onscreen, 0.12, 64), (label, 0.04, 36)]):
         if not text:
             continue
-        for j, line in enumerate(textwrap.wrap(text, 22)[:3]):   # ар сап өзүнчө: ffmpeg 7+ '\n'ди □ кылып көрсөтөт
+        for j, line in enumerate(textwrap.wrap(text, 24)[:4]):   # ар сап өзүнчө: ffmpeg 7+ '\n'ди □ кылып көрсөтөт
             tf = os.path.join(tmp, f"t_{os.path.basename(out)}_{i}_{j}.txt")
             with open(tf, "w", encoding="utf-8") as f:
                 f.write(line)
