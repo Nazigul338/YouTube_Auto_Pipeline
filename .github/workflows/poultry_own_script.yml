@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches: [ccr-e9f49a12-c7fuhx]
-    paths: [poultry_ig_agent/scripts_own/queue/**]
+    paths: [poultry_ig_agent/scripts_own/queue/**, .github/workflows/poultry_own_script.yml]
 permissions:
   contents: write
 concurrency: {group: poultry-own-script, cancel-in-progress: false}
@@ -29,10 +29,13 @@ jobs:
           set -euo pipefail
           mkdir -p poultry_ig_agent/deliveries poultry_ig_agent/scripts_own/done
           shopt -s nullglob
+          FAILED=0
           for f in poultry_ig_agent/scripts_own/queue/*.txt; do
             name=$(basename "$f" .txt)
             echo "== $name"
-            res=$(python -m poultry_ig_agent.agent run --own-text-file "$f" --type education --topic chicks --lang ky | tail -1)
+            if ! res=$(python -m poultry_ig_agent.agent run --own-text-file "$f" --type education --topic chicks --lang ky | tail -1); then
+              echo "::error::$name — пост жасалган жок (логду караңыз)"; FAILED=1; continue
+            fi
             echo "$res"
             pid=$(python -c 'import json,sys; print(json.loads(sys.argv[1])["id"])' "$res")
             python -m poultry_ig_agent.agent voice "$pid" || echo "::warning::$name үнү чыккан жок"
@@ -41,6 +44,7 @@ jobs:
             [ -f poultry_ig_agent/out/"$pid"/voice.mp3 ] && cp poultry_ig_agent/out/"$pid"/voice.mp3 "poultry_ig_agent/deliveries/$name/"
             git mv "$f" "poultry_ig_agent/scripts_own/done/$name.txt"
           done
+          exit $FAILED
       - name: Натыйжаны commit
         if: always()
         run: |
