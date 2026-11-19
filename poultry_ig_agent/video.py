@@ -298,12 +298,46 @@ def assemble(clips, voice, srt_path, out, music=None):
     return out
 
 
-def build(post, post_dir, veo, tts, assets_dir, allow_ai_fallback=False, niche=None):
+def fill_stock(shots, missing, stock, work):
+    """Өз видеосу жок кадрларды стоктон толуктайт (real_farm эмес посттор үчүн гана чакырылат)."""
+    lics, still = [], []
+    for s in shots:
+        if s["n"] in missing:
+            try:
+                path, lic = stock.fetch(s.get("visual", ""), float(s.get("duration", 4)), os.path.join(work, f"stock_{s['n']}.mp4"))
+                s.update(source="stock", file=path, stock=lic)
+                lics.append({"shot": s["n"], **lic})
+            except Exception as e:
+                log.get().warning("Кадр %s үчүн сток табылган жок: %s", s["n"], e)
+                still.append(s["n"])
+    return lics, still
+
+
+def fit_durations(shots, voice_seconds, pad=0.5, max_shot=8.0):
+    """Кадрлардын узундугун диктордун узундугуна пропорционалдуу тууралайт (акыркы кадр гана узарбасын)."""
+    plan = sum(float(s.get("duration", 3)) for s in shots) or 1
+    target = voice_seconds + pad
+    if target > plan:
+        k = target / plan
+        for s in shots:
+            s["duration"] = round(min(float(s.get("duration", 3)) * k, max_shot), 2)
+        rest = target - sum(s["duration"] for s in shots)
+        if rest > 0.05:
+            shots[-1]["duration"] = round(shots[-1]["duration"] + rest, 2)
+    return shots
+
+
+def build(post, post_dir, veo, tts, assets_dir, allow_ai_fallback=False, niche=None, stock=None):
     """Толук Reel. Кайтарат dict: status = ready | needs_footage | failed."""
     L = log.get()
     cfg = settings.load_settings()["video"]
     lang = post.get("lang", "ky")
     shots, missing = resolve_shots(post, assets_dir, allow_ai_fallback)
+    licenses = []
+    if missing and stock is not None and post.get("content_type") != "real_farm":
+        work0 = os.path.join(post_dir, "work")
+        os.makedirs(work0, exist_ok=True)
+        licenses, missing = fill_stock(shots, missing, stock, work0)
     if missing:
         L.warning("Реалдуу видео жетишпейт: кадр %s → assets/real/ ичине файл кошуңуз", missing)
         return {"status": "needs_footage", "missing_real_shots": missing, "shots": shots}
@@ -313,9 +347,7 @@ def build(post, post_dir, veo, tts, assets_dir, allow_ai_fallback=False, niche=N
     try:
         voice = tts.synth(post["voiceover"], os.path.join(work, "voice.wav"))
         vlen = duration(voice)
-        plan = sum(float(s.get("duration", 3)) for s in shots)
-        if vlen + 0.4 > plan:                       # диктор узунураак болсо акыркы кадрды узарт
-            shots[-1]["duration"] = float(shots[-1].get("duration", 3)) + (vlen + 0.4 - plan)
+        fit_durations(shots, vlen)
         clips = []
         style = niche.style_bible if niche else ""
         for s in shots:
@@ -337,4 +369,8 @@ def build(post, post_dir, veo, tts, assets_dir, allow_ai_fallback=False, niche=N
         return {"status": "failed", "error": str(e)}
     with open(os.path.join(post_dir, "shots.json"), "w", encoding="utf-8") as f:
         json.dump(shots, f, ensure_ascii=False, indent=2)
-    return {"status": "ready", "path": out, "ai_shots": sum(s["source"] == "ai" for s in shots), "shots": shots}
+    if licenses:
+        with open(os.path.join(post_dir, "licenses.json"), "w", encoding="utf-8") as f:
+            json.dump(licenses, f, ensure_ascii=False, indent=2)
+    return {"status": "ready", "path": out, "ai_shots": sum(s["source"] == "ai" for s in shots),
+            "stock_shots": sum(s["source"] == "stock" for s in shots), "shots": shots, "licenses": licenses}

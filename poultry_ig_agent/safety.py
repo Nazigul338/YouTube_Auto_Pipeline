@@ -12,6 +12,11 @@ AI_NOTE = {
 }
 
 
+STOCK_NOTE = {
+    "ky": "🎞 Айрым кадрлар — стоктук видео (Pixabay/Pexels; иллюстрация, биздин ферма эмес).",
+    "ru": "🎞 Часть кадров — стоковые видео (Pixabay/Pexels; иллюстрация, не наша ферма).",
+}
+
 AI_VOICE_NOTE = {
     "ky": "🎙 Диктордун үнү AI менен түзүлгөн (үн ээсинин уруксаты менен).",
     "ru": "🎙 Голос диктора создан с помощью AI (с согласия владельца голоса).",
@@ -55,6 +60,8 @@ def ensure_disclaimers(post, niche):
             cap += f"\n{label}: " + ", ".join(urlparse(s["url"]).hostname for s in srcs)
     if any(s.get("source") == "ai" for s in post.get("shots", [])) and AI_NOTE[lang] not in cap:
         cap += "\n\n" + AI_NOTE[lang]
+    if any(s.get("source") == "stock" for s in post.get("shots", [])) and STOCK_NOTE[lang] not in cap:
+        cap += "\n" + STOCK_NOTE[lang]
     if post.get("ai_voice") and AI_VOICE_NOTE[lang] not in cap:
         cap += "\n" + AI_VOICE_NOTE[lang]
     post["caption"] = cap

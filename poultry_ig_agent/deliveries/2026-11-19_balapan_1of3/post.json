@@ -3,48 +3,102 @@
   "shots": [
     {
       "n": 1,
-      "duration": 5.0,
-      "source": "real",
+      "duration": 6.15,
+      "source": "stock",
       "visual": "Close-up of fluffy chicks running in a warm brooder, soft natural lighting.",
-      "onscreen": "Балапандардын өлүмүн токтотобуз!"
+      "onscreen": "1/3: Температура",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-1ca4c47b-reel-ky/work/stock_1.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 27539,
+        "url": "https://pixabay.com/videos/id-27539/",
+        "author": "socialsudo",
+        "query": "fluffy chicks running warm brooder",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 2,
-      "duration": 6.0,
-      "source": "real",
+      "duration": 7.38,
+      "source": "stock",
       "visual": "A farmer adjusting a heat lamp or temperature regulator in a coop.",
-      "onscreen": "1-ката: Температураны туура эмес жөндөө"
+      "onscreen": "1-ката: Температураны туура эмес жөндөө",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-1ca4c47b-reel-ky/work/stock_2.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 3612,
+        "url": "https://pixabay.com/videos/id-3612/",
+        "author": "Coverr-Free-Footage",
+        "query": "farmer adjusting heat lamp temperature",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 3,
-      "duration": 6.0,
-      "source": "real",
+      "duration": 7.38,
+      "source": "stock",
       "visual": "Chicks huddling together under a heat lamp, looking cold/uncomfortable.",
-      "onscreen": "Бири-бирине тыгылып жатышабы?"
+      "onscreen": "Бири-бирине тыгылып жатышабы?",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-1ca4c47b-reel-ky/work/stock_3.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 35427,
+        "url": "https://pixabay.com/videos/id-35427/",
+        "author": "JancickaL",
+        "query": "chicks huddling together under heat",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 4,
-      "duration": 6.0,
-      "source": "real",
+      "duration": 7.38,
+      "source": "stock",
       "visual": "Chicks panting and staying away from the heat source.",
-      "onscreen": "Же канаттарын жайып, алыстап жатышабы?"
+      "onscreen": "Же канаттарын жайып, алыстап жатышабы?",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-1ca4c47b-reel-ky/work/stock_4.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 190144,
+        "url": "https://pixabay.com/videos/id-190144/",
+        "author": "Danganhfoto",
+        "query": "chicks panting staying away from",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 5,
-      "duration": 7.0,
-      "source": "real",
+      "duration": 8.0,
+      "source": "stock",
       "visual": "A healthy group of chicks eating feed in a clean, spacious brooder.",
-      "onscreen": "Ар дайым көзөмөлдө болуңуз!"
+      "onscreen": "Ар дайым көзөмөлдө болуңуз!",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-1ca4c47b-reel-ky/work/stock_5.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 108679,
+        "url": "https://pixabay.com/videos/id-108679/",
+        "author": "NickyPe",
+        "query": "healthy group chicks eating feed",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 6,
-      "duration": 7.0,
-      "source": "real",
+      "duration": 9.25,
+      "source": "stock",
       "visual": "A farmer looking at the camera, smiling, or pointing to a sign about expert advice.",
-      "onscreen": "Ветеринардын кеңеши зарыл болсо, сөзсүз кайрылыңыз!"
+      "onscreen": "Ветеринардын кеңеши зарыл болсо, сөзсүз кайрылыңыз!",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-1ca4c47b-reel-ky/work/stock_6.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 76886,
+        "url": "https://pixabay.com/videos/id-76886/",
+        "author": "FnBTV",
+        "query": "farmer smiling pointing sign about",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     }
   ],
-  "caption": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз!\n\nБиринчи ката — температураны туура сактабоо.\n\nБалапандар жашоосунун алгачкы күндөрүндө жылуулукка өзгөчө муктаж болушат. Биринчи жумада брудердеги температураны көбүнчө 32–34°C чамасында кармоо керек. Бирок бул көрсөткүч өлчөнгөн жерге, балапандардын жашына жана багуу шартына жараша өзгөрөт.\n\nЭгер балапандар бири-бирине тыгылып, жылуулук булагына жакын чогулса — алар үшүп жаткан болушу мүмкүн. Ал эми канаттарын жайып, тумчугуп, жылуулук булагынан алыстаса — өтө ысып жаткан болушу мүмкүн.\n\nТоок чарбасы боюнча дагы пайдалуу кеңештер үчүн баракчабызга катталыңыз!\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.",
+  "caption": "Балапандардын алгачкы жумасындагы 1-ката — температураны туура сактабоо. Балапандар үшүп же ысып жатканын кантип билесиз? Видеону сактап коюңуз 👇 (1/3)\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\n🎞 Айрым кадрлар — стоктук видео (Pixabay/Pexels; иллюстрация, биздин ферма эмес).\n🎙 Диктордун үнү AI менен түзүлгөн (үн ээсинин уруксаты менен).",
   "hashtags": [
     "#тоокчарбасы",
     "#балапан",
@@ -79,8 +133,72 @@
   "purpose": "education",
   "needs_vet_review": true,
   "lint_issues": [
-    "Ишенимсиз/белгисиз булак домени: None"
+    "Булак шилтеме эмес, жөн гана сүрөттөмө: «Ветеринардык справочник жана тоок багуу боюнча агротехникалы» — так сайт керек"
   ],
   "status": "needs_fix",
-  "id": "2026-11-19-1ca4c47b-reel-ky"
+  "id": "2026-11-19-1ca4c47b-reel-ky",
+  "series": {
+    "name": "balapan_3_kata",
+    "part": 1,
+    "of": 3
+  },
+  "ai_voice": true,
+  "licenses": [
+    {
+      "shot": 1,
+      "source": "Pixabay",
+      "id": 27539,
+      "url": "https://pixabay.com/videos/id-27539/",
+      "author": "socialsudo",
+      "query": "fluffy chicks running warm brooder",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 2,
+      "source": "Pixabay",
+      "id": 3612,
+      "url": "https://pixabay.com/videos/id-3612/",
+      "author": "Coverr-Free-Footage",
+      "query": "farmer adjusting heat lamp temperature",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 3,
+      "source": "Pixabay",
+      "id": 35427,
+      "url": "https://pixabay.com/videos/id-35427/",
+      "author": "JancickaL",
+      "query": "chicks huddling together under heat",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 4,
+      "source": "Pixabay",
+      "id": 190144,
+      "url": "https://pixabay.com/videos/id-190144/",
+      "author": "Danganhfoto",
+      "query": "chicks panting staying away from",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 5,
+      "source": "Pixabay",
+      "id": 108679,
+      "url": "https://pixabay.com/videos/id-108679/",
+      "author": "NickyPe",
+      "query": "healthy group chicks eating feed",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 6,
+      "source": "Pixabay",
+      "id": 76886,
+      "url": "https://pixabay.com/videos/id-76886/",
+      "author": "FnBTV",
+      "query": "farmer smiling pointing sign about",
+      "license": "https://pixabay.com/service/license-summary/"
+    }
+  ],
+  "video": "final.mp4",
+  "video_status": "ready"
 }

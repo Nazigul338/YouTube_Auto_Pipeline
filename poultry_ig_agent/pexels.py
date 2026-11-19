@@ -1,0 +1,78 @@
+"""Pexels стоктон вертикалдуу видео издөө (Pexels License: бекер, коммерциялык колдонууга болот, атрибуция милдеттүү эмес).
+Ачкыч: POULTRY_PEXELS_API_KEY (GitHub Secret). Ар бир колдонулган клип licenses.json'го жазылат."""
+import json
+import os
+import re
+import urllib.parse
+import urllib.request
+
+from . import log
+
+API = "https://api.pexels.com/videos/search"
+FALLBACK_QUERIES = ("baby chicks", "chicks brooder", "poultry farm chickens", "chicken coop")
+STOP = {"a", "an", "the", "of", "in", "on", "with", "and", "or", "to", "for", "at", "is", "are", "close-up", "shot",
+        "soft", "natural", "close", "light", "looking", "camera", "background", "out", "focus", "small", "up"}
+
+
+class StockError(RuntimeError):
+    pass
+
+
+def keywords(visual, n=5):
+    words = [w for w in re.findall(r"[a-zA-Z]+", (visual or "").lower()) if w not in STOP and len(w) > 2]
+    return " ".join(list(dict.fromkeys(words))[:n])
+
+
+def _get(url, key, transport=None):
+    if transport:
+        return transport(url)
+    req = urllib.request.Request(url, headers={"Authorization": key, "User-Agent": "poultry-ig-agent"})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return json.load(r)
+
+
+def pick_file(video, min_h=1280):
+    """Эң ылайыктуу mp4: вертикалдуу, бийиктиги ≥ min_h, бирок 4K'дан кичине (көлөмү үчүн)."""
+    files = [f for f in video.get("video_files", []) if f.get("file_type") == "video/mp4" and f.get("height") and f.get("width")]
+    vert = [f for f in files if f["height"] >= f["width"] and min_h <= f["height"] <= 2160]
+    pool = vert or [f for f in files if f["height"] >= 720]
+    return min(pool, key=lambda f: f["height"]) if pool else None
+
+
+class PexelsStock:
+    def __init__(self, key=None, transport=None, downloader=None):
+        self.key = key or os.environ.get("POULTRY_PEXELS_API_KEY")
+        if not self.key:
+            raise StockError("POULTRY_PEXELS_API_KEY коюлган эмес (GitHub Secrets'ке кошуңуз)")
+        self.tx, self.dl, self.used = transport, downloader, set()
+        self.log = log.get()
+
+    def search(self, query, per_page=15):
+        q = urllib.parse.urlencode({"query": query, "orientation": "portrait", "per_page": per_page, "size": "medium"})
+        return _get(f"{API}?{q}", self.key, self.tx).get("videos", [])
+
+    def find(self, visual, min_seconds):
+        for q in [keywords(visual)] + list(FALLBACK_QUERIES):
+            if not q:
+                continue
+            for v in self.search(q):
+                if v["id"] in self.used or v.get("duration", 0) < min(min_seconds, 8):
+                    continue
+                f = pick_file(v)
+                if f:
+                    self.used.add(v["id"])
+                    return v, f, q
+        raise StockError(f"Pexels'тен ылайыктуу видео табылган жок: {visual[:60]}")
+
+    def fetch(self, visual, min_seconds, out_path):
+        v, f, q = self.find(visual, min_seconds)
+        if self.dl:
+            self.dl(f["link"], out_path)
+        else:
+            req = urllib.request.Request(f["link"], headers={"User-Agent": "poultry-ig-agent"})
+            with urllib.request.urlopen(req, timeout=180) as r, open(out_path, "wb") as fh:
+                fh.write(r.read())
+        lic = {"source": "Pexels", "id": v["id"], "url": v.get("url"), "author": (v.get("user") or {}).get("name"),
+               "author_url": (v.get("user") or {}).get("url"), "query": q, "license": "https://www.pexels.com/license/"}
+        self.log.info("Pexels клип %s (%s) — %s", v["id"], q, lic["author"])
+        return out_path, lic

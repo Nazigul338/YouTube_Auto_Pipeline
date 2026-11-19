@@ -238,16 +238,18 @@ def save_post(post, today=None):
     return pid
 
 
-def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False, voice_file=None):
+def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False, voice_file=None, stock=None):
     d = _path(pid)
     with open(os.path.join(d, "post.json"), encoding="utf-8") as f:
         post = json.load(f)
     tts = tts or video.tts_from_settings(voice_file=voice_file)
     post["ai_voice"] = settings.load_settings()["voice"].get("disclose_ai_voice", True)
     res = video.build(post, d, veo or video.VeoProvider(), tts,
-                      os.path.join(os.path.dirname(__file__), "assets"), allow_ai_fallback, NICHE)
+                      os.path.join(os.path.dirname(__file__), "assets"), allow_ai_fallback, NICHE, stock=stock)
     if res["status"] == "ready":
         post["shots"] = res["shots"]
+        if res.get("licenses"):
+            post["licenses"] = res["licenses"]
         post["lint_issues"] = review(post)          # AI ачыктоосу caption'ко кошулсун
         post["video"] = "final.mp4"
     post["video_status"] = res["status"]
@@ -375,6 +377,7 @@ def main(argv=None):
     vo = sub.add_parser("voice"); vo.add_argument("id")
     vd = sub.add_parser("video"); vd.add_argument("id"); vd.add_argument("--voice-file", default=None)
     vd.add_argument("--allow-ai-fallback", action="store_true")
+    vd.add_argument("--stock", action="store_true", help="өз видеосу жок кадрларды стоктон (Pixabay, болбосо Pexels) толуктоо")
     c = sub.add_parser("calc"); c.add_argument("--inputs", required=True); c.add_argument("--lang", default="ky")
     a = ap.parse_args(argv)
     L = log.get()
@@ -406,7 +409,9 @@ def main(argv=None):
         elif a.cmd == "voice":
             print(json.dumps(cmd_voice(a.id), ensure_ascii=False))
         elif a.cmd == "video":
-            print(json.dumps(attach_video(a.id, allow_ai_fallback=a.allow_ai_fallback, voice_file=a.voice_file)["status"]))
+            from .pixabay import make_stock
+            st = make_stock() if a.stock else None
+            print(json.dumps(attach_video(a.id, allow_ai_fallback=a.allow_ai_fallback, voice_file=a.voice_file, stock=st)["status"]))
         elif a.cmd == "calc":
             cur = settings.load_course().get("currency") or ""
             cp = calc.to_post(calc.load(a.inputs), a.lang, cur)

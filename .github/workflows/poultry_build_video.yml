@@ -1,0 +1,71 @@
+name: "🎬 Poultry — даяр пакеттен видео (Pixabay/Pexels + Aoede)"
+# deliveries/<аты>/build_request.txt түшкөндө же кол менен: пакет → Pexels кадрлар → Aoede үнү → субтитр → 9:16 mp4
+on:
+  workflow_dispatch:
+    inputs:
+      names:
+        description: "deliveries ичиндеги папкалар, үтүр менен (бош = build_request.txt бар бардыгы)"
+        default: ""
+  push:
+    branches: [claude/youtube-auto-pipeline-87d41t, ccr-e9f49a12-c7fuhx]
+    paths: [poultry_ig_agent/deliveries/*/build_request.txt]
+permissions:
+  contents: write
+concurrency: {group: poultry-build-video, cancel-in-progress: false}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: ffmpeg
+        timeout-minutes: 6
+        run: bash poultry_ig_agent/tools/ensure_ffmpeg.sh
+      - run: pip install -q -r poultry_ig_agent/requirements.txt
+      - name: Тесттер
+        run: python -m unittest discover -s poultry_ig_agent/tests -t .
+      - name: Видео жасоо
+        env:
+          POULTRY_GEMINI_API_KEY: ${{ secrets.POULTRY_GEMINI_API_KEY }}
+          POULTRY_PIXABAY_API_KEY: ${{ secrets.POULTRY_PIXABAY_API_KEY }}
+          POULTRY_PEXELS_API_KEY: ${{ secrets.POULTRY_PEXELS_API_KEY }}
+          NAMES: ${{ inputs.names }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [ -z "$POULTRY_PIXABAY_API_KEY" ] && [ -z "$POULTRY_PEXELS_API_KEY" ]; then echo "::error::POULTRY_PIXABAY_API_KEY (же POULTRY_PEXELS_API_KEY) secret коюлган эмес"; exit 1; fi
+          D=poultry_ig_agent/deliveries; FAILED=0
+          if [ -n "$NAMES" ]; then IFS=',' read -ra LIST <<< "$NAMES"; else LIST=(); for f in $D/*/build_request.txt; do LIST+=("$(basename "$(dirname "$f")")"); done; fi
+          for name in "${LIST[@]}"; do
+            name=$(echo "$name" | xargs); [ -d "$D/$name" ] || { echo "::error::$name жок"; FAILED=1; continue; }
+            pid=$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$D/$name/post.json")
+            mkdir -p "poultry_ig_agent/out/$pid" && cp "$D/$name"/{post.json,voiceover.txt,caption.txt} "poultry_ig_agent/out/$pid/"
+            echo "== $name ($pid)"
+            st=$(python -m poultry_ig_agent.agent video "$pid" --stock | tail -1) || st='"error"'
+            echo "статус: $st"
+            if [ "$st" = '"ready"' ]; then
+              cp poultry_ig_agent/out/$pid/{final.mp4,shots.json,post.json} "$D/$name/"
+              [ -f poultry_ig_agent/out/$pid/licenses.json ] && cp poultry_ig_agent/out/$pid/licenses.json "$D/$name/"
+              python - "$D/$name/post.json" "$D/$name/caption.txt" <<'PY'
+          import json,sys
+          p=json.load(open(sys.argv[1],encoding="utf-8"))
+          open(sys.argv[2],"w",encoding="utf-8").write(p.get("caption","")+"\n\n"+" ".join(p.get("hashtags",[])))
+          PY
+              git rm -q --cached "$D/$name/build_request.txt" 2>/dev/null; rm -f "$D/$name/build_request.txt"
+            else
+              echo "::error::$name видео жасалган жок ($st)"; FAILED=1
+            fi
+          done
+          exit $FAILED
+      - name: Натыйжаны commit
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A poultry_ig_agent/deliveries
+          git commit -m "Poultry видеолор (сток + Aoede)" && git push || echo "өзгөрүү жок"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: poultry-build-logs, path: poultry_ig_agent/out/logs, if-no-files-found: ignore}

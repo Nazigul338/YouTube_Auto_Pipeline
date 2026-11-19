@@ -68,8 +68,9 @@ class Isolation(unittest.TestCase):
                     src = open(os.path.join(d, f), encoding="utf-8").read()
                     self.assertIsNone(re.search(r"^\s*(from|import)\s+(pipeline|tests)\b", src, re.M), f)
                     if f not in ("test_agent.py", "config.py"):
-                        for bad in ("GOOGLE_API_KEY", "GDRIVE", "PEXELS", "PIXABAY", "YTA_"):
-                            self.assertNotIn(bad, src, f)
+                        # мотивациянын secret'тери (POULTRY_ префикси жок) колдонулбашы керек
+                        for bad in ("GOOGLE_API_KEY", "GDRIVE_", "PEXELS_API_KEY", "PIXABAY_API_KEY", "YTA_"):
+                            self.assertIsNone(re.search(r"(?<!POULTRY_)\b" + bad, src), f"{f}: {bad}")
 
     def test_workflow_uses_own_secrets(self):
         wf = open(os.path.join(ROOT, "..", ".github", "workflows", "poultry_ig.yml"), encoding="utf-8").read()
