@@ -74,29 +74,41 @@ class VeoProvider:
 class GeminiTTS:
     """Gemini TTS → wav. Кыргызча айтылыш сапаты ASR (Whisper) менен текшерилиши керек, же башка провайдер алмаштырылат."""
 
-    def __init__(self, voice=None):
+    def __init__(self, voice=None, tries=3, wait=4):
         self.voice = voice or os.environ.get("POULTRY_TTS_VOICE", "Kore")
+        self.tries, self.wait = tries, wait
 
     def synth(self, text, out_path):
         key = llm.api_key()
         body = json.dumps({"contents": [{"parts": [{"text": text}]}], "generationConfig": {
             "responseModalities": ["AUDIO"],
             "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.voice}}}}}).encode()
-        last = None
+        errors = []
         for m in config.TTS_MODELS:
-            try:
-                req = urllib.request.Request(f"{config.API_BASE}/models/{m}:generateContent", body,
-                                             {"Content-Type": "application/json", "x-goog-api-key": key})
-                data = json.load(urllib.request.urlopen(req, timeout=120))
-                pcm = base64.b64decode(data["candidates"][0]["content"]["parts"][0]["inlineData"]["data"])
-                with wave.open(out_path, "wb") as w:
-                    w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
-                return out_path
-            except urllib.error.HTTPError as e:  # кийинки моделге (ачкыч логго чыкпайт)
-                last = f"{m}: HTTP {e.code} {e.read().decode('utf-8', 'replace')[:200]}"
-            except Exception as e:
-                last = f"{m}: {type(e).__name__}: {str(e)[:200]}"
-        raise VideoError("TTS ишке ашкан жок: " + str(last))
+            for attempt in range(self.tries):
+                try:
+                    req = urllib.request.Request(f"{config.API_BASE}/models/{m}:generateContent", body,
+                                                 {"Content-Type": "application/json", "x-goog-api-key": key})
+                    data = json.load(urllib.request.urlopen(req, timeout=120))
+                    cand = (data.get("candidates") or [{}])[0]
+                    parts = (cand.get("content") or {}).get("parts") or []
+                    if not parts or "inlineData" not in parts[0]:
+                        # аудиосуз жооп (finishReason=OTHER ж.б.) — кокус болот, кайра аракет
+                        raise VideoError(f"аудио жок (finishReason={cand.get('finishReason')})")
+                    pcm = base64.b64decode(parts[0]["inlineData"]["data"])
+                    with wave.open(out_path, "wb") as w:
+                        w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(pcm)
+                    if errors:
+                        log.get().info("TTS %s %d-аракетте ийгиликтүү (мурунку каталар: %s)", m, attempt + 1, errors)
+                    return out_path
+                except urllib.error.HTTPError as e:  # ачкыч логго чыкпайт
+                    errors.append(f"{m}#{attempt + 1}: HTTP {e.code} {e.read().decode('utf-8', 'replace')[:120]}")
+                    if e.code not in (429, 500, 503):
+                        break
+                except Exception as e:
+                    errors.append(f"{m}#{attempt + 1}: {type(e).__name__}: {str(e)[:120]}")
+                time.sleep(self.wait * (attempt + 1))
+        raise VideoError("TTS ишке ашкан жок: " + " | ".join(errors))
 
 
 class ElevenLabsTTS:

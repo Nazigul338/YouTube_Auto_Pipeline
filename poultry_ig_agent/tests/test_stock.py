@@ -172,3 +172,10 @@ class Pixabay(unittest.TestCase):
         self.assertEqual(r["status"], "ready", r)
         v = [s for s in probe(os.path.join(out, "final.mp4")) if s["codec_type"] == "video"][0]
         self.assertEqual((v["width"], v["height"]), (1080, 1920))
+
+
+class FoodFilter(unittest.TestCase):
+    def test_cooked_chicken_rejected(self):
+        self.assertFalse(pexels.relevant("chicken, grill, food, meat"))
+        self.assertFalse(pexels.relevant("chicken, wok, cooking, kitchen"))
+        self.assertTrue(pexels.relevant("chicken, hen, farm, poultry"))

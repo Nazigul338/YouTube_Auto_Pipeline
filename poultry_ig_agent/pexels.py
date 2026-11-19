@@ -24,7 +24,11 @@ DETAILS = ("water", "drinking", "feed", "feeding", "eating", "egg", "eggs", "str
 # 'chick' жалгыз жетишсиз: Pixabay аны өрдөк/каз балапандарына да коёт
 RELEVANT = ("chicken", "hen", "hens", "rooster", "poultry", "broiler", "fowl", "cockerel", "pullet", "brooder", "coop")
 NEGATIVE = ("duck", "goose", "geese", "gosling", "swan", "sparrow", "pigeon", "ostrich", "parrot", "penguin", "owl",
-            "eagle", "seagull", "gull", "pelican", "flamingo", "heron", "stork", "turkey", "quail", "peacock")
+            "eagle", "seagull", "gull", "pelican", "flamingo", "heron", "stork", "turkey", "quail", "peacock",
+            # тамак-аш: 'chicken' тегдүү бышырылган эт кадрлары
+            "food", "meat", "grill", "grilled", "grilling", "bbq", "barbecue", "cooking", "cook", "cooked", "fried",
+            "frying", "roast", "roasted", "recipe", "dish", "meal", "soup", "kitchen", "wok", "restaurant", "dinner",
+            "lunch", "kebab", "wings", "nuggets", "curry", "delicious", "eat", "fry")
 
 
 def keywords(visual, n=5):

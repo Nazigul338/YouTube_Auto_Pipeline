@@ -110,3 +110,27 @@ class Kani(unittest.TestCase):
             out = t.synth("Салам", os.path.join(d, f"v{i}.wav"))
         self.assertEqual(len(loads), 1)
         self.assertAlmostEqual(video.duration(out), 1.5, delta=0.2)
+
+
+class GeminiTTSRetry(unittest.TestCase):
+    def test_empty_audio_retried_then_ok(self):
+        import base64, io
+        from unittest import mock
+        os.environ["POULTRY_GEMINI_API_KEY"] = "k"
+        replies = [{"candidates": [{"finishReason": "OTHER"}]},
+                   {"candidates": [{"content": {"parts": [{"inlineData": {"data": base64.b64encode(b"\x00\x01" * 2400).decode()}}]}}]}]
+
+        def fake(req, timeout=None):
+            r = io.BytesIO(json.dumps(replies.pop(0)).encode()); return r
+        with mock.patch("urllib.request.urlopen", fake), mock.patch("time.sleep"):
+            out = video.GeminiTTS("Aoede").synth("салам", os.path.join(tempfile.mkdtemp(), "v.wav"))
+        self.assertTrue(os.path.getsize(out) > 0)
+
+    def test_all_errors_reported(self):
+        from unittest import mock
+        os.environ["POULTRY_GEMINI_API_KEY"] = "k"
+        import io
+        with mock.patch("urllib.request.urlopen", lambda req, timeout=None: io.BytesIO(b'{"candidates":[{}]}')), mock.patch("time.sleep"):
+            with self.assertRaises(video.VideoError) as cm:
+                video.GeminiTTS("Aoede", tries=2).synth("x", os.path.join(tempfile.mkdtemp(), "v.wav"))
+        self.assertEqual(str(cm.exception).count("#"), 2 * 2)   # 2 модель × 2 аракет
