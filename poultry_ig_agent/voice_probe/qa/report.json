@@ -1,0 +1,105 @@
+{
+ "text": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз! Балапандар жашоосунун алгачкы күндөрүндө жылуулукка өзгөчө муктаж болушат. Эгер балапандар бири-бирине тыгылып, жылуулук булагына жакын чогулса — алар үшүп жаткан болушу мүмкүн.",
+ "results": [
+  {
+   "voice": "Aoede",
+   "style": "warm",
+   "tts_model": "gemini-3.8-flash-tts",
+   "seconds": 21.6,
+   "transcript": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз. Балапандар жашоосунун алгачкы күндөрүндө жылуулукка өзгөчө муктаж болушат. Эгер балапандар бири-бирине тыгылып, жылуулук булагына жакын чогулса, алар үшүп жаткан болушу мүмкүн.",
+   "asr_model": "gemini-3.5-flash",
+   "accuracy": 100.0,
+   "leak": false
+  },
+  {
+   "voice": "Orus",
+   "style": "plain",
+   "tts_model": "gemini-3.8-flash-tts",
+   "seconds": 20.2,
+   "transcript": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз. Балапандар жашоосунун алгачкы күндөрүндө жылуулукка өзгөчө муктаж болушат. Эгер балапандар бири-бирине тыгылып, жылуулук булагына жакын чогулса, алар үшүп жаткан болушу мүмкүн.",
+   "asr_model": "gemini-3.5-flash",
+   "accuracy": 100.0,
+   "leak": false
+  },
+  {
+   "voice": "Charon",
+   "style": "warm",
+   "tts_model": "gemini-3.8-flash-tts",
+   "seconds": 19.7,
+   "transcript": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз. Балапандар жашоосунун алгачкы күндөрүндө жылуулукка өзгөчө муктаж болушат. Эгер балапандар бири-бирине тыгылып, жылуулук булагына жакын чогулса, алар үшүп жаткан болушу мүмкүн.",
+   "asr_model": "gemini-3.1-flash-lite",
+   "accuracy": 100.0,
+   "leak": false
+  },
+  {
+   "voice": "Fenrir",
+   "style": "plain",
+   "tts_model": "gemini-3.8-flash-tts",
+   "seconds": 20.0,
+   "transcript": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз. Балапандар жашоосунун алгачкы күндөрүндө жылуулукка өзгөчө муктаж болушат. Эгер балапандар бири-бирине тыгылып, жылуулук булагына жакын чогулса, алар үшүп жаткан болушу мүмкүн.",
+   "asr_model": "gemini-3.1-flash-lite",
+   "accuracy": 100.0,
+   "leak": false
+  },
+  {
+   "voice": "Charon",
+   "style": "plain",
+   "tts_model": "gemini-2.5-flash-preview-tts",
+   "seconds": 17.2,
+   "transcript": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз. Балапандар жашоосунун алгачкы күндөрүндө жылуулукка өзгөчө муктаж болушат. Эгер балапандар бир-бирине тыгылып, жылуулук булагына жакын чогулса, алар үшүп жаткан болушу мүмкүн.",
+   "asr_model": "gemini-3.1-flash-lite",
+   "accuracy": 99.8,
+   "leak": false
+  },
+  {
+   "voice": "Fenrir",
+   "style": "warm",
+   "tts_model": "gemini-2.5-flash-preview-tts",
+   "seconds": 17.8,
+   "transcript": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз. Балапандар жашоосунун алгачкы күндөрүндө жылуулукка өтө эле күчө муктаж болушат. Эгер балапандар бири-бирине тыгылып, жылуулук булагына жакын чогулса, алар үшүп жаткан болушу мүмкүн.",
+   "asr_model": "gemini-3.1-flash-lite",
+   "accuracy": 97.8,
+   "leak": false
+  },
+  {
+   "voice": "Aoede",
+   "style": "plain",
+   "error": "TTS ишке ашкан жок: gemini-3.8-flash-tts#1: HTTP 429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing deta | gemini-3.8-flash-tts#2: "
+  },
+  {
+   "voice": "Orus",
+   "style": "warm",
+   "error": "TTS ишке ашкан жок: gemini-3.8-flash-tts#1: HTTP 429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing deta | gemini-3.8-flash-tts#2: "
+  },
+  {
+   "voice": "Iapetus",
+   "style": "plain",
+   "error": "TTS ишке ашкан жок: gemini-3.8-flash-tts#1: HTTP 429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing deta | gemini-3.8-flash-tts#2: "
+  },
+  {
+   "voice": "Iapetus",
+   "style": "warm",
+   "error": "TTS ишке ашкан жок: gemini-3.8-flash-tts#1: HTTP 429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing deta | gemini-3.8-flash-tts#2: "
+  },
+  {
+   "voice": "Algieba",
+   "style": "plain",
+   "error": "TTS ишке ашкан жок: gemini-3.8-flash-tts#1: HTTP 429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing deta | gemini-3.8-flash-tts#2: "
+  },
+  {
+   "voice": "Algieba",
+   "style": "warm",
+   "error": "TTS ишке ашкан жок: gemini-3.8-flash-tts#1: HTTP 429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing deta | gemini-3.8-flash-tts#2: "
+  },
+  {
+   "voice": "Schedar",
+   "style": "plain",
+   "error": "TTS ишке ашкан жок: gemini-3.8-flash-tts#1: HTTP 429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing deta | gemini-3.8-flash-tts#2: "
+  },
+  {
+   "voice": "Schedar",
+   "style": "warm",
+   "error": "TTS ишке ашкан жок: gemini-3.8-flash-tts#1: HTTP 429 {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing deta | gemini-3.8-flash-tts#2: "
+  }
+ ]
+}
