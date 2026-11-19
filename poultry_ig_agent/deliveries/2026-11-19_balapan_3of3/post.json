@@ -1,0 +1,84 @@
+{
+  "hook_onscreen": "Балапандарды сактап калуучу маанилүү эреже!",
+  "shots": [
+    {
+      "n": 1,
+      "duration": 5.0,
+      "source": "real",
+      "visual": "Close-up of small yellow baby chicks in a warm brooder box looking active and alert.",
+      "onscreen": "Балапандар өлүп калбашы үчүн!"
+    },
+    {
+      "n": 2,
+      "duration": 5.0,
+      "source": "real",
+      "visual": "Farmer replacing wet damp straw bedding with fresh, dry wood shavings inside a clean chick brooder.",
+      "onscreen": "3-ката: Нымдуу төшөк"
+    },
+    {
+      "n": 3,
+      "duration": 6.0,
+      "source": "real",
+      "visual": "A farmer adjusting ventilation vents high up in the poultry coop to let fresh air in without cold drafts.",
+      "onscreen": "Таза аба жана туура желдетүү"
+    },
+    {
+      "n": 4,
+      "duration": 6.0,
+      "source": "real",
+      "visual": "Flock of healthy, lively baby chicks running around in a clean, brightly lit farm room.",
+      "onscreen": "Алгачкы 7 күн абдан маанилүү"
+    },
+    {
+      "n": 5,
+      "duration": 6.0,
+      "source": "real",
+      "visual": "Farmer holding a clean dry bedding sample and smiling satisfied at the well-maintained brooder.",
+      "onscreen": "Бүгүнкү туура багуу — эртеңки натыйжа!"
+    },
+    {
+      "n": 6,
+      "duration": 5.0,
+      "source": "real",
+      "visual": "Text overlay screen on farm background inviting viewers to follow the account.",
+      "onscreen": "Бизге катталыңыз!"
+    }
+  ],
+  "caption": "Балапандарды өстүрүүдө алгачкы жети күн эң жооптуу мезгил болуп саналат. Нымдуу төшөк жана тоокканадагы аммиак жыты балапандардын дем алуу органдарына зыян келтирет. Төшөктү кургак кармап, түз муздак шамал тийгизбей желдетип туруңуз. Пайдалуу кеңештерди өткөрүп жибербөө үчүн бизге катталыңыз!\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\nБулактар: www.fao.org",
+  "hashtags": [
+    "#тоокчарбасы",
+    "#балапан",
+    "#фермерлик",
+    "#айылчарба",
+    "#тоокбагуу",
+    "#тооко",
+    "#тоокферма",
+    "#кыргызстан",
+    "#фермер",
+    "#бройлер",
+    "#жумуртка"
+  ],
+  "cta": {
+    "type": "direct",
+    "text": "Тоок чарбасы боюнча дагы пайдалуу кеңештер үчүн баракчабызга катталыңыз!"
+  },
+  "sources": [
+    {
+      "url": "https://www.fao.org"
+    }
+  ],
+  "format": "reel",
+  "voiceover": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз!\n\nҮчүнчү ката — нымдуу төшөк жана начар желдетүү.\n\nКир, нымдуу төшөк бактериялардын көбөйүшүнө шарт түзөт. Ал эми абада аммиактын топтолушу балапандардын дем алуу органдарына зыян келтириши мүмкүн.\n\nОшондуктан төшөктү кургак жана таза кармап, тооккананы туура желдетип туруңуз. Бирок балапандарга түз муздак шамал тийбеши керек.\n\nЭсиңизде болсун!\n\nАлгачкы жети күн — балапандардын келечектеги өсүшү үчүн өтө маанилүү мезгил.\n\nБалапандарга туура кам көрүңүз, анткени бүгүнкү туура багуу — эртеңки жакшы натыйжа!\n\nТоок чарбасы боюнча дагы пайдалуу кеңештер үчүн баракчабызга катталыңыз!",
+  "hook": "Балапандарыңыздын алгачкы жумада эле өлүп калышын каалабасаңыз, анда бул үч катаны эч качан кетирбеңиз!",
+  "own_text": true,
+  "lang": "ky",
+  "topic": "Балапан багуу",
+  "topic_key": "chicks",
+  "content_type": "education",
+  "pillar": "education",
+  "purpose": "education",
+  "needs_vet_review": true,
+  "lint_issues": [],
+  "status": "pending_review",
+  "id": "2026-11-19-1ca4c47b-reel-ky"
+}
