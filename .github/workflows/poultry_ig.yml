@@ -59,7 +59,7 @@ jobs:
         with: {python-version: "3.11"}
       - name: ffmpeg (бар болсо өткөрүлөт)
         timeout-minutes: 6
-        run: command -v ffmpeg >/dev/null && echo "ffmpeg бар - $(ffmpeg -version | head -1)" || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg fonts-dejavu-core)
+        run: bash poultry_ig_agent/tools/ensure_ffmpeg.sh
       - run: pip install -r poultry_ig_agent/requirements.txt
       - name: Тесттер (Motivation'го тийбейт)
         run: python -m unittest discover -s poultry_ig_agent/tests -t .

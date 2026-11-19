@@ -16,7 +16,7 @@ jobs:
         with: {python-version: "3.11"}
       - name: ffmpeg (бар болсо өткөрүлөт)
         timeout-minutes: 6
-        run: command -v ffmpeg >/dev/null && echo "ffmpeg бар - $(ffmpeg -version | head -1)" || (sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg libsndfile1)
+        run: bash poultry_ig_agent/tools/ensure_ffmpeg.sh
       - name: Орнотуу (CPU torch)
         run: |
           pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
