@@ -1,4 +1,5 @@
 name: "✍️ Poultry — өз текстиңизден Reel пакети"
+# LLM жообу normalize() аркылуу текшерилет (2026-11-19)
 on:
   workflow_dispatch:
   push:

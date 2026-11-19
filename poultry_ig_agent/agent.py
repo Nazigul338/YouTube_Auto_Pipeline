@@ -56,6 +56,43 @@ def pick_topic():
     return min(NICHE.topics, key=lambda k: used.get(k, 0))
 
 
+def normalize(post):
+    """LLM жообун бир түзүмгө келтирет (булак/хэштег/кадр/cta ар кандай формада келиши мүмкүн)."""
+    if not isinstance(post, dict):
+        raise ValueError("LLM JSON объект кайтарган жок")
+    srcs = post.get("sources") or []
+    if isinstance(srcs, (str, dict)):
+        srcs = [srcs]
+    post["sources"] = [({"url": s} if isinstance(s, str) else s) for s in srcs if isinstance(s, (str, dict))]
+    tags = post.get("hashtags") or []
+    if isinstance(tags, str):
+        tags = tags.replace(",", " ").split()
+    post["hashtags"] = [t if t.startswith("#") else "#" + t for t in map(str, tags) if t.strip()]
+    cta = post.get("cta")
+    if isinstance(cta, str):
+        post["cta"] = {"type": "comment", "text": cta}
+    elif not isinstance(cta, dict):
+        post["cta"] = {}
+    shots = post.get("shots")
+    if isinstance(shots, list):
+        fixed = []
+        for i, s in enumerate(shots, 1):
+            if isinstance(s, str):
+                s = {"visual": s}
+            if isinstance(s, dict):
+                s.setdefault("n", i)
+                try:
+                    s["duration"] = float(s.get("duration", 4))
+                except (TypeError, ValueError):
+                    s["duration"] = 4.0
+                fixed.append(s)
+        post["shots"] = fixed
+    for k in ("slides", "frames"):
+        if k in post and isinstance(post[k], list):
+            post[k] = [x if isinstance(x, dict) else {"text": str(x), "title": str(x), "body": ""} for x in post[k]]
+    return post
+
+
 def review(post, course=None, video_cfg=None):
     course = course if course is not None else settings.load_course()
     safety.ensure_disclaimers(post, NICHE)
@@ -126,7 +163,7 @@ def make_post(item, generate=llm.generate_json, tries=2, course=None):
         prompt = _post_prompt(item, course)
         if issues:
             prompt += f"\nМурунку вариантта ката бар, оңдо: {issues}"
-        post = generate(prompt)
+        post = normalize(generate(prompt))
         ctype = item.get("content_type") or item.get("pillar", "education")
         post.update(format=item["format"], topic=item.get("topic", ""), topic_key=item.get("topic_key", ""),
                     content_type=ctype, pillar=ctype, purpose="sales" if ctype == "sales" else "education",
@@ -160,7 +197,7 @@ def make_post_from_text(text, item, generate=llm.generate_json, tries=2, course=
     post, issues = {}, []
     for _ in range(tries):
         prompt = base + (f"\nМурунку вариантта ката бар, оңдо: {issues}" if issues else "")
-        post = generate(prompt)
+        post = normalize(generate(prompt))
         first = _re.split(r"(?<=[.!?])\s+", text)[0]
         ctype = item.get("content_type", "education")
         post.update(format="reel", voiceover=text, hook=first, own_text=True, lang=lang,

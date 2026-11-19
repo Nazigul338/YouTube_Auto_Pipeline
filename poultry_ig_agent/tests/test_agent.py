@@ -127,3 +127,21 @@ class VoiceCmd(unittest.TestCase):
         r = agent.cmd_voice(pid, T())
         self.assertTrue(os.path.exists(os.path.join(out, pid, "voice.mp3")))
         self.assertAlmostEqual(r["seconds"], 2, delta=0.2)
+
+
+class Normalize(unittest.TestCase):
+    def test_messy_llm_output(self):
+        p = agent.normalize({"sources": ["https://www.fao.org", {"url": "https://www.woah.org"}], "hashtags": "ферма, #тоок",
+                             "cta": "Комментарий жазыңыз", "shots": ["hens", {"visual": "coop", "duration": "5"}]})
+        self.assertEqual(p["sources"], [{"url": "https://www.fao.org"}, {"url": "https://www.woah.org"}])
+        self.assertEqual(p["hashtags"], ["#ферма", "#тоок"])
+        self.assertEqual(p["cta"]["text"], "Комментарий жазыңыз")
+        self.assertEqual([s["n"] for s in p["shots"]], [1, 2]); self.assertEqual(p["shots"][1]["duration"], 5.0)
+
+    def test_string_sources_do_not_crash_own_text(self):
+        out = tmp_out()
+        os.environ["POULTRY_COURSE_FILE"] = course_file()
+        fake = lambda _: {"shots": shots(4), "caption": "x", "hashtags": [], "cta": "Жазыңыз", "sources": ["https://www.fao.org"]}
+        r = agent.run(own_text="Балапандар өлүп калбасын. Суу таза болсун.", generate=fake)
+        post = json.load(open(os.path.join(out, r["id"], "post.json"), encoding="utf-8"))
+        self.assertIn("ветеринар", post["caption"])
