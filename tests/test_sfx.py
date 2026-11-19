@@ -319,3 +319,45 @@ class TestSynth(unittest.TestCase):
             self.assertEqual([m["sha256"] for m in items], [m["sha256"] for m in again])
         finally:
             shutil.rmtree(d, ignore_errors=True)
+
+
+class TestRealisticLevelsAndQA(Base):
+    """run #44576373873: (1) QA лицензияны так аты боюнча четке каккан, (2) эффекттер 7.8 LU гана акырын болгон."""
+
+    def test_synth_library_through_stage_and_qa(self):
+        from pipeline import sfx_synth
+        from pipeline.stages import s9_qa
+        from pipeline.stages.s7_music import MusicStage
+
+        sfx_synth.generate(self.lib, "2026-11-19")
+        c = TestBuildAndMix.ctx(self)
+        scenes, total, _ = TestBuildAndMix.prepare(self, c)
+        # чыныгы диктор сыяктуу: катуу (−17 LUFS чамасы)
+        ff("-y", "-i", str(c.path("audio", "voice.wav")), "-af", "volume=14dB", str(c.path("audio", "v2.wav")))
+        c.path("audio", "v2.wav").replace(c.path("audio", "voice.wav"))
+        (c.folder / "scenes.json").write_text(json.dumps({"scenes": [
+            {**s, "music_mood": "calm", "words": 40} for s in scenes]}))
+        mroot = self.d / "drive" / "Music"
+        tone(mroot / "Pixabay" / "Calm Piano.mp3", 10, 330, 0.3)
+        (mroot / "_tags.json").write_text(json.dumps(
+            {"Pixabay/Calm Piano.mp3": {"mood": "calm", "energy": "low", "vocals": False}}))
+        c.cfg.music_root, c.cfg.niche_data = mroot, {"music_moods": ["calm"]}
+        c.registry, c.services, c.store = {"videos": {}}, {"gemini": object()}, LocalStore(self.d / "local")
+        with mock.patch.dict(os.environ, {"YTA_SFX": "1"}):
+            MusicStage().run(c)
+        music = json.loads(c.path("music", "music.json").read_text(encoding="utf-8"))
+        self.assertGreaterEqual(music["levels"]["voice_minus_sfx_lu"], 10)
+        info = json.loads(c.path("music", "sfx.json").read_text(encoding="utf-8"))
+        self.assertTrue(any(e["kind"] == "hit" for e in info["events"]))
+        rep = s9_qa.Report()
+        stage = next(v for v in vars(s9_qa).values()
+                     if isinstance(v, type) and hasattr(v, "check_sfx"))()
+        stage.check_sfx(c, rep, music)
+        res = {i["key"]: i for i in rep.items}
+        self.assertTrue(res["sfx_license"]["ok"], res["sfx_license"]["note"])
+        self.assertTrue(res["sfx_level"]["ok"], res["sfx_level"]["note"])
+
+    def test_license_name_accepts_canonical(self):
+        self.assertEqual(sfx.license_name("CC0 1.0 (Public Domain)"), "CC0 1.0 (Public Domain)")
+        self.assertEqual(sfx.license_name("pixabay content license"), "Pixabay Content License")
+        self.assertIsNone(sfx.license_name("YouTube Audio Library"))

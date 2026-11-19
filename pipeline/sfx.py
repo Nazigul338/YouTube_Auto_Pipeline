@@ -65,6 +65,7 @@ REQUIRED = ("title", "file", "category", "source", "source_url", "license", "com
 REL_LU = {"transitions": 14.0, "impact": 12.0, "cinematic": 13.0, "emotional": 14.0,
           "atmosphere": 24.0, "nature": 22.0}
 PEAK_CEIL_DB = -6.0        # эффекттин пиги мындан ашпайт
+TRACK_REL_LU = {"hit": 13.0, "bed": 23.0}   # даяр трек диктордон канча LU акырын (ЧЫНЫГЫ өлчөө боюнча)
 MAX_GAIN_DB = 12.0
 # Тандоо эрежелери
 MIN_PAUSE = 0.35          # диктордун паузасы (сек)
@@ -130,7 +131,12 @@ class Sfx:
 
 
 def license_name(raw: str) -> str | None:
-    return ALLOWED_LICENSES.get(re.sub(r"\s+", " ", str(raw or "").strip().lower()))
+    """Уруксат берилген лицензиянын так аты (лакап аты да, так аты да кабыл алынат) же None."""
+    key = re.sub(r"\s+", " ", str(raw or "").strip().lower())
+    if key in ALLOWED_LICENSES:
+        return ALLOWED_LICENSES[key]
+    canon = {v.lower(): v for v in ALLOWED_LICENSES.values()}
+    return canon.get(key)
 
 
 def sha256_of(p: Path) -> str:
@@ -415,10 +421,38 @@ def build_sfx(ctx, scenes: list[dict], total: float) -> dict:
 def _render_all(ctx, info: dict, files: dict[str, Path], total: float, run) -> None:
     ev = info["events"]
     gains = info["gains"]
+    voice = info.get("voice_lufs")
     for kind, name in (("bed", "sfx_bed.wav"), ("hit", "sfx_hits.wav")):
         part = [e for e in ev if e["kind"] == kind]
         out = render(part, files, gains, total, ctx.path("audio", name), run)
         info[f"{kind}_file"] = str(out) if out else None
+        if out and voice is not None:
+            info[f"{kind}_trim_db"] = trim_track(out, voice - TRACK_REL_LU[kind], run)
+
+
+def trim_track(path: Path, target_lufs: float, run=None) -> float:
+    """Даяр эффект трегинин ЧЫНЫГЫ катуулугун (LUFS) өлчөп, максатка тууралайт (−20…+6 dB).
+
+    Себеби (run #44576373873): кыска эффекттин бир бөлүгү гана колдонулат (паузага чейин), ал эми
+    файлдын орточо деңгээли тынч «куйругун» да эсептейт — трек болжолдон ~5 LU катуу чыккан.
+    """
+    from . import media
+
+    lufs = media.loudness(path)["I"]
+    if lufs is None or lufs < -69:
+        return 0.0
+    delta = round(max(-20.0, min(6.0, target_lufs - lufs)), 2)
+    if abs(delta) < 0.1:
+        return 0.0
+    tmp = path.with_name(path.stem + "_trim.wav")
+    args = ["ffmpeg", "-y", "-v", "error", "-i", str(path), "-af", f"volume={delta:.2f}dB",
+            "-ar", "48000", "-ac", "2", str(tmp)]
+    if run:
+        run(args, "үн эффекттеринин деңгээли")
+    else:
+        subprocess.run(args, check=True, capture_output=True, timeout=600)
+    tmp.replace(path)
+    return delta
 
 
 def _save(ctx, info: dict) -> None:
