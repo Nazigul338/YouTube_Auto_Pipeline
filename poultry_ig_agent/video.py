@@ -228,6 +228,9 @@ def resolve_shots(post, assets_dir, allow_ai_fallback=False):
     used, out, missing = set(), [], []
     for s in post["shots"]:
         s = dict(s)
+        if s.get("source") == "stock":          # мурунку build'дин сток кадры — кайра сток/реал изделет, AI'ге ӨТПӨЙТ
+            s["source"] = "real"
+            s.pop("file", None); s.pop("stock", None)
         want_real = real_only or s.get("source") == "real"
         if want_real:
             f = next((p for p in pool if p not in used), None)

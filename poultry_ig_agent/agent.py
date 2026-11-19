@@ -214,7 +214,8 @@ def make_post_from_text(text, item, generate=llm.generate_json, tries=2, course=
 
 def save_post(post, today=None):
     today = today or dt.date.today().isoformat()
-    pid = f"{today}-{_slug(post.get('topic', '') + post.get('hook', ''))}-{post['format']}-{post.get('lang', 'ky')}"
+    key = post.get("topic", "") + post.get("hook", "") + post.get("voiceover", "") + json.dumps(post.get("slides", []), ensure_ascii=False)
+    pid = f"{today}-{_slug(key)}-{post['format']}-{post.get('lang', 'ky')}"
     d = _path(pid)
     os.makedirs(d, exist_ok=True)
     post["id"] = pid

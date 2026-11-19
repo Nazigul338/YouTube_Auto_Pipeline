@@ -60,6 +60,13 @@ mp3'тер: `voice_probe/samples/gemini_*.mp3`. Колдонуучу угуп **
 Motivation тесттери: бириктирүүгө чейин жана кийин бирдей 10 ката (test_ai_images ×7, test_drive_upload ×3 —
 googleapiclient жок) — poultry кошкон жок. Эми Actions'та бардык 7 poultry workflow'у «Run workflow» менен көрүнөт.
 
+
+## Видео build (2026-11-19)
+- Run 44555201498: видео чыкты, бирок көз менен текшергенде кадрлар тиешесиз (5 сөздүк суроо, тиешелүүлүк текшерилбеген),
+  субтитр жогоруда (SRT MarginV 288-масштаб), «□» (ffmpeg 7+ drawtext '\n'), клиптер кайталанган → оңдолду (d1de776).
+- Run 44556784725: failed — мурунку 'stock' кадрлар AI деп эсептелип Veo'го кеткен → Veo HTTP 404
+  (`veo-3.1-fast-generate-preview` модели табылган жок — Veo азырынча колдонулбайт). Үч бөлүктүн ID'си бирдей болгон → оңдолду.
+
 ## 7 API абалы
 Gemini текст ✅ (2026-11-19, run 44533063140) · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (❓ = чыныгы чакыруу менен али текшерилген эмес). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
 

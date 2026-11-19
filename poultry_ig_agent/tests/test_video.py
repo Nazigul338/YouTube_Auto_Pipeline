@@ -106,3 +106,11 @@ class Onscreen(unittest.TestCase):
         files = sorted(f for f in os.listdir(d) if f.startswith("t_"))
         self.assertEqual(len(files), 2)                                  # 2 сап → 2 өзүнчө drawtext
         self.assertFalse(any("\n" in open(os.path.join(d, f), encoding="utf-8").read() for f in files))
+
+
+class StaleStock(unittest.TestCase):
+    def test_previous_stock_shot_never_becomes_ai(self):
+        d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "real"))
+        post = {"content_type": "education", "shots": [{"n": 1, "duration": 4, "source": "stock", "visual": "chicks", "file": "/old/x.mp4"}]}
+        out, missing = video.resolve_shots(post, d)
+        self.assertEqual(missing, [1]); self.assertEqual(out[0]["source"], "real"); self.assertNotIn("file", out[0])

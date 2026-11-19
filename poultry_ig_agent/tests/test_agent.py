@@ -146,3 +146,12 @@ class Normalize(unittest.TestCase):
         r = agent.run(own_text="Балапандар өлүп калбасын. Суу таза болсун.", generate=fake)
         post = json.load(open(os.path.join(out, r["id"], "post.json"), encoding="utf-8"))
         self.assertIn("ветеринар", post["caption"])
+
+
+class UniqueIds(unittest.TestCase):
+    def test_same_hook_different_text_different_id(self):
+        tmp_out()
+        base = {"format": "reel", "lang": "ky", "topic": "Балапан", "hook": "Бирдей hook!", "shots": shots()}
+        a = agent.save_post({**base, "voiceover": "Бирдей hook! Биринчи ката."})
+        b = agent.save_post({**base, "voiceover": "Бирдей hook! Экинчи ката."})
+        self.assertNotEqual(a, b)
