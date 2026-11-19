@@ -3,39 +3,39 @@
   "shots": [
     {
       "n": 1,
-      "duration": 4.47,
+      "duration": 4.59,
       "source": "stock",
       "visual": "Close-up of fluffy yellow chicks running around in a clean, bright brooder.",
       "onscreen": "2/3: Суу",
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c5ff2020-reel-ky/work/stock_1.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 352519,
-        "url": "https://pixabay.com/videos/id-352519/",
-        "author": "Kaffeesüchtig",
-        "query": "chicks",
+        "id": 36571,
+        "url": "https://pixabay.com/videos/id-36571/",
+        "author": "Lolame",
+        "query": "baby chicken",
         "license": "https://pixabay.com/service/license-summary/"
       }
     },
     {
       "n": 2,
-      "duration": 6.71,
+      "duration": 6.89,
       "source": "stock",
       "visual": "A farmer cleaning a small, professional waterer for chicks.",
       "onscreen": "Ката №2: Туура эмес суу берүү",
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c5ff2020-reel-ky/work/stock_2.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 352518,
-        "url": "https://pixabay.com/videos/id-352518/",
-        "author": "Kaffeesüchtig",
-        "query": "chicks farmer",
+        "id": 76883,
+        "url": "https://pixabay.com/videos/id-76883/",
+        "author": "FnBTV",
+        "query": "baby chicken farmer",
         "license": "https://pixabay.com/service/license-summary/"
       }
     },
     {
       "n": 3,
-      "duration": 6.71,
+      "duration": 6.89,
       "source": "stock",
       "visual": "Fresh, clean water inside a chick-safe waterer, close-up shot.",
       "onscreen": "Суу дайыма таза болуусу шарт",
@@ -45,39 +45,39 @@
         "id": 118648,
         "url": "https://pixabay.com/videos/id-118648/",
         "author": "KIMDAEJEUNG",
-        "query": "chick water",
+        "query": "baby chicken water",
         "license": "https://pixabay.com/service/license-summary/"
       }
     },
     {
       "n": 4,
-      "duration": 6.71,
+      "duration": 6.89,
       "source": "stock",
       "visual": "Chicks drinking water from the dispenser, active and healthy movement.",
       "onscreen": "Суунун жетишсиздиги - коркунучтуу",
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c5ff2020-reel-ky/work/stock_4.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 354408,
-        "url": "https://pixabay.com/videos/id-354408/",
-        "author": "Kaffeesüchtig",
-        "query": "chicks drinking",
+        "id": 227131,
+        "url": "https://pixabay.com/videos/id-227131/",
+        "author": "kurt_BID",
+        "query": "baby chicken drinking",
         "license": "https://pixabay.com/service/license-summary/"
       }
     },
     {
       "n": 5,
-      "duration": 6.71,
+      "duration": 6.89,
       "source": "stock",
       "visual": "Farmer looking at the chicks, smiling, farm background out of focus.",
       "onscreen": "Кеңештер үчүн катталыңыз",
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c5ff2020-reel-ky/work/stock_5.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 10266,
-        "url": "https://pixabay.com/videos/id-10266/",
-        "author": "gayulo",
-        "query": "chicks farmer",
+        "id": 76884,
+        "url": "https://pixabay.com/videos/id-76884/",
+        "author": "FnBTV",
+        "query": "baby chicken farmer",
         "license": "https://pixabay.com/service/license-summary/"
       }
     }
@@ -132,19 +132,19 @@
     {
       "shot": 1,
       "source": "Pixabay",
-      "id": 352519,
-      "url": "https://pixabay.com/videos/id-352519/",
-      "author": "Kaffeesüchtig",
-      "query": "chicks",
+      "id": 36571,
+      "url": "https://pixabay.com/videos/id-36571/",
+      "author": "Lolame",
+      "query": "baby chicken",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
       "shot": 2,
       "source": "Pixabay",
-      "id": 352518,
-      "url": "https://pixabay.com/videos/id-352518/",
-      "author": "Kaffeesüchtig",
-      "query": "chicks farmer",
+      "id": 76883,
+      "url": "https://pixabay.com/videos/id-76883/",
+      "author": "FnBTV",
+      "query": "baby chicken farmer",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
@@ -153,25 +153,25 @@
       "id": 118648,
       "url": "https://pixabay.com/videos/id-118648/",
       "author": "KIMDAEJEUNG",
-      "query": "chick water",
+      "query": "baby chicken water",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
       "shot": 4,
       "source": "Pixabay",
-      "id": 354408,
-      "url": "https://pixabay.com/videos/id-354408/",
-      "author": "Kaffeesüchtig",
-      "query": "chicks drinking",
+      "id": 227131,
+      "url": "https://pixabay.com/videos/id-227131/",
+      "author": "kurt_BID",
+      "query": "baby chicken drinking",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
       "shot": 5,
       "source": "Pixabay",
-      "id": 10266,
-      "url": "https://pixabay.com/videos/id-10266/",
-      "author": "gayulo",
-      "query": "chicks farmer",
+      "id": 76884,
+      "url": "https://pixabay.com/videos/id-76884/",
+      "author": "FnBTV",
+      "query": "baby chicken farmer",
       "license": "https://pixabay.com/service/license-summary/"
     }
   ],

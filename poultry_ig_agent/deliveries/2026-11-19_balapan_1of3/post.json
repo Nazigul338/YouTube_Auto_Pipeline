@@ -3,23 +3,23 @@
   "shots": [
     {
       "n": 1,
-      "duration": 6.15,
+      "duration": 6.67,
       "source": "stock",
       "visual": "Close-up of fluffy chicks running in a warm brooder, soft natural lighting.",
       "onscreen": "1/3: Температура",
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-57f57c3b-reel-ky/work/stock_1.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 190144,
-        "url": "https://pixabay.com/videos/id-190144/",
-        "author": "Danganhfoto",
-        "query": "chicks",
+        "id": 29874,
+        "url": "https://pixabay.com/videos/id-29874/",
+        "author": "Dan_Kaesler",
+        "query": "baby chicken",
         "license": "https://pixabay.com/service/license-summary/"
       }
     },
     {
       "n": 2,
-      "duration": 7.38,
+      "duration": 8.0,
       "source": "stock",
       "visual": "A farmer adjusting a heat lamp or temperature regulator in a coop.",
       "onscreen": "1-ката: Температураны туура эмес жөндөө",
@@ -35,33 +35,33 @@
     },
     {
       "n": 3,
-      "duration": 7.38,
+      "duration": 8.0,
       "source": "stock",
       "visual": "Chicks huddling together under a heat lamp, looking cold/uncomfortable.",
       "onscreen": "Бири-бирине тыгылып жатышабы?",
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-57f57c3b-reel-ky/work/stock_3.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 265501,
-        "url": "https://pixabay.com/videos/id-265501/",
-        "author": "Engin_Akyurt",
-        "query": "chicks heat",
+        "id": 190144,
+        "url": "https://pixabay.com/videos/id-190144/",
+        "author": "Danganhfoto",
+        "query": "baby chicken heat",
         "license": "https://pixabay.com/service/license-summary/"
       }
     },
     {
       "n": 4,
-      "duration": 7.38,
+      "duration": 8.0,
       "source": "stock",
       "visual": "Chicks panting and staying away from the heat source.",
       "onscreen": "Же канаттарын жайып, алыстап жатышабы?",
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-57f57c3b-reel-ky/work/stock_4.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 267,
-        "url": "https://pixabay.com/videos/id-267/",
+        "id": 273,
+        "url": "https://pixabay.com/videos/id-273/",
         "author": "Life-Of-Vids",
-        "query": "chicks heat",
+        "query": "baby chicken heat",
         "license": "https://pixabay.com/service/license-summary/"
       }
     },
@@ -74,26 +74,26 @@
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-57f57c3b-reel-ky/work/stock_5.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 67069,
-        "url": "https://pixabay.com/videos/id-67069/",
-        "author": "BenjaminNelan",
-        "query": "chicks eating",
+        "id": 10685,
+        "url": "https://pixabay.com/videos/id-10685/",
+        "author": "klimkin",
+        "query": "baby chicken eating",
         "license": "https://pixabay.com/service/license-summary/"
       }
     },
     {
       "n": 6,
-      "duration": 9.25,
+      "duration": 10.75,
       "source": "stock",
       "visual": "A farmer looking at the camera, smiling, or pointing to a sign about expert advice.",
       "onscreen": "Ветеринардын кеңеши зарыл болсо, сөзсүз кайрылыңыз!",
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-57f57c3b-reel-ky/work/stock_6.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 29874,
-        "url": "https://pixabay.com/videos/id-29874/",
-        "author": "Dan_Kaesler",
-        "query": "chicks farmer",
+        "id": 76879,
+        "url": "https://pixabay.com/videos/id-76879/",
+        "author": "FnBTV",
+        "query": "baby chicken farmer",
         "license": "https://pixabay.com/service/license-summary/"
       }
     }
@@ -147,10 +147,10 @@
     {
       "shot": 1,
       "source": "Pixabay",
-      "id": 190144,
-      "url": "https://pixabay.com/videos/id-190144/",
-      "author": "Danganhfoto",
-      "query": "chicks",
+      "id": 29874,
+      "url": "https://pixabay.com/videos/id-29874/",
+      "author": "Dan_Kaesler",
+      "query": "baby chicken",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
@@ -165,37 +165,37 @@
     {
       "shot": 3,
       "source": "Pixabay",
-      "id": 265501,
-      "url": "https://pixabay.com/videos/id-265501/",
-      "author": "Engin_Akyurt",
-      "query": "chicks heat",
+      "id": 190144,
+      "url": "https://pixabay.com/videos/id-190144/",
+      "author": "Danganhfoto",
+      "query": "baby chicken heat",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
       "shot": 4,
       "source": "Pixabay",
-      "id": 267,
-      "url": "https://pixabay.com/videos/id-267/",
+      "id": 273,
+      "url": "https://pixabay.com/videos/id-273/",
       "author": "Life-Of-Vids",
-      "query": "chicks heat",
+      "query": "baby chicken heat",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
       "shot": 5,
       "source": "Pixabay",
-      "id": 67069,
-      "url": "https://pixabay.com/videos/id-67069/",
-      "author": "BenjaminNelan",
-      "query": "chicks eating",
+      "id": 10685,
+      "url": "https://pixabay.com/videos/id-10685/",
+      "author": "klimkin",
+      "query": "baby chicken eating",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
       "shot": 6,
       "source": "Pixabay",
-      "id": 29874,
-      "url": "https://pixabay.com/videos/id-29874/",
-      "author": "Dan_Kaesler",
-      "query": "chicks farmer",
+      "id": 76879,
+      "url": "https://pixabay.com/videos/id-76879/",
+      "author": "FnBTV",
+      "query": "baby chicken farmer",
       "license": "https://pixabay.com/service/license-summary/"
     }
   ],
