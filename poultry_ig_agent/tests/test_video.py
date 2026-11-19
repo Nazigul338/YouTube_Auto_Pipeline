@@ -95,3 +95,22 @@ class Build(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAVE, "ffmpeg жок")
+class Onscreen(unittest.TestCase):
+    def test_lines_rendered_separately(self):
+        d = tempfile.mkdtemp(); src = os.path.join(d, "s.mp4")
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "color=c=gray:s=720x1280:d=1", "-pix_fmt", "yuv420p", src], check=True)
+        video.normalize(src, 1, os.path.join(d, "o.mp4"), "1-ката: Температураны туура эмес жөндөө", "", d)
+        files = sorted(f for f in os.listdir(d) if f.startswith("t_"))
+        self.assertEqual(len(files), 2)                                  # 2 сап → 2 өзүнчө drawtext
+        self.assertFalse(any("\n" in open(os.path.join(d, f), encoding="utf-8").read() for f in files))
+
+
+class StaleStock(unittest.TestCase):
+    def test_previous_stock_shot_never_becomes_ai(self):
+        d = tempfile.mkdtemp(); os.makedirs(os.path.join(d, "real"))
+        post = {"content_type": "education", "shots": [{"n": 1, "duration": 4, "source": "stock", "visual": "chicks", "file": "/old/x.mp4"}]}
+        out, missing = video.resolve_shots(post, d)
+        self.assertEqual(missing, [1]); self.assertEqual(out[0]["source"], "real"); self.assertNotIn("file", out[0])
