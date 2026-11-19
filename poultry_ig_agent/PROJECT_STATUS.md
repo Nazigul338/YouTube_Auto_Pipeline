@@ -46,7 +46,7 @@ mp3'тер: `voice_probe/samples/gemini_*.mp3`. Сапатын колдонуу�
 `tools/ensure_ffmpeg.sh` (PyPI static-ffmpeg, apt — запас) бардык poultry workflow'дорго.
 
 ## 7 API абалы
-Gemini текст ❓ · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (бардыгы чыныгы чакыруу менен текшерилбеген). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
+Gemini текст ❓ · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (❓ = чыныгы чакыруу менен али текшерилген эмес). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
 
 ## 8 Кийинки тапшырмалар
 1. Secrets кош → START (`carousel`, видеосуз) → чыныгы Gemini текшерүү. 2. `course.json` толтур. 3. Бир Reel `--video` (Veo/TTS текшерүү). 4. Meta app + токен → `publish` dry-run → `--live`. 5. 5 кол менен жарыялоодон кийин автопилот. 6. Drive аркылуу реалдуу видео, комментарий/DM мониторинг workflow.
