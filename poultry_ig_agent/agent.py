@@ -377,7 +377,7 @@ def main(argv=None):
     vo = sub.add_parser("voice"); vo.add_argument("id")
     vd = sub.add_parser("video"); vd.add_argument("id"); vd.add_argument("--voice-file", default=None)
     vd.add_argument("--allow-ai-fallback", action="store_true")
-    vd.add_argument("--stock", action="store_true", help="өз видеосу жок кадрларды Pexels'тен толуктоо")
+    vd.add_argument("--stock", action="store_true", help="өз видеосу жок кадрларды стоктон (Pixabay, болбосо Pexels) толуктоо")
     c = sub.add_parser("calc"); c.add_argument("--inputs", required=True); c.add_argument("--lang", default="ky")
     a = ap.parse_args(argv)
     L = log.get()
@@ -409,8 +409,8 @@ def main(argv=None):
         elif a.cmd == "voice":
             print(json.dumps(cmd_voice(a.id), ensure_ascii=False))
         elif a.cmd == "video":
-            from .pexels import PexelsStock
-            st = PexelsStock() if a.stock else None
+            from .pixabay import make_stock
+            st = make_stock() if a.stock else None
             print(json.dumps(attach_video(a.id, allow_ai_fallback=a.allow_ai_fallback, voice_file=a.voice_file, stock=st)["status"]))
         elif a.cmd == "calc":
             cur = settings.load_course().get("currency") or ""

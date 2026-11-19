@@ -63,7 +63,7 @@ class Disclosure(unittest.TestCase):
     def test_stock_note_added_and_not_linted(self):
         p = {"lang": "ky", "caption": "Таң", "topic_key": "daily", "shots": [{"source": "stock"}]}
         safety.ensure_disclaimers(p, niche.get("poultry"))
-        self.assertIn("Pexels", p["caption"])
+        self.assertIn("стоктук видео", p["caption"])
         self.assertFalse([i for i in lint.lint_post({**p, "format": "story", "hook": "h", "frames": [{"text": "x"}]}) if "Тыюу" in i])
 
 
@@ -95,3 +95,53 @@ class BuildWithStock(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def hit(i, h=1080, dur=20):
+    return {"id": i, "duration": dur, "pageURL": f"https://pixabay.com/videos/x-{i}/", "user": f"user{i}",
+            "videos": {"large": {"url": f"https://cdn.pixabay.com/{i}_l.mp4", "width": 1920, "height": h},
+                       "medium": {"url": f"https://cdn.pixabay.com/{i}_m.mp4", "width": 1280, "height": 720},
+                       "tiny": {"url": "t", "width": 640, "height": 360}}}
+
+
+class Pixabay(unittest.TestCase):
+    def setUp(self):
+        for k in ("POULTRY_PIXABAY_API_KEY", "POULTRY_PEXELS_API_KEY"):
+            os.environ.pop(k, None)
+
+    def test_pick_smallest_hd(self):
+        from poultry_ig_agent import pixabay
+        self.assertTrue(pixabay.pick_file(hit(1))["url"].endswith("_m.mp4"))
+
+    def test_fetch_and_license_no_dup(self):
+        from poultry_ig_agent import pixabay
+        urls = []
+        st = pixabay.PixabayStock("SECRET", transport=lambda u: urls.append(u) or {"hits": [hit(5)]},
+                                  downloader=lambda u, p: open(p, "wb").close())
+        d = tempfile.mkdtemp()
+        _, lic = st.fetch("chicks drinking water", 5, os.path.join(d, "a.mp4"))
+        self.assertEqual((lic["source"], lic["id"]), ("Pixabay", 5))
+        self.assertIn("video_type=film", urls[0]); self.assertIn("safesearch=true", urls[0])
+        with self.assertRaises(pexels.StockError):
+            st.fetch("chicks drinking water", 5, os.path.join(d, "b.mp4"))
+
+    def test_make_stock_prefers_pixabay(self):
+        from poultry_ig_agent import pixabay
+        with self.assertRaises(pexels.StockError):
+            pixabay.make_stock()
+        os.environ["POULTRY_PEXELS_API_KEY"] = "p"
+        self.assertIsInstance(pixabay.make_stock(), pexels.PexelsStock)
+        os.environ["POULTRY_PIXABAY_API_KEY"] = "x"
+        self.assertIsInstance(pixabay.make_stock(), pixabay.PixabayStock)
+
+    @unittest.skipUnless(HAVE, "ffmpeg жок")
+    def test_landscape_cropped_to_vertical(self):
+        from poultry_ig_agent import pixabay
+        from poultry_ig_agent.tests.test_video import FakeTTS, FakeVeo, probe
+        dl = lambda u, p: subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "testsrc=s=1280x720:d=10:r=24", "-pix_fmt", "yuv420p", p], check=True)
+        st = pixabay.PixabayStock("K", transport=lambda u: {"hits": [hit(n) for n in range(1, 6)]}, downloader=dl)
+        assets = tempfile.mkdtemp(); os.makedirs(os.path.join(assets, "real")); out = tempfile.mkdtemp()
+        r = video.build({"lang": "ky", "content_type": "education", "voiceover": "x", "shots": shots(3, "real")}, out, FakeVeo(), FakeTTS(), assets, stock=st)
+        self.assertEqual(r["status"], "ready", r)
+        v = [s for s in probe(os.path.join(out, "final.mp4")) if s["codec_type"] == "video"][0]
+        self.assertEqual((v["width"], v["height"]), (1080, 1920))
