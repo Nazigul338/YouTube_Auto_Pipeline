@@ -244,7 +244,9 @@ def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False, voice_file=No
     with open(os.path.join(d, "post.json"), encoding="utf-8") as f:
         post = json.load(f)
     tts = tts or video.tts_from_settings(voice_file=voice_file)
-    post["ai_voice"] = settings.load_settings()["voice"].get("disclose_ai_voice", True)
+    vcfg = settings.load_settings()["voice"]
+    clone = vcfg.get("provider") in ("elevenlabs", "kani") and (vcfg.get("elevenlabs_voice_id") or vcfg.get("kani_ref_audio")) or voice_file
+    post["ai_voice"] = ("clone" if clone else True) if vcfg.get("disclose_ai_voice", True) else False
     res = video.build(post, d, veo or video.VeoProvider(), tts,
                       os.path.join(os.path.dirname(__file__), "assets"), allow_ai_fallback, NICHE, stock=stock)
     if res["status"] == "ready":
