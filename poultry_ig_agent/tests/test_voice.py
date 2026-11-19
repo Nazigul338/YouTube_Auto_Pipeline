@@ -163,3 +163,24 @@ class VoiceQA(unittest.TestCase):
         self.assertEqual((t.voice, t.style), ("Orus", "warm"))
         self.assertIn("TEXT:", video.GeminiTTS.STYLES["warm"])
         self.assertIsNone(video.GeminiTTS.STYLES["plain"])
+
+
+class NoSilentFallback(unittest.TestCase):
+    def test_settings_default_no_fallback(self):
+        t = video.tts_from_settings({"voice": {"provider": "gemini", "gemini_voice": "Orus"}})
+        self.assertEqual(len(t.models), 1)
+
+    def test_quota_error_is_clear(self):
+        import io, urllib.error
+        from unittest import mock
+        os.environ["POULTRY_GEMINI_API_KEY"] = "k"
+        calls = []
+
+        def fake(req, timeout=None):
+            calls.append(req.full_url)
+            raise urllib.error.HTTPError(req.full_url, 429, "quota", {}, io.BytesIO(b'{"error":"quota"}'))
+        with mock.patch("urllib.request.urlopen", fake), mock.patch("time.sleep"):
+            with self.assertRaises(video.VideoError) as cm:
+                video.GeminiTTS("Orus", tries=2, allow_fallback=False).synth("x", os.path.join(tempfile.mkdtemp(), "v.wav"))
+        self.assertIn("квотасы бүттү", str(cm.exception))
+        self.assertFalse(any("2.5" in u for u in calls))      # запас моделге өткөн жок

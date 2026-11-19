@@ -81,9 +81,11 @@ class GeminiTTS:
                  "natural pauses and lively intonation. Read ONLY the text after 'TEXT:', never these instructions.\nTEXT:\n"),
     }
 
-    def __init__(self, voice=None, tries=3, wait=4, style=None):
+    def __init__(self, voice=None, tries=3, wait=4, style=None, allow_fallback=True):
         self.voice = voice or os.environ.get("POULTRY_TTS_VOICE", "Kore")
         self.tries, self.wait = tries, wait
+        # False: эскирээк запас моделге (кыргызча начарыраак) ЖАШЫРЫН өтпөйт — квота бүтсө ката берет
+        self.models = config.TTS_MODELS if allow_fallback else config.TTS_MODELS[:1]
         self.style = style or "plain"
         self.last_model = None
 
@@ -94,7 +96,7 @@ class GeminiTTS:
             "responseModalities": ["AUDIO"],
             "speechConfig": {"voiceConfig": {"prebuiltVoiceConfig": {"voiceName": self.voice}}}}}).encode()
         errors = []
-        for m in config.TTS_MODELS:
+        for m in self.models:
             for attempt in range(self.tries):
                 try:
                     req = urllib.request.Request(f"{config.API_BASE}/models/{m}:generateContent", body,
@@ -119,7 +121,9 @@ class GeminiTTS:
                 except Exception as e:
                     errors.append(f"{m}#{attempt + 1}: {type(e).__name__}: {str(e)[:120]}")
                 time.sleep(self.wait * (attempt + 1))
-        raise VideoError("TTS ишке ашкан жок: " + " | ".join(errors))
+        quota = any("HTTP 429" in e for e in errors)
+        raise VideoError(("TTS квотасы бүттү (эртең кайра аракет кылыңыз). " if quota else "TTS ишке ашкан жок: ")
+                         + " | ".join(errors)[:600])
 
 
 class ElevenLabsTTS:
@@ -231,7 +235,8 @@ def tts_from_settings(cfg=None, voice_file=None):
         return KaniTTS(v.get("kani_model", "nineninesix/kani-tts-400m-ky"), v.get("kani_ref_audio"),
                        v.get("owner_consent_confirmed", False))
     if v.get("provider", "gemini") == "gemini":
-        return GeminiTTS(v.get("gemini_voice"), style=v.get("gemini_style"))
+        return GeminiTTS(v.get("gemini_voice"), style=v.get("gemini_style"),
+                         allow_fallback=v.get("allow_tts_fallback", False))
     if v.get("provider") == "elevenlabs":
         return ElevenLabsTTS(v.get("elevenlabs_voice_id"), v.get("elevenlabs_model", "eleven_v3"),
                              v.get("owner_consent_confirmed", False))
@@ -401,5 +406,6 @@ def build(post, post_dir, veo, tts, assets_dir, allow_ai_fallback=False, niche=N
     if licenses:
         with open(os.path.join(post_dir, "licenses.json"), "w", encoding="utf-8") as f:
             json.dump(licenses, f, ensure_ascii=False, indent=2)
-    return {"status": "ready", "path": out, "ai_shots": sum(s["source"] == "ai" for s in shots),
+    return {"status": "ready", "path": out, "tts_model": getattr(tts, "last_model", None),
+            "ai_shots": sum(s["source"] == "ai" for s in shots),
             "stock_shots": sum(s["source"] == "stock" for s in shots), "shots": shots, "licenses": licenses}
