@@ -95,3 +95,14 @@ class Build(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@unittest.skipUnless(HAVE, "ffmpeg жок")
+class Onscreen(unittest.TestCase):
+    def test_lines_rendered_separately(self):
+        d = tempfile.mkdtemp(); src = os.path.join(d, "s.mp4")
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "color=c=gray:s=720x1280:d=1", "-pix_fmt", "yuv420p", src], check=True)
+        video.normalize(src, 1, os.path.join(d, "o.mp4"), "1-ката: Температураны туура эмес жөндөө", "", d)
+        files = sorted(f for f in os.listdir(d) if f.startswith("t_"))
+        self.assertEqual(len(files), 2)                                  # 2 сап → 2 өзүнчө drawtext
+        self.assertFalse(any("\n" in open(os.path.join(d, f), encoding="utf-8").read() for f in files))

@@ -245,7 +245,7 @@ def resolve_shots(post, assets_dir, allow_ai_fallback=False):
 
 def srt(voiceover, total):
     words = voiceover.split()
-    chunks = [" ".join(words[i:i + 5]) for i in range(0, len(words), 5)] or [""]
+    chunks = [" ".join(words[i:i + 4]) for i in range(0, len(words), 4)] or [""]
     per, lines, t = total / len(chunks), [], 0.0
     ts = lambda x: f"{int(x // 3600):02}:{int(x % 3600 // 60):02}:{int(x % 60):02},{int(x % 1 * 1000):03}"
     for i, c in enumerate(chunks, 1):
@@ -261,13 +261,16 @@ def _escape(p):
 
 def normalize(src, seconds, out, onscreen="", label="", tmp="."):
     vf = ["scale=1080:1920:force_original_aspect_ratio=increase", "crop=1080:1920", "fps=30", "setsar=1"]
-    for i, (text, y, size) in enumerate([(onscreen, "h*0.10", 64), (label, "h*0.03", 36)]):
-        if text:
-            tf = os.path.join(tmp, f"t_{os.path.basename(out)}_{i}.txt")
+    for i, (text, y0, size) in enumerate([(onscreen, 0.12, 64), (label, 0.04, 36)]):
+        if not text:
+            continue
+        for j, line in enumerate(textwrap.wrap(text, 22)[:3]):   # ар сап өзүнчө: ffmpeg 7+ '\n'ди □ кылып көрсөтөт
+            tf = os.path.join(tmp, f"t_{os.path.basename(out)}_{i}_{j}.txt")
             with open(tf, "w", encoding="utf-8") as f:
-                f.write("\n".join(textwrap.wrap(text, 22)))
+                f.write(line)
+            y = f"h*{y0}+{j * int(size * 1.45)}"
             vf.append(f"drawtext=fontfile={FONT}:textfile={tf}:fontsize={size}:fontcolor=white:box=1:"
-                      f"boxcolor=black@0.55:boxborderw=18:x=(w-text_w)/2:y={y}")
+                      f"boxcolor=black@0.55:boxborderw=14:x=(w-text_w)/2:y={y}")
     is_img = src.lower().endswith(IMG_EXT)
     pre = ["-loop", "1"] if is_img else ["-stream_loop", "-1"]
     _run(["ffmpeg", "-y", "-v", "error", *pre, "-i", src, "-t", f"{seconds:.2f}", "-an", "-vf", ",".join(vf),
@@ -283,7 +286,7 @@ def assemble(clips, voice, srt_path, out, music=None):
     joined = os.path.join(work, "joined.mp4")
     _run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy", joined])
     total = duration(joined)
-    style = "FontName=DejaVu Sans,Bold=1,FontSize=15,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=3,Alignment=2,MarginV=260"
+    style = "FontName=DejaVu Sans,Bold=1,FontSize=11,PrimaryColour=&HFFFFFF&,OutlineColour=&H000000&,BorderStyle=1,Outline=2,Alignment=2,MarginV=78"  # 288-масштаб: ≈520px ылдыйдан — Instagram'дын caption/баскыч аймагынан жогору (y<1440)
     vf = f"subtitles='{_escape(srt_path)}':force_style='{style}'"
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", joined, "-i", voice]
     if music:

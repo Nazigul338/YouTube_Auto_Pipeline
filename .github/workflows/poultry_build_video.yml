@@ -7,7 +7,7 @@ on:
         description: "deliveries ичиндеги папкалар, үтүр менен (бош = build_request.txt бар бардыгы)"
         default: ""
   push:
-    branches: [claude/youtube-auto-pipeline-87d41t, ccr-e9f49a12-c7fuhx]
+    branches: [claude/youtube-auto-pipeline-87d41t]   # бир гана branch — эки жолу иштебесин
     paths: [poultry_ig_agent/deliveries/*/build_request.txt]
 permissions:
   contents: write
@@ -36,7 +36,7 @@ jobs:
         run: |
           set -uo pipefail
           if [ -z "$POULTRY_PIXABAY_API_KEY" ] && [ -z "$POULTRY_PEXELS_API_KEY" ]; then echo "::error::POULTRY_PIXABAY_API_KEY (же POULTRY_PEXELS_API_KEY) secret коюлган эмес"; exit 1; fi
-          D=poultry_ig_agent/deliveries; FAILED=0
+          D=poultry_ig_agent/deliveries; FAILED=0; export POULTRY_STOCK_EXCLUDE=""
           if [ -n "$NAMES" ]; then IFS=',' read -ra LIST <<< "$NAMES"; else LIST=(); for f in $D/*/build_request.txt; do LIST+=("$(basename "$(dirname "$f")")"); done; fi
           for name in "${LIST[@]}"; do
             name=$(echo "$name" | xargs); [ -d "$D/$name" ] || { echo "::error::$name жок"; FAILED=1; continue; }
@@ -47,7 +47,11 @@ jobs:
             echo "статус: $st"
             if [ "$st" = '"ready"' ]; then
               cp poultry_ig_agent/out/$pid/{final.mp4,shots.json,post.json} "$D/$name/"
-              [ -f poultry_ig_agent/out/$pid/licenses.json ] && cp poultry_ig_agent/out/$pid/licenses.json "$D/$name/"
+              if [ -f poultry_ig_agent/out/$pid/licenses.json ]; then
+                cp poultry_ig_agent/out/$pid/licenses.json "$D/$name/"
+                ids=$(python -c 'import json,sys; print(",".join(str(l["id"]) for l in json.load(open(sys.argv[1]))))' poultry_ig_agent/out/$pid/licenses.json)
+                export POULTRY_STOCK_EXCLUDE="${POULTRY_STOCK_EXCLUDE:+$POULTRY_STOCK_EXCLUDE,}$ids"   # кийинки бөлүктөрдө кайталанбасын
+              fi
               python - "$D/$name/post.json" "$D/$name/caption.txt" <<'PY'
           import json,sys
           p=json.load(open(sys.argv[1],encoding="utf-8"))

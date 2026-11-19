@@ -8,7 +8,7 @@ import urllib.parse
 import urllib.request
 
 from . import log
-from .pexels import FALLBACK_QUERIES, StockError, keywords
+from .pexels import FALLBACK_QUERIES, StockError, excluded_ids, poultry_query, relevant
 
 API = "https://pixabay.com/api/videos/"
 
@@ -25,7 +25,7 @@ class PixabayStock:
         self.key = key or os.environ.get("POULTRY_PIXABAY_API_KEY")
         if not self.key:
             raise StockError("POULTRY_PIXABAY_API_KEY коюлган эмес (GitHub Secrets'ке кошуңуз)")
-        self.tx, self.dl, self.used = transport, downloader, set()
+        self.tx, self.dl, self.used = transport, downloader, excluded_ids()
         self.log = log.get()
 
     def search(self, query, per_page=20):
@@ -42,11 +42,11 @@ class PixabayStock:
             raise StockError(f"Pixabay HTTP {e.code}") from None
 
     def find(self, visual, min_seconds):
-        for q in [keywords(visual)] + list(FALLBACK_QUERIES):
-            if not q:
-                continue
+        for q in [poultry_query(visual)] + list(FALLBACK_QUERIES):
             for h in self.search(q):
                 if h["id"] in self.used or h.get("duration", 0) < min(min_seconds, 8):
+                    continue
+                if not relevant(h.get("tags", "")):          # тегдеринде тоок/балапан сөзү жок болсо — колдонбойбуз
                     continue
                 f = pick_file(h)
                 if f:

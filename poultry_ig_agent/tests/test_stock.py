@@ -12,15 +12,34 @@ HAVE = shutil.which("ffmpeg")
 
 
 def vid(i, h=1920, w=1080, dur=15):
-    return {"id": i, "duration": dur, "url": f"https://www.pexels.com/video/{i}/", "user": {"name": f"Author{i}", "url": "u"},
+    return {"id": i, "duration": dur, "url": f"https://www.pexels.com/video/baby-chicks-{i}/", "user": {"name": f"Author{i}", "url": "u"},
             "video_files": [{"file_type": "video/mp4", "width": w, "height": h, "link": f"https://videos.pexels.com/{i}.mp4"},
                             {"file_type": "video/mp4", "width": w * 2, "height": h * 2, "link": "big"}]}
 
 
 class Pexels(unittest.TestCase):
-    def test_keywords(self):
-        self.assertEqual(pexels.keywords("Close-up of fluffy chicks running in a warm brooder, soft natural light"),
-                         "fluffy chicks running warm brooder")
+    def test_poultry_query_short_and_anchored(self):
+        self.assertEqual(pexels.poultry_query("Close-up of fluffy chicks running in a warm brooder"), "chicks")
+        self.assertEqual(pexels.poultry_query("Chicks drinking water from the dispenser"), "chicks drinking")
+        self.assertEqual(pexels.poultry_query("A farmer smiling at the camera"), "chicks farmer")
+        self.assertEqual(pexels.poultry_query("Farmer adjusting ventilation in the coop"), "chicken coop farmer")
+
+    def test_irrelevant_rejected(self):
+        from poultry_ig_agent import pixabay
+        rose = {**hit(1), "tags": "rose, flower, red"}
+        st = pixabay.PixabayStock("K", transport=lambda u: {"hits": [rose]}, downloader=lambda u, p: None)
+        with self.assertRaises(pexels.StockError):
+            st.fetch("chicks", 4, "/tmp/x.mp4")
+
+    def test_series_exclude(self):
+        from poultry_ig_agent import pixabay
+        os.environ["POULTRY_STOCK_EXCLUDE"] = "1, 2"
+        try:
+            st = pixabay.PixabayStock("K", transport=lambda u: {"hits": [hit(1), hit(2), hit(3)]}, downloader=lambda u, p: open(p, "wb").close())
+            _, lic = st.fetch("chicks", 4, os.path.join(tempfile.mkdtemp(), "a.mp4"))
+            self.assertEqual(lic["id"], 3)
+        finally:
+            os.environ.pop("POULTRY_STOCK_EXCLUDE")
 
     def test_pick_file_vertical_not_4k(self):
         self.assertEqual(pexels.pick_file(vid(1))["link"], "https://videos.pexels.com/1.mp4")
@@ -36,7 +55,7 @@ class Pexels(unittest.TestCase):
 
         def tx(url):
             seen.append(url)
-            return {"videos": [vid(7)]} if "query=baby+chicks" in url or "fluffy" in url else {"videos": []}
+            return {"videos": [vid(7)]} if "query=baby+chicks" in url else {"videos": []}
         st = pexels.PexelsStock("K", transport=tx, downloader=lambda u, p: open(p, "wb").close())
         d = tempfile.mkdtemp()
         _, lic = st.fetch("fluffy chicks", 4, os.path.join(d, "a.mp4"))
@@ -98,7 +117,7 @@ if __name__ == "__main__":
 
 
 def hit(i, h=1080, dur=20):
-    return {"id": i, "duration": dur, "pageURL": f"https://pixabay.com/videos/x-{i}/", "user": f"user{i}",
+    return {"id": i, "duration": dur, "pageURL": f"https://pixabay.com/videos/x-{i}/", "user": f"user{i}", "tags": "chicks, chicken, farm",
             "videos": {"large": {"url": f"https://cdn.pixabay.com/{i}_l.mp4", "width": 1920, "height": h},
                        "medium": {"url": f"https://cdn.pixabay.com/{i}_m.mp4", "width": 1280, "height": 720},
                        "tiny": {"url": "t", "width": 640, "height": 360}}}

@@ -9,7 +9,7 @@ import urllib.request
 from . import log
 
 API = "https://api.pexels.com/videos/search"
-FALLBACK_QUERIES = ("baby chicks", "chicks brooder", "poultry farm chickens", "chicken coop")
+FALLBACK_QUERIES = ("baby chicks", "chicks", "chickens farm", "hens", "chicken coop")
 STOP = {"a", "an", "the", "of", "in", "on", "with", "and", "or", "to", "for", "at", "is", "are", "close-up", "shot",
         "soft", "natural", "close", "light", "looking", "camera", "background", "out", "focus", "small", "up"}
 
@@ -18,9 +18,35 @@ class StockError(RuntimeError):
     pass
 
 
+ANCHORS = ("chick", "chicks", "chicken", "chickens", "hen", "hens", "rooster", "poultry", "coop", "brooder", "broiler")
+DETAILS = ("water", "drinking", "feed", "feeding", "eating", "egg", "eggs", "straw", "bedding", "lamp", "heat", "coop",
+           "farm", "nest", "incubator", "farmer", "barn")
+RELEVANT = ("chick", "chicken", "hen", "rooster", "poultry", "coop", "brooder", "broiler", "fowl", "cockerel", "pullet")
+
+
 def keywords(visual, n=5):
     words = [w for w in re.findall(r"[a-zA-Z]+", (visual or "").lower()) if w not in STOP and len(w) > 2]
     return " ".join(list(dict.fromkeys(words))[:n])
+
+
+def poultry_query(visual):
+    """Кыска суроо: бир тоок сөзү + бир деталь (узун суроо тиешесиз натыйжа берет: 'running' → чуркаган адам)."""
+    words = re.findall(r"[a-zA-Z]+", (visual or "").lower())
+    anchor = next((w for w in words if w in ANCHORS), "chicks")
+    if anchor in ("brooder", "coop") and "chick" not in " ".join(words):
+        anchor = "chicken " + anchor
+    detail = next((w for w in words if w in DETAILS and w not in anchor), "")
+    return f"{anchor} {detail}".strip()
+
+
+def relevant(text):
+    t = (text or "").lower()
+    return any(r in t for r in RELEVANT)
+
+
+def excluded_ids():
+    """POULTRY_STOCK_EXCLUDE=1,2,3 — сериянын башка бөлүктөрүндө колдонулган клиптер."""
+    return {int(x) for x in os.environ.get("POULTRY_STOCK_EXCLUDE", "").replace(" ", "").split(",") if x.isdigit()}
 
 
 def _get(url, key, transport=None):
@@ -44,7 +70,7 @@ class PexelsStock:
         self.key = key or os.environ.get("POULTRY_PEXELS_API_KEY")
         if not self.key:
             raise StockError("POULTRY_PEXELS_API_KEY коюлган эмес (GitHub Secrets'ке кошуңуз)")
-        self.tx, self.dl, self.used = transport, downloader, set()
+        self.tx, self.dl, self.used = transport, downloader, excluded_ids()
         self.log = log.get()
 
     def search(self, query, per_page=15):
@@ -52,11 +78,11 @@ class PexelsStock:
         return _get(f"{API}?{q}", self.key, self.tx).get("videos", [])
 
     def find(self, visual, min_seconds):
-        for q in [keywords(visual)] + list(FALLBACK_QUERIES):
-            if not q:
-                continue
+        for q in [poultry_query(visual)] + list(FALLBACK_QUERIES):
             for v in self.search(q):
                 if v["id"] in self.used or v.get("duration", 0) < min(min_seconds, 8):
+                    continue
+                if not relevant(v.get("url", "")):          # Pexels: URL slug'ында тоок сөзү болушу керек
                     continue
                 f = pick_file(v)
                 if f:
