@@ -1,0 +1,44 @@
+name: "🎧 Poultry — Kani кыргызча үн сыноосу"
+on:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {pkg: kani-tts-2, tf: "transformers==4.56.0"}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: ffmpeg (бар болсо өткөрүлөт)
+        timeout-minutes: 6
+        run: bash poultry_ig_agent/tools/ensure_ffmpeg.sh
+      - name: Орнотуу (CPU torch)
+        run: |
+          pip install -q torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+          pip install -q "${{ matrix.pkg }}" soundfile
+          pip install -q ${{ matrix.tf }}
+          pip install -q "pyarrow<18" "datasets<4"   # NeMo numpy<2: жаңы pyarrow numpy>=2, жаңы datasets pyarrow.json_ талап кылат
+          python -c 'import numpy, pyarrow, datasets; print("numpy", numpy.__version__, "pyarrow", pyarrow.__version__, "datasets", datasets.__version__)'
+      - name: Үн чыгаруу
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p probe_out
+          python poultry_ig_agent/tools/kani_probe.py --model nineninesix/kani-tts-400m-ky \
+            --text-file poultry_ig_agent/voice_probe/text_ky.txt --outdir probe_out 2>&1 | tail -60
+      - name: Тыныгууларды өлчөө (үн сапатын текшерүү)
+        if: always()
+        shell: bash
+        run: |
+          for f in probe_out/*.wav; do
+            echo "== $f"; ffprobe -v error -show_entries format=duration -of csv=p=0 "$f"
+            ffmpeg -hide_banner -nostats -i "$f" -af silencedetect=noise=-35dB:d=0.6 -f null - 2>&1 | grep -E "silence_(start|end)" | head -40
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: {name: "kani-voice-${{ matrix.pkg }}", path: probe_out}

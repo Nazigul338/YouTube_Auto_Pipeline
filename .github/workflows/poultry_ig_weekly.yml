@@ -1,0 +1,19 @@
+name: "🐔 Poultry Instagram — жумалык отчет"
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * 1"   # дүйшөмбү (UTC)
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install -r poultry_ig_agent/requirements.txt
+      - env:
+          POULTRY_IG_ACCESS_TOKEN: ${{ secrets.POULTRY_IG_ACCESS_TOKEN }}
+          POULTRY_IG_USER_ID: ${{ secrets.POULTRY_IG_USER_ID }}
+        run: python -m poultry_ig_agent.agent report
+      - uses: actions/upload-artifact@v4
+        with: {name: poultry-weekly-report, path: poultry_ig_agent/out/reports}

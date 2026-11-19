@@ -1,0 +1,16 @@
+{
+  "_эскертүү": "Бул файлды өзүңүз толтурасыз. null/бош болсо агент баа же жоопту ОЙЛОП ТАППАЙТ, 'директке жазыңыз' дейт.",
+  "name": null,
+  "price": null,
+  "currency": null,
+  "payment_methods": [],
+  "contacts": {"whatsapp_group_url": null, "whatsapp_number": null, "instagram_dm": true},
+  "start_date": null,
+  "duration": null,
+  "format": null,
+  "benefits": [],
+  "program": [],
+  "refund_policy": null,
+  "limited_seats": null,
+  "faq": []
+}

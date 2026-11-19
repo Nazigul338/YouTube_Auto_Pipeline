@@ -1,0 +1,7 @@
+# Kani TTS (бекер кыргызча диктор, Apache-2.0). Run 44297472704'дө CPU'да иштеди (kani-tts-2 + kani-tts-400m-ky).
+# Адегенде CPU torch:  pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+kani-tts-2
+transformers==4.56.0
+pyarrow<18    # NeMo numpy<2 менен шайкеш
+datasets<4    # pyarrow<18 менен шайкеш
+soundfile
