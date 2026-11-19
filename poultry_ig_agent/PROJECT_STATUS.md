@@ -54,6 +54,12 @@ mp3'тер: `voice_probe/samples/gemini_*.mp3`. Колдонуучу угуп **
 кадрды узартат. (3) 2/3 экрандагы «3 жолу» жазуусу адаштырат. (4) 1/3, 2/3 caption = бүт диктор тексти.
 Ушул күнү оңдолгон каталар: TimeoutError кармалбаган (run 44528569865), sources сап тизмеси (run 44529118701).
 
+
+## Негизги branch'ка кошулду (2026-11-19, колдонуучунун уруксаты менен)
+`claude/youtube-auto-pipeline-87d41t` ← merge 899d432 (+ 28321f6). Motivation файлдары өзгөргөн жок (diff текшерилди).
+Motivation тесттери: бириктирүүгө чейин жана кийин бирдей 10 ката (test_ai_images ×7, test_drive_upload ×3 —
+googleapiclient жок) — poultry кошкон жок. Эми Actions'та бардык 7 poultry workflow'у «Run workflow» менен көрүнөт.
+
 ## 7 API абалы
 Gemini текст ✅ (2026-11-19, run 44533063140) · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (❓ = чыныгы чакыруу менен али текшерилген эмес). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
 
