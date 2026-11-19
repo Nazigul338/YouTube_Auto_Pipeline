@@ -227,7 +227,9 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
    Колдонуучу 1-вариантты тандады → фондор 12 сек стерео (BED=12, 2.3 МБ) кайра түзүлүп, 5 фон + metadata жүктөлдү (16:22 UTC).
    ✅ Drive'да 15/15 эффект + metadata. SFX run #44565276336 — CANCELLED: пландалган resume_pending (#44565916680, schedule)
    ошол эле `make-video` concurrency кезегине келип, күтүп турганды алмаштырды (GitHub бир гана pending кармайт).
-   ⏭ Кийинки: #44562653620 бүтүп, resume_pending башталгандан кийин SFX run'ду кайра коюу (rerun_from=s7_music, sound_effects ✓).
+   ✅ #44562653620 SUCCESS (17:21 UTC, эффектсиз): мүнөт сайын бирдейлик ✅ 10/10 (мурун 3/7/10-мүн ❌ — gamma/каныккандык оңдоосу иштеди),
+   AI маани: 164 бааланды, ≤2 болгон 40, 17 алмаштырылды; акыркы QA'да AI баа 503 (TransientError, кошумча). 9:31, −14.3 LUFS.
+   ▶️ SFX менен: **run #44576373873** (17:21 UTC, rerun_from=s7_music, sound_effects ✓).
    Эскертүү: cinematic_test'ти кезекке коюудан мурун make-video тобунда pending жок экенин текшер.
    Drive'дагы «YouTube Audio Library» файлдары — 13 музыка трек гана (Music/), үн эффекти эмес.
    ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
