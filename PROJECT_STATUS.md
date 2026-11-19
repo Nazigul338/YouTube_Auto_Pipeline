@@ -222,7 +222,10 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
 
 ### 8ж. КИЙИНКИ КАДАМДАР (2026-11-19 жаңыртылды)
 1. ✅ (2026-11-19) Колдонуучу: «өзүң Pixabay'дан ал» → Pixabay API'де SFX жок, сайттан автоматтык жүктөө эрежеге каршы →
-   `pipeline/sfx_synth.py`: 15 ОРИГИНАЛДУУ эффект (синтез, CC0, metadata+sha256) түзүлүп Drive `Sound_Effects/<кат>/`'ке жүктөлдү.
+   `pipeline/sfx_synth.py`: 15 ОРИГИНАЛДУУ эффект (синтез, CC0, metadata+sha256) түзүлдү.
+   Drive'га жүктөлдү (2026-11-19 16:19 UTC): 10 «сокку» эффект + metadata (transitions 3, impact 2, cinematic 2, emotional 3).
+   ❗ ЖҮКТӨЛГӨН ЖОК: 5 фон (room_drone_01, air_tone_02, wind_01, rain_02, ocean_waves_03 — ар бири 4.6 МБ; Drive коннектору
+   бир чакырууда ≤3.1 МБ) — колдонуучудан сурадым (кичирейтип кайра түзүү же фонсуз).
    Drive'дагы «YouTube Audio Library» файлдары — 13 музыка трек гана (Music/), үн эффекти эмес.
    ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
    **Колдонуучу:** Drive `YouTube_Auto/Sound_Effects/<категория>/` ичине лицензиясы текшерилген аудио + `<файл>.metadata.json`
