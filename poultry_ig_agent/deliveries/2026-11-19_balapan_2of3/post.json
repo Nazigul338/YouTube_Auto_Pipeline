@@ -10,9 +10,9 @@
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c5ff2020-reel-ky/work/stock_1.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 36571,
-        "url": "https://pixabay.com/videos/id-36571/",
-        "author": "Lolame",
+        "id": 147982,
+        "url": "https://pixabay.com/videos/id-147982/",
+        "author": "u_msjokrr5zc",
         "query": "baby chicken",
         "license": "https://pixabay.com/service/license-summary/"
       }
@@ -58,9 +58,9 @@
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c5ff2020-reel-ky/work/stock_4.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 227131,
-        "url": "https://pixabay.com/videos/id-227131/",
-        "author": "kurt_BID",
+        "id": 105228,
+        "url": "https://pixabay.com/videos/id-105228/",
+        "author": "Eaktas06",
         "query": "baby chicken drinking",
         "license": "https://pixabay.com/service/license-summary/"
       }
@@ -132,9 +132,9 @@
     {
       "shot": 1,
       "source": "Pixabay",
-      "id": 36571,
-      "url": "https://pixabay.com/videos/id-36571/",
-      "author": "Lolame",
+      "id": 147982,
+      "url": "https://pixabay.com/videos/id-147982/",
+      "author": "u_msjokrr5zc",
       "query": "baby chicken",
       "license": "https://pixabay.com/service/license-summary/"
     },
@@ -159,9 +159,9 @@
     {
       "shot": 4,
       "source": "Pixabay",
-      "id": 227131,
-      "url": "https://pixabay.com/videos/id-227131/",
-      "author": "kurt_BID",
+      "id": 105228,
+      "url": "https://pixabay.com/videos/id-105228/",
+      "author": "Eaktas06",
       "query": "baby chicken drinking",
       "license": "https://pixabay.com/service/license-summary/"
     },

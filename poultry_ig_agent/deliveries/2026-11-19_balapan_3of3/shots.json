@@ -1,33 +1,33 @@
 [
   {
     "n": 1,
-    "duration": 7.4,
+    "duration": 7.72,
     "source": "stock",
     "visual": "Close-up of small yellow baby chicks in a warm brooder box looking active and alert.",
     "onscreen": "3/3: Төшөк жана желдетүү",
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_1.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 273848,
-      "url": "https://pixabay.com/videos/id-273848/",
-      "author": "Kaffeesüchtig",
-      "query": "chicks",
+      "id": 130412,
+      "url": "https://pixabay.com/videos/id-130412/",
+      "author": "NickyPe",
+      "query": "baby chicken",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
   {
     "n": 2,
-    "duration": 7.4,
+    "duration": 7.72,
     "source": "stock",
     "visual": "Farmer replacing wet damp straw bedding with fresh, dry wood shavings inside a clean chick brooder.",
     "onscreen": "3-ката: Нымдуу төшөк",
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_2.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 67072,
-      "url": "https://pixabay.com/videos/id-67072/",
-      "author": "BenjaminNelan",
-      "query": "chick farmer",
+      "id": 76881,
+      "url": "https://pixabay.com/videos/id-76881/",
+      "author": "FnBTV",
+      "query": "baby chicken farmer",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -56,10 +56,10 @@
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_4.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 105226,
-      "url": "https://pixabay.com/videos/id-105226/",
-      "author": "Eaktas06",
-      "query": "chicks farm",
+      "id": 165148,
+      "url": "https://pixabay.com/videos/id-165148/",
+      "author": "OleksandrPidvalnyi",
+      "query": "baby chicken farm",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -72,8 +72,8 @@
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_5.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 76879,
-      "url": "https://pixabay.com/videos/id-76879/",
+      "id": 76882,
+      "url": "https://pixabay.com/videos/id-76882/",
       "author": "FnBTV",
       "query": "chicken brooder farmer",
       "license": "https://pixabay.com/service/license-summary/"
@@ -81,17 +81,17 @@
   },
   {
     "n": 6,
-    "duration": 10.06,
+    "duration": 11.54,
     "source": "stock",
     "visual": "Text overlay screen on farm background inviting viewers to follow the account.",
     "onscreen": "Бизге катталыңыз!",
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_6.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 188986,
-      "url": "https://pixabay.com/videos/id-188986/",
-      "author": "Danganhfoto",
-      "query": "chicks farm",
+      "id": 238827,
+      "url": "https://pixabay.com/videos/id-238827/",
+      "author": "xBriantcx",
+      "query": "baby chicken farm",
       "license": "https://pixabay.com/service/license-summary/"
     }
   }
