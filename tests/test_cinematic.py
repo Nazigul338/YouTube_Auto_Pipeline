@@ -64,8 +64,21 @@ class TestFilters(unittest.TestCase):
         self.assertEqual(cinematic.match_filter(None), "")
         self.assertEqual(cinematic.match_filter({"y": 0.43, "sat": 0.20}), "")
         dark = cinematic.match_filter({"y": 0.10, "sat": 0.05})
-        self.assertIn("brightness=0.070", dark)          # чектелген: ±0.07
-        self.assertIn("saturation=1.100", dark)
+        self.assertIn("gamma=1.450", dark)               # караңгы → gamma (чектелген)
+        self.assertNotIn("brightness", dark)             # кара түс бозорбосун
+        self.assertIn("saturation=1.300", dark)
+        bright = cinematic.match_filter({"y": 0.80, "sat": 0.45})
+        self.assertIn("brightness=-0.070", bright)
+        self.assertIn("saturation=0.850", bright)
+        mild = cinematic.match_filter({"y": 0.36, "sat": 0.17})
+        self.assertRegex(mild, r"gamma=1\.1\d\d")
+
+    def test_subtitle_band_gradient(self):
+        png = cinematic.subtitle_band(self.d / "band.png")
+        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=width,height,pix_fmt",
+                            "-of", "csv=p=0", str(png)], capture_output=True, text=True)
+        self.assertIn(f"1920,{cinematic.BAND_H}", r.stdout)
+        self.assertIn("rgba", r.stdout)
 
     def test_measure_reads_brightness(self):
         dark, bright = self.d / "d.mp4", self.d / "b.mp4"

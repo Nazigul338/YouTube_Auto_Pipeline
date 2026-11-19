@@ -390,12 +390,20 @@ class RenderStage(Stage):
         subs = ctx.path("subtitles", "subtitles.ass")
         cards = cards_ass
         look = cinematic.look_chain(c["grade"]) if cine else c["grade"]
-        vf = (f"{look},vignette={c['vignette']},"
-              f"subtitles='{_esc(subs)}',subtitles='{_esc(cards)}',"
-              f"fade=t=in:st=0:d=0.5,fade=t=out:st={max(0.0, total - 0.8):.3f}:d=0.8,format=yuv420p")
+        tail = (f"subtitles='{_esc(subs)}',subtitles='{_esc(cards)}',"
+                f"fade=t=in:st=0:d=0.5,fade=t=out:st={max(0.0, total - 0.8):.3f}:d=0.8,format=yuv420p")
+        band_in: list[str] = []
+        if cine:   # СЫНАК: субтитр астында жумшак күңүрт градиент (ак фондо да окулат)
+            band = cinematic.subtitle_band(rdir / "sub_band.png")
+            band_in = ["-loop", "1", "-framerate", str(FPS), "-i", str(band)]
+            graph = (f"[0:v]{look},vignette={c['vignette']}[g];"
+                     f"[g][2:v]overlay=0:H-h:shortest=1:format=auto,{tail}[v]")
+            debug.append({"label": "subtitle_band", "h": cinematic.BAND_H, "alpha": cinematic.BAND_ALPHA})
+        else:
+            graph = f"[0:v]{look},vignette={c['vignette']},{tail}[v]"
         final = rdir / "final.mp4"
-        media.run(["ffmpeg", "-y", "-v", "error", "-i", str(video), "-i", str(mix),
-                   "-filter_complex", f"[0:v]{vf}[v]", "-map", "[v]", "-map", "1:a",
+        media.run(["ffmpeg", "-y", "-v", "error", "-i", str(video), "-i", str(mix), *band_in,
+                   "-filter_complex", graph, "-map", "[v]", "-map", "1:a",
                    "-t", f"{total:.3f}", "-c:v", "libx264", "-preset", "fast", "-crf", "22" if cine else "20",
                    "-pix_fmt", "yuv420p", "-r", str(FPS), "-c:a", "aac", "-b:a", "192k",
                    "-ar", "48000", "-movflags", "+faststart", str(final)],

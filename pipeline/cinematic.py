@@ -108,8 +108,10 @@ def transition_for(rng, prev: str | None, emo_a: str, emo_b: str, used_black: in
 
 TARGET_Y = 0.43        # орточо жарык (0..1, tv-range ичинде)
 TARGET_SAT = 0.20      # орточо каныккандык (SATAVG/255)
-MAX_BRIGHT = 0.07
-SAT_RANGE = (0.93, 1.10)             # каныккандыкты бирдейлөө жумшак (±10%)
+MAX_BRIGHT = 0.07                    # жарык клипти караңгылатуу чеги (brightness −)
+GAMMA_MAX = 1.45                     # караңгы клипти жарыктатуу (gamma: кара түс бозорбойт)
+SAT_RANGE = (0.85, 1.30)             # каныккандыкты бирдейлөө (run #44356971412: ±10% жетпеди)
+STRENGTH = 0.7                       # максатка канча жакындатат (1 = толук; табигый калсын)
 
 
 def measure(clip: Path, offset: float, dur: float, kind: str = "video") -> dict | None:
@@ -130,16 +132,31 @@ def measure(clip: Path, offset: float, dur: float, kind: str = "video") -> dict 
 
 
 def match_filter(stats: dict | None) -> str:
-    """Клипти максаттык жарыкка/каныккандыкка ЖАРЫМ-ЖАРТЫЛАЙ жакындатат (табигый калсын)."""
+    """Клипти максаттык жарыкка/каныккандыкка жакындатат (толук эмес — табигый калсын).
+
+    Караңгы клип — gamma (орто тондор жарыйт, кара кара бойдон), жарык клип — brightness (−).
+    """
     if not stats:
         return ""
-    b = max(-MAX_BRIGHT, min(MAX_BRIGHT, (TARGET_Y - stats["y"]) * 0.5))
-    s = 1.0
+    import math
+
+    y = min(max(stats["y"], 0.02), 0.98)
+    parts = []
+    if y < TARGET_Y - 0.02:
+        t = y + (TARGET_Y - y) * STRENGTH
+        g = min(GAMMA_MAX, math.log(y) / math.log(t))
+        if g > 1.01:
+            parts.append(f"gamma={g:.3f}")
+    elif y > TARGET_Y + 0.02:
+        b = max(-MAX_BRIGHT, (TARGET_Y - y) * 0.5)
+        if b < -0.005:
+            parts.append(f"brightness={b:.3f}")
     if stats.get("sat"):
-        s = max(SAT_RANGE[0], min(SAT_RANGE[1], 1 + (TARGET_SAT / max(stats["sat"], 0.02) - 1) * 0.35))
-    if abs(b) < 0.005 and abs(s - 1) < 0.01:
-        return ""
-    return f"eq=brightness={b:.3f}:saturation={s:.3f}"
+        k = 1 + (TARGET_SAT / max(stats["sat"], 0.02) - 1) * STRENGTH
+        sat = max(SAT_RANGE[0], min(SAT_RANGE[1], k))
+        if abs(sat - 1) >= 0.01:
+            parts.append(f"saturation={sat:.3f}")
+    return "eq=" + ":".join(parts) if parts else ""
 
 
 # ---------------------------------------------------------------- 16:9'га туура келбеген материал
@@ -188,3 +205,20 @@ def shot_prefilter(clip: Path, kind: str, offset: float, dur: float) -> tuple[st
         info["y"], info["sat"] = round(st["y"], 3), (round(st["sat"], 3) if st.get("sat") else None)
     info["match"] = m
     return ",".join(parts), info
+
+
+# ---------------------------------------------------------------- субтитр астындагы жумшак күңүрт тилке
+
+BAND_H = 380            # түбүнөн бийиктиги (px, 1080p) — субтитр 96 px бийиктикте
+BAND_ALPHA = 150        # эң ылдыйкы четтин тунуксуздугу (0..255) ≈ 59%
+
+
+def subtitle_band(out: Path, W: int = 1920) -> Path:
+    """Ылдый караңгылаган градиент PNG (бир жолу түзүлөт): ак фондо да субтитр окулат."""
+    if not out.exists():
+        out.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
+                        f"color=black:s={W}x{BAND_H},format=rgba", "-vf",
+                        f"geq=r=0:g=0:b=0:a='{BAND_ALPHA}*pow(Y/H,1.35)'",
+                        "-frames:v", "1", str(out)], check=True, capture_output=True, timeout=60)
+    return out
