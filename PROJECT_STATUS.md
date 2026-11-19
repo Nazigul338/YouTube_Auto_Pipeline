@@ -224,7 +224,10 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
 1. ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
    **Колдонуучу:** Drive `YouTube_Auto/Sound_Effects/<категория>/` ичине лицензиясы текшерилген аудио + `<файл>.metadata.json`
    салат (үлгү `assets/sound_effects/metadata.example.json`). Claude metadata толтурууга жардам берет.
-2. Video_001 TEST кайра: `🎞 Cinematic сынак`, `rerun_from=s5_visuals`, `sound_effects` ✓ (аудио болсо) — бренд чыпкасы,
+2. ▶️ **Иштеп жатат: run #44562653620** (2026-11-19 16:08 UTC; Video_001, TEST, rerun_from=s5_visuals, sound_effects ✓).
+   Drive'да SFX табылган жок (Sound_Effects бош; колдонуучу «мурдагы звуктар» деди — Drive'да үн эффекти жок, музыка гана) →
+   эффектсиз. Текшерүү: `curl https://api.github.com/repos/Nazigul338/YouTube_Auto_Pipeline/actions/runs/44562653620`.
+   Video_001 TEST кайра: `🎞 Cinematic сынак`, `rerun_from=s5_visuals`, `sound_effects` ✓ (аудио болсо) — бренд чыпкасы,
    субтитр тилкеси, gamma/каныккандык бирдейлөө жана SFX бир run менен текшерилет; контакт-барак менен КӨЗ МЕНЕН текшерүү.
 3. `tests/test_full_local.py` cinematic режиминде `_cinematic.mp4` атын күтсүн (азыр YTA_CINEMATIC=1 менен акыркы assert FAIL).
 4. Production'го өткөрүү — колдонуучунун уруксаты менен гана. AI-сүрөт: billing КОШУЛБАЙТ (колдонуучунун чечими).
