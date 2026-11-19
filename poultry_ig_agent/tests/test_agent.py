@@ -110,3 +110,20 @@ class OwnText(unittest.TestCase):
     def test_empty_text_rejected(self):
         with self.assertRaises(ValueError):
             agent.make_post_from_text("  ", {}, self._fake)
+
+
+@unittest.skipUnless(__import__("shutil").which("ffmpeg"), "ffmpeg жок")
+class VoiceCmd(unittest.TestCase):
+    def test_voice_mp3(self):
+        import wave
+        out = tmp_out()
+
+        class T:
+            def synth(self, text, path):
+                with wave.open(path, "wb") as w:
+                    w.setnchannels(1); w.setsampwidth(2); w.setframerate(24000); w.writeframes(b"\x01\x02" * 24000 * 2)
+                return path
+        pid = agent.save_post({"format": "reel", "lang": "ky", "topic": "t", "hook": "h", "voiceover": "Таң атты.", "shots": shots()})
+        r = agent.cmd_voice(pid, T())
+        self.assertTrue(os.path.exists(os.path.join(out, pid, "voice.mp3")))
+        self.assertAlmostEqual(r["seconds"], 2, delta=0.2)

@@ -241,6 +241,22 @@ def run(topic_key=None, content_type="education", fmt="reel", lang="ky", make_vi
     return res
 
 
+def cmd_voice(pid, tts=None):
+    """Постун диктор текстин settings'теги үн менен окуп, voice.mp3 кылат (видеосуз угуп текшерүү үчүн)."""
+    d = _path(pid)
+    with open(os.path.join(d, "post.json"), encoding="utf-8") as f:
+        post = json.load(f)
+    if not post.get("voiceover"):
+        raise ValueError("Бул постто диктор тексти жок")
+    tts = tts or video.tts_from_settings()
+    wav = os.path.join(d, "voice.wav")
+    tts.synth(post["voiceover"], wav)
+    mp3 = os.path.join(d, "voice.mp3")
+    video._run(["ffmpeg", "-y", "-v", "error", "-i", wav, "-ac", "1", "-b:a", "96k", mp3])
+    os.remove(wav)
+    return {"mp3": mp3, "seconds": round(video.duration(mp3), 2)}
+
+
 def cmd_make(n=3, generate=llm.generate_json):
     ids = []
     for item in _load_plan()["items"][:n]:
@@ -319,6 +335,7 @@ def main(argv=None):
     sub.add_parser("reject").add_argument("id")
     pb = sub.add_parser("publish"); pb.add_argument("id"); pb.add_argument("--live", action="store_true")
     dm = sub.add_parser("dm"); dm.add_argument("text"); dm.add_argument("--lang", default="ky")
+    vo = sub.add_parser("voice"); vo.add_argument("id")
     vd = sub.add_parser("video"); vd.add_argument("id"); vd.add_argument("--voice-file", default=None)
     vd.add_argument("--allow-ai-fallback", action="store_true")
     c = sub.add_parser("calc"); c.add_argument("--inputs", required=True); c.add_argument("--lang", default="ky")
@@ -349,6 +366,8 @@ def main(argv=None):
             print(cmd_report(InstagramClient(version=settings.load_settings()["graph_version"])))
         elif a.cmd == "dm":
             print(json.dumps(sales.draft_dm_reply(a.text, settings.load_course(), a.lang, llm.generate_json if os.environ.get("POULTRY_GEMINI_API_KEY") else None), ensure_ascii=False, indent=2))
+        elif a.cmd == "voice":
+            print(json.dumps(cmd_voice(a.id), ensure_ascii=False))
         elif a.cmd == "video":
             print(json.dumps(attach_video(a.id, allow_ai_fallback=a.allow_ai_fallback, voice_file=a.voice_file)["status"]))
         elif a.cmd == "calc":
