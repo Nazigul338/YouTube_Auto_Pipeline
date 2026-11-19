@@ -1,0 +1,30 @@
+{
+ "chars": 173,
+ "voices": {
+  "Charon": {
+   "ok": true,
+   "gen_s": 4.2,
+   "audio_s": 11.96
+  },
+  "Orus": {
+   "ok": true,
+   "gen_s": 3.9,
+   "audio_s": 12.4
+  },
+  "Fenrir": {
+   "ok": true,
+   "gen_s": 4.1,
+   "audio_s": 11.64
+  },
+  "Kore": {
+   "ok": true,
+   "gen_s": 4.6,
+   "audio_s": 13.4
+  },
+  "Aoede": {
+   "ok": true,
+   "gen_s": 4.4,
+   "audio_s": 12.48
+  }
+ }
+}
