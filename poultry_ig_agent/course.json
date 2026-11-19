@@ -1,10 +1,16 @@
 {
-  "_эскертүү": "Бул файлды өзүңүз толтурасыз. null/бош болсо агент баа же жоопту ОЙЛОП ТАППАЙТ, 'директке жазыңыз' дейт.",
-  "name": null,
-  "price": null,
-  "currency": null,
-  "payment_methods": [],
-  "contacts": {"whatsapp_group_url": null, "whatsapp_number": null, "instagram_dm": true},
+  "_эскертүү": "Бул файлды өзүңүз толтурасыз. null/бош талаа болсо агент жоопту ОЙЛОП ТАППАЙТ, 'Direct'ке жазыңыз' дейт. WhatsApp шилтемеси: contacts.whatsapp_group_url (2026-11-19 абалы: берилген эмес).",
+  "name": "Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин",
+  "price": 3000,
+  "currency": "сом",
+  "payment_methods": [
+    "MBank"
+  ],
+  "contacts": {
+    "whatsapp_group_url": null,
+    "whatsapp_number": null,
+    "instagram_dm": true
+  },
   "start_date": null,
   "duration": null,
   "format": null,
@@ -12,5 +18,11 @@
   "program": [],
   "refund_policy": null,
   "limited_seats": null,
-  "faq": []
+  "faq": [],
+  "enrollment_steps": [
+    "Адегенде WhatsApp аркылуу байланышасыз.",
+    "Курстун шарттары менен таанышасыз.",
+    "Төлөм MBank аркылуу жүргүзүлөт.",
+    "Төлөмдөн кийин окуу группасына кошуласыз."
+  ]
 }

@@ -95,3 +95,40 @@ class AuthorExperience(unittest.TestCase):
     def test_experience_without_note_flagged(self):
         p = {"lang": "ky", "topic_key": "chicks", "caption": "Балапандар өлүп калбасын. ветеринар", "sources": [{"type": "author_experience"}]}
         self.assertTrue(safety.check(p, N))
+
+
+class CourseAnswers(unittest.TestCase):
+    """Колдонуучунун чыныгы course.json'у менен (2026-11-19)."""
+    def setUp(self):
+        import os
+        self.c = json.load(open(os.path.join(os.path.dirname(__file__), "..", "course.json"), encoding="utf-8"))
+
+    def test_price_and_name_from_config(self):
+        self.assertIn("3000 сом", sales.answer("Курс канча турат?", self.c)["reply"])
+        self.assertIn("нөлдөн баштап кирешелүү фермага чейин", sales.answer("Кандай курс бар?", self.c)["reply"])
+
+    def test_enrollment_steps_in_order(self):
+        r = sales.answer("Кантип катталам?", self.c)["reply"]
+        self.assertTrue(r.index("WhatsApp") < r.index("MBank") < r.index("окуу группасына"))
+
+    def test_payment_mbank(self):
+        self.assertIn("MBank", sales.answer("Төлөмдү кантип төлөйм?", self.c)["reply"])
+
+    def test_unknown_not_invented(self):
+        for q in ("Курста кандай сабактар бар?", "WhatsApp группанын шилтемесин бериңизчи", "Курс канча убакытка созулат?"):
+            r = sales.answer(q, self.c)
+            self.assertTrue(r["needs_human"], q)
+            self.assertNotIn("http", r["reply"]); self.assertNotRegex(r["reply"], r"\d")
+
+    def test_duration_question_not_answered_with_price(self):
+        self.assertNotIn("3000", sales.answer("Курс канча убакытка созулат?", self.c)["reply"])
+
+    def test_health_dm_goes_to_vet(self):
+        r = sales.answer("Тооктор ооруп жатат, эмне кылам? Курс канча?", self.c)
+        self.assertIn("ветеринар", r["reply"]); self.assertNotIn("3000", r["reply"])
+
+    def test_russian(self):
+        self.assertIn("3000 сом", sales.answer("Сколько стоит курс?", self.c, "ru")["reply"])
+
+    def test_whatsapp_placeholder_not_saved(self):
+        self.assertIsNone(self.c["contacts"]["whatsapp_group_url"])

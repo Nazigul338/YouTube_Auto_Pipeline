@@ -5,14 +5,26 @@ HANDOFF = {
     "ky": "Так маалымат үчүн Direct'ке жазыңыз — менеджер жооп берет 🙌",
     "ru": "Точную информацию уточните в Direct — менеджер ответит 🙌",
 }
-INTENTS = {  # intent -> (талаа, ключ сөздөр)
-    "price": ("price", ("баасы", "канча", "кымбат", "цена", "сколько стоит", "стоимост", "сколько")),
-    "payment": ("payment_methods", ("төлөм", "төлөйт", "оплат", "перевод", "карта")),
+INTENTS = {  # intent -> (талаа, ключ сөздөр). ИРЕТИ МААНИЛҮҮ: так суроолор жалпыларынан мурун
+    "duration": ("duration", ("канча убакыт", "канча күн", "канча жума", "узактыг", "сколько длит", "длитель")),
+    "enroll": ("enrollment_steps", ("каттал", "жазылуу", "жазылам", "кантип кошул", "кантип алам", "кантип окуйм",
+                                    "записат", "запис", "регистрац", "как попасть", "как купить")),
+    "payment": ("payment_methods", ("төлөм", "төлөйт", "төлөйм", "mbank", "мбанк", "оплат", "перевод", "карта")),
+    "price": ("price", ("баасы", "баа ", "канча турат", "канча сом", "канча", "кымбат", "цена", "сколько стоит",
+                        "стоимост", "сколько")),
     "start": ("start_date", ("качан башта", "башталат", "когда нач", "старт", "дата")),
-    "duration": ("duration", ("канча убакыт", "узактыг", "сколько длит", "длитель")),
-    "program": ("program", ("программа", "эмне үйрөт", "что узна", "чему научат", "темалар")),
-    "whatsapp": ("whatsapp", ("whatsapp", "ватсап", "группа", "топ")),
+    "program": ("program", ("программа", "сабак", "эмне үйрөт", "эмнени үйрөт", "что узна", "чему научат", "темалар", "урок")),
+    "whatsapp": ("whatsapp", ("whatsapp", "ватсап", "вотсап", "группа", "топко", "шилтеме")),
     "refund": ("refund_policy", ("кайтарым", "кайтар", "возврат", "вернуть")),
+    "name": ("name", ("кандай курс", "курстун аты", "кайсы курс", "какой курс", "название")),
+}
+LABELS = {
+    "ky": {"price": "Курстун баасы: {v}.", "payment": "Төлөм: {v} аркылуу.", "start": "Курс башталат: {v}.",
+           "duration": "Курстун узактыгы: {v}.", "program": "Курстун темалары: {v}.", "refund": "Кайтаруу шарты: {v}.",
+           "name": "Курс: «{v}».", "whatsapp": "WhatsApp группа: {v}", "enroll": "Курска катталуу тартиби:\n{v}"},
+    "ru": {"price": "Стоимость курса: {v}.", "payment": "Оплата: через {v}.", "start": "Старт курса: {v}.",
+           "duration": "Длительность: {v}.", "program": "Темы курса: {v}.", "refund": "Условия возврата: {v}.",
+           "name": "Курс: «{v}».", "whatsapp": "Группа WhatsApp: {v}", "enroll": "Как записаться на курс:\n{v}"},
 }
 
 
@@ -48,8 +60,10 @@ def _value(field, course, lang):
         return None
     if field == "price":
         return price_text(course)
+    if field == "enrollment_steps":
+        return "\n".join(f"{i}. {s}" for i, s in enumerate(v, 1))
     if isinstance(v, list):
-        return "; ".join(map(str, v))
+        return ", ".join(map(str, v))
     return str(v)
 
 
@@ -61,9 +75,20 @@ def match_intent(text):
     return None
 
 
+HEALTH_WORDS = ("оору", "ооруп", "өлүп", "өлдү", "ич өт", "дары", "дарыла", "болеет", "болезн", "умира", "лечить", "понос")
+HEALTH_REPLY = {
+    "ky": "Тооктордун ден соолугу боюнча сырттан диагноз коё албайбыз — жакынкы ветеринарга кайрылыңыз 🙏 "
+          "Жалпы багуу боюнча суроолоруңуз болсо, Direct'ке жазыңыз.",
+    "ru": "Мы не ставим диагноз дистанционно — пожалуйста, обратитесь к ветеринару 🙏 "
+          "По общим вопросам содержания пишите в Direct.",
+}
+
+
 def answer(message, course, lang="ky"):
-    """Детерминдүү жооп: FAQ → intent → handoff. Эч качан сан ойлоп таппайт."""
+    """Детерминдүү жооп: ден соолук → FAQ → intent → handoff. Эч качан сан/маалымат ойлоп таппайт."""
     t = message.lower()
+    if any(w in t for w in HEALTH_WORDS):
+        return {"reply": HEALTH_REPLY[lang], "source": "health", "needs_human": True}
     for item in course.get("faq", []):
         kws = [w for w in re.findall(r"\w{4,}", item.get("q", "").lower())]
         if kws and sum(w in t for w in kws) >= max(1, len(kws) // 2):
@@ -72,8 +97,14 @@ def answer(message, course, lang="ky"):
     if intent:
         val = _value(INTENTS[intent][0], course, lang)
         if val:
-            return {"reply": val, "source": "config:" + intent, "needs_human": False}
-        return {"reply": HANDOFF[lang], "source": "handoff:" + intent, "needs_human": True}
+            reply = LABELS[lang][intent].format(v=val)
+            if intent in ("price", "payment") and course.get("enrollment_steps"):
+                reply += "\n" + ("Катталуу тартибин билүү үчүн «катталуу» деп жазыңыз." if lang == "ky"
+                                  else "Напишите «записаться», чтобы узнать порядок записи.")
+            return {"reply": reply, "source": "config:" + intent, "needs_human": False}
+        miss = {"ky": "Бул суроо боюнча так маалымат азырынча жок — менеджер Direct'те жооп берет 🙌",
+                "ru": "Точной информации по этому вопросу пока нет — менеджер ответит в Direct 🙌"}[lang]
+        return {"reply": miss, "source": "handoff:" + intent, "needs_human": True}
     return {"reply": HANDOFF[lang], "source": "handoff", "needs_human": True}
 
 
