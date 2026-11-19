@@ -285,3 +285,37 @@ class TestModeAndStorage(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSynth(unittest.TestCase):
+    def test_generated_library_passes_gate_and_loops(self):
+        import numpy as np
+        import wave
+
+        from pipeline import sfx_synth
+
+        d = Path(tempfile.mkdtemp())
+        try:
+            items = sfx_synth.generate(d, "2026-11-19")
+            ok, rej = sfx.load_library(d)
+            self.assertEqual(rej, [])
+            self.assertEqual(len(ok), len(sfx_synth.CATALOG))
+            self.assertEqual({s.category for s in ok}, set(sfx.CATEGORIES))
+            self.assertTrue(all(m["license"] == "CC0 1.0" and m["commercial_use"] for m in items))
+            for s in ok:
+                m = sfx.measure(s.path)
+                self.assertLessEqual(m["peak"], -2.9, s.rel)
+                if s.category in sfx.BED_CATS:
+                    self.assertGreaterEqual(m["dur"], 20)
+                    with wave.open(str(s.path)) as w:
+                        a = np.frombuffer(w.readframes(w.getnframes()), "<i2").reshape(-1, 2) / 32768
+                    jump = np.max(np.abs(a[0] - a[-1]))
+                    step = np.percentile(np.abs(np.diff(a, axis=0)), 99.9)
+                    self.assertLessEqual(jump, step * 3 + 1e-3, s.rel)   # loop чеги чыкылдабайт
+                else:
+                    self.assertLessEqual(m["dur"], 4.0)
+            # туруктуу: кайра түзсө — ошол эле файл (sha256 metadata'га дал келет)
+            again = sfx_synth.generate(d / "x", "2026-11-19")
+            self.assertEqual([m["sha256"] for m in items], [m["sha256"] for m in again])
+        finally:
+            shutil.rmtree(d, ignore_errors=True)

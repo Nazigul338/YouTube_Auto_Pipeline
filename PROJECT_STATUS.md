@@ -221,7 +221,10 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
 ## 8. Кийинки аткарыла турган тапшырмалар (ирети менен)
 
 ### 8ж. КИЙИНКИ КАДАМДАР (2026-11-19 жаңыртылды)
-1. ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
+1. ✅ (2026-11-19) Колдонуучу: «өзүң Pixabay'дан ал» → Pixabay API'де SFX жок, сайттан автоматтык жүктөө эрежеге каршы →
+   `pipeline/sfx_synth.py`: 15 ОРИГИНАЛДУУ эффект (синтез, CC0, metadata+sha256) түзүлүп Drive `Sound_Effects/<кат>/`'ке жүктөлдү.
+   Drive'дагы «YouTube Audio Library» файлдары — 13 музыка трек гана (Music/), үн эффекти эмес.
+   ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
    **Колдонуучу:** Drive `YouTube_Auto/Sound_Effects/<категория>/` ичине лицензиясы текшерилген аудио + `<файл>.metadata.json`
    салат (үлгү `assets/sound_effects/metadata.example.json`). Claude metadata толтурууга жардам берет.
 2. ▶️ **Иштеп жатат: run #44562653620** (2026-11-19 16:08 UTC; Video_001, TEST, rerun_from=s5_visuals, sound_effects ✓).
