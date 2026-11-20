@@ -1,0 +1,45 @@
+name: 🎞 Визуалдык из (даяр видеолорду салыштыруу)
+
+# Даяр видеолордон визуалдык из алып реестрге жазат жана өз ара салыштырат. Видеолор ӨЗГӨРБӨЙТ.
+on:
+  workflow_dispatch:
+    inputs:
+      videos:
+        description: "ID:файл, үтүр менен (Final_Videos ичинен)"
+        required: true
+        default: "Video_001:Video_001_cinematic.mp4,Video_003:Video_003_cinematic.mp4"
+        type: string
+      test_run:
+        description: "YouTube_Auto_TEST папкасынан"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: make-video          # реестрге жазат — видео жасоо менен бир убакта иштебейт
+  cancel-in-progress: false
+
+jobs:
+  fp:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: FFmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - run: pip install -q -r requirements.txt
+      - name: Визуалдык из
+        env:
+          VIDEOS: ${{ inputs.videos }}
+          YTA_DRIVE_FOLDER: ${{ inputs.test_run && 'YouTube_Auto_TEST' || 'YouTube_Auto' }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.visual_compare
