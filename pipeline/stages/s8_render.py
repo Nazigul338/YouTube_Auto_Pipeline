@@ -82,11 +82,19 @@ def render_shot(clip: Path, out: Path, kind: str, offset: float, dur: float,
     өтүп, монтаждын калган бөлүгүн бузган. Эми кадр кыска болсо: клиптин башынан (кайталап)
     кайра рендерленет; ошондо да кыска болсо — так ката менен токтойт.
     """
-    if out.exists() and out.stat().st_size > 1000:
+    # Кэш ПАРАМЕТРЛЕР дал келгенде гана колдонулат: кайра монтажда (жаңы концепция) эски кыймыл/узундук калбасын
+    # (pipeline тести: кайра монтажда 2-сахна 12.17 сек болуп, эски кадр узундугу кайра колдонулган).
+    import hashlib as _hl
+
+    key = _hl.md5(repr((str(clip), kind, round(offset, 3), round(dur, 3), motion, round(intensity, 3), prefilter,
+                        str(card[0]) if card else None, round(card[1], 3) if card else None)).encode()).hexdigest()
+    keyf = out.with_suffix(".key")
+    if out.exists() and out.stat().st_size > 1000 and keyf.exists() and keyf.read_text() == key:
         got = video_len(out)
-        if got is not None and got >= dur - SHOT_TOL:
+        if got is not None and abs(got - dur) <= SHOT_TOL:
             return out
-        out.unlink()
+    out.unlink(missing_ok=True)
+    keyf.unlink(missing_ok=True)
     # prefilter/card — cinematic СЫНАК режиминде гана берилет (кадыресе бош → мурунку жол)
     vf = (prefilter + "," if prefilter else "") + motion_filter(motion, dur, intensity) + "," + COLOR_VF
     if card is not None:
@@ -116,6 +124,7 @@ def render_shot(clip: Path, out: Path, kind: str, offset: float, dur: float,
             got = None
         if got is not None and got >= dur - SHOT_TOL:
             tmp.rename(out)
+            keyf.write_text(key)
             return out
     tmp.unlink(missing_ok=True)
     raise StageError(f"{out.stem}: кадр кыска чыкты ({got} сек, күтүлгөнү {dur:.2f} сек); "
