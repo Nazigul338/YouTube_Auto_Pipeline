@@ -101,13 +101,19 @@
     "source": "stock",
     "visual": "Lamp light above hens in a coop",
     "onscreen": "СЕБЕП №2 · ЖАРЫК",
+    "stock_query": "light bulb",
+    "stock_require": [
+      "bulb",
+      "lamp",
+      "light"
+    ],
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_7.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 45789,
-      "url": "https://pixabay.com/videos/id-45789/",
-      "author": "powerp540",
-      "query": "hens lamp",
+      "id": 113,
+      "url": "https://pixabay.com/videos/id-113/",
+      "author": "Coverr-Free-Footage",
+      "query": "light bulb",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -117,13 +123,20 @@
     "source": "stock",
     "visual": "Hens under lamp light at night",
     "onscreen": "Жарык аз → жумуртка аз",
+    "stock_query": "sunset",
+    "stock_require": [
+      "sunset",
+      "dusk",
+      "evening",
+      "sun"
+    ],
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_8.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 188986,
-      "url": "https://pixabay.com/videos/id-188986/",
-      "author": "Danganhfoto",
-      "query": "hens lamp",
+      "id": 201308,
+      "url": "https://pixabay.com/videos/id-201308/",
+      "author": "SerajKaram",
+      "query": "sunset",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -133,13 +146,20 @@
     "source": "stock",
     "visual": "Lamp in a poultry barn",
     "onscreen": "Жарык режимин көзөмөлдөңүз",
+    "stock_query": "light switch lamp",
+    "stock_require": [
+      "lamp",
+      "bulb",
+      "light",
+      "switch"
+    ],
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_9.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 105228,
-      "url": "https://pixabay.com/videos/id-105228/",
-      "author": "Eaktas06",
-      "query": "poultry lamp",
+      "id": 11414,
+      "url": "https://pixabay.com/videos/id-11414/",
+      "author": "anncapictures",
+      "query": "light switch lamp",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -165,13 +185,17 @@
     "source": "stock",
     "visual": "Hen drinking from a water dispenser",
     "onscreen": "Таза суу — ар дайым",
+    "stock_query": "pouring water",
+    "stock_require": [
+      "water"
+    ],
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_11.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 105226,
-      "url": "https://pixabay.com/videos/id-105226/",
-      "author": "Eaktas06",
-      "query": "hen drinking",
+      "id": 13100,
+      "url": "https://pixabay.com/videos/id-13100/",
+      "author": "StefWithAnF",
+      "query": "pouring water",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -181,13 +205,19 @@
     "source": "stock",
     "visual": "Chickens drinking water in the farm",
     "onscreen": "Суу аз → жумуртка аз",
+    "stock_query": "water drop",
+    "stock_require": [
+      "water",
+      "drop",
+      "droplet"
+    ],
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_12.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 105229,
-      "url": "https://pixabay.com/videos/id-105229/",
-      "author": "Eaktas06",
-      "query": "chickens drinking",
+      "id": 21536,
+      "url": "https://pixabay.com/videos/id-21536/",
+      "author": "Engin_Akyurt",
+      "query": "water drop",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -200,9 +230,9 @@
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_13.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 144679,
-      "url": "https://pixabay.com/videos/id-144679/",
-      "author": "Dx21",
+      "id": 105226,
+      "url": "https://pixabay.com/videos/id-105226/",
+      "author": "Eaktas06",
       "query": "hens farm",
       "license": "https://pixabay.com/service/license-summary/"
     }
