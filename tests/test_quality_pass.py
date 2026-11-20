@@ -190,3 +190,47 @@ class TestUniformity(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestVisualBeats(TestAIRelevance):
+    """2026-11-20: начар кадр үчүн ОШОЛ сөздүн маанисин көрсөткөн өзүнчө идея + издөө; шаблон/монетизация эрежелери."""
+
+    def test_beat_query_used_and_rated_on_shot_words(self):
+        import json as _json
+
+        (self.d / "subtitles").mkdir()
+        (self.d / "subtitles" / "timings.json").write_text(_json.dumps({"words": [
+            {"w": "Страх", "s": 0.2, "e": 0.6}, {"w": "мешает", "s": 3.2, "e": 3.6}, {"w": "двигаться", "s": 6.5, "e": 6.9}]}))
+        for k, sh in enumerate(self.shots):
+            sh.update(start=3.0 * k, end=3.0 * (k + 1))
+        self.ctx.path = lambda *p: self.d.joinpath(*p)
+        seen_texts, prompts = [], []
+
+        class Gem(FakeGem):
+            def rate_frames(self, items):
+                seen_texts.extend(t for _, t in items)
+                return super().rate_frames(items)
+
+            def json(self, prompt, **kw):
+                prompts.append(prompt)
+                return [{"i": 1, "idea": "a person freezing at a doorway", "queries": ["man hesitating doorway", "x"]},
+                        {"i": 2, "idea": "dup", "queries": ["man hesitating doorway"]}]   # кайталанган идея — алынбайт
+
+        gem = Gem([5, 1, 2, 4])
+        self.ctx.services["gemini"] = gem
+        chosen = {k: (asset(k), "fresh", 0.5) for k in range(3)}
+        finder = mock.Mock()
+        finder.beat_candidate.side_effect = lambda q, dur: asset(200) if q == "man hesitating doorway" else None
+        finder.replacement.return_value = None
+
+        def fetch(i):
+            return (i, chosen[i][0], self.clip, 8.0, "fresh", 0.0)
+
+        out, st = VisualsStage().ai_relevance(self.ctx, self.results, self.shots, self.scenes, chosen,
+                                              {k: None for k in range(3)}, finder, fetch, lambda i: 0.5)
+        self.assertTrue(seen_texts[1].startswith("«мешает»"))              # кадрдын өз сөзү боюнча бааланат
+        self.assertIn("NO cartoons", prompts[0])                           # эрежелер prompt'то
+        self.assertIn("chess pieces", prompts[0])                          # шаблон кадрлардын тизмеси
+        self.assertEqual(st["beats"], {"1": "a person freezing at a doorway"})
+        self.assertEqual(st["beats_won"], 1)
+        self.assertEqual(out[1][1].id, "pixabay:200")

@@ -234,7 +234,9 @@ class Gemini:
                 "3 = acceptable mood match, 1 = unrelated). Always rate 1 if the frame shows a "
                 "brand logo or trademark (e.g. YouTube, social networks), a watermark, or a "
                 "cartoon/clip-art illustration in the footage itself (ignore subtitles and "
-                "title-card text added by the editor). "
+                "title-card text added by the editor). Rate at most 2 if the frame is a generic stock cliche "
+                "(chess pieces, handshake, light bulb, statue or monument, puzzle, trophy, abstract particles) "
+                "that the narration does not literally mention. "
                 "Return JSON array of integers only."]
             for k, (jpg, text) in enumerate(items, 1):
                 contents += [f"Frame {k}. Narration (Russian): {text[:300]}",

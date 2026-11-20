@@ -408,11 +408,66 @@ class VisualsStage(Stage):
             time.sleep(self.RATE_WAIT)
         return out
 
+    BEAT_PROMPT = """You are a film editor for a Russian-language psychology/motivation YouTube video.
+For each numbered shot you get the exact Russian narration heard during that shot. The current stock clip
+does not show its meaning. Invent ONE concrete visual idea per shot and two different 2-4 word English
+stock-footage search queries for it.
+{rules}
+Return a JSON array only: [{{"i": <shot number>, "idea": "<1 short English sentence>", "queries": ["...", "..."]}}]
+
+SHOTS:
+{shots}"""
+
+    @staticmethod
+    def shot_texts(ctx, shots) -> dict[int, str]:
+        """Ар кадрда диктор так эмне деп жатат (Whisper убакыттары боюнча)."""
+        if not hasattr(ctx, "path"):
+            return {}
+        p = ctx.path("subtitles", "timings.json")
+        words = json.loads(p.read_text(encoding="utf-8")).get("words", []) if p.exists() else []
+        return {sh["i"]: " ".join(w["w"] for w in words if w["e"] > sh["start"] - 0.3 and w["s"] < sh["end"] + 0.3)
+                for sh in shots}
+
+    def visual_beats(self, ctx, idx: list[int], stext: dict[int, str]) -> dict[int, tuple[str, list[str]]]:
+        """Начар кадрлар үчүн маанини көрсөткөн өзүнчө идея + издөө сөздөрү (бир Gemini суроо). Ката болсо — {}."""
+        from ..visual_rules import VISUAL_RULES
+        from .base import gemini_of
+
+        todo = [i for i in idx if stext.get(i)]
+        if not todo:
+            return {}
+        try:
+            data = gemini_of(ctx).json(self.BEAT_PROMPT.format(
+                rules=VISUAL_RULES, shots="\n".join(f"{i}. {stext[i][:300]}" for i in todo)),
+                purpose="visual_beats", temperature=0.7)
+        except Exception as e:
+            ctx.log(f"   ⚠️ Кадр идеялары жазылган жок ({type(e).__name__}) — сахнанын запас клиптери колдонулат")
+            return {}
+        out: dict[int, tuple[str, list[str]]] = {}
+        seen: set[str] = set()
+        for row in data if isinstance(data, list) else []:
+            try:
+                i = int(row.get("i"))
+            except (TypeError, ValueError, AttributeError):
+                continue
+            qs = [q.strip() for q in row.get("queries", []) if isinstance(q, str) and q.strip()
+                  and q.strip().lower() not in seen][:2]
+            if i in todo and qs:
+                seen.update(q.lower() for q in qs)        # бир видеодо бир идея эки жолу эмес
+                out[i] = (str(row.get("idea", ""))[:160], qs)
+        return out
+
     def ai_relevance(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u):
-        """Ар кадрды (клиптин ортосунан) сахнанын текстине Gemini менен баалайт; ≤2/5 болсо — ошол сахнанын
-        кийинки жаңы клибине алмаштырат (жакшыраса гана)."""
+        """Ар кадрды (клиптин ортосунан) ОШОЛ кадрдагы диктордун сөзүнө Gemini менен баалайт; ≤2/5 болсо —
+        сөздүн маанисин көрсөткөн өзүнчө идея боюнча жаңы клип издейт (жок болсо — сахнанын запас клиби),
+        жаңысы жакшыраак бааланса гана алмаштырат."""
         by_i = {r[0]: r for r in results}
-        text = lambda i: scenes[shots[i]["scene"]]["text"]
+        stext = self.shot_texts(ctx, shots)
+
+        def text(i: int) -> str:
+            sc = scenes[shots[i]["scene"]]["text"]
+            st = stext.get(i, "")
+            return f"«{st}» (scene context: {sc[:150]})" if st else sc
         items = []
         for i, a, path, real, tier, score in results:
             sh = shots[i]
@@ -422,8 +477,17 @@ class VisualsStage(Stage):
         low = sorted((i for i, s in scores.items() if s <= self.LOW_SCORE), key=lambda i: scores[i])
         replaced = 0
         trial: dict[int, tuple] = {}
+        beats = self.visual_beats(ctx, low[: self.MAX_REPLACE], stext)
+        beat_used: dict[int, str] = {}
         for i in low[: self.MAX_REPLACE]:
-            nxt = finder.replacement(pool_of[i], shots[i]["dur"])
+            nxt = None
+            for q in beats.get(i, ("", []))[1]:
+                nxt = finder.beat_candidate(q, shots[i]["dur"])
+                if nxt is not None:
+                    beat_used[i] = beats[i][0]
+                    break
+            if nxt is None:
+                nxt = finder.replacement(pool_of[i], shots[i]["dur"])
             if nxt is None:
                 continue
             chosen[i] = (nxt, "fresh", 0.0)
@@ -445,7 +509,12 @@ class VisualsStage(Stage):
                     replaced += 1
         out = [by_i[i] for i in sorted(by_i)]
         avg = sum(scores.values()) / len(scores) if scores else 0.0
-        return out, {"rated": len(scores), "low": len(low), "replaced": replaced, "avg": avg, "scores": scores}
+        beats_won = sum(1 for i in beat_used if by_i[i] is trial.get(i))
+        if beats:
+            ctx.log(f"   💡 Кадр идеялары: {len(beats)} жазылды, {len(beat_used)} боюнча клип табылды, "
+                    f"{beats_won} алмаштырылды")
+        return out, {"rated": len(scores), "low": len(low), "replaced": replaced, "avg": avg, "scores": scores,
+                     "beats": {str(i): beat_used[i] for i in beat_used}, "beats_won": beats_won}
 
     def verify(self, ctx: Context, outputs: dict[str, Any] | None) -> None:
         super().verify(ctx, outputs)

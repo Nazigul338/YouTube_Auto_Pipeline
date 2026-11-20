@@ -262,6 +262,13 @@ class ClipFinder:
         self.taken.add(asset.id)
         return asset, tier, score
 
+    def beat_candidate(self, query: str, dur: float):
+        """Бир кадр үчүн өзүнчө маанилик суроо (visual beat): жаңы, мурда колдонулбаган, узундугу жетиштүү клип."""
+        for a in self.search("video", query):
+            if a.id not in self.taken and a.id not in self.others and a.duration >= dur + LONG_ROOM:
+                return self._take(a, "fresh", 0.0)[0]
+        return None
+
     def replacement(self, pool: Pool, dur: float):
         """Жүктөө/узактык ишке ашпаса — ошол сахнадан кийинки жаңы клип."""
         for c in pool.fresh:

@@ -12,6 +12,7 @@ import json
 import re
 from typing import Any
 
+from ..visual_rules import VISUAL_RULES
 from ..clipmemory import ClipMemory
 from ..clipsearch import THEME_KEYS, detect_theme
 from ..textutil import group_sentences, norm, word_count
@@ -29,8 +30,9 @@ Return a JSON array with exactly {n} objects, in the same order, each:
   "visual": "<1 sentence, English: what the viewer should SEE; concrete, cinematic, metaphorical if abstract>",
   "theme": one of {themes} (the main subject of THIS scene),
   "queries": [5 different 2-4 word English stock-footage search queries for THIS scene:
-              1) literal real-life footage of the idea, 2) a visual metaphor, 3) a different setting/place,
-              4) a close-up detail (hands, objects), 5) mood/atmosphere],
+              1) literal real-life footage of the idea, 2) a human situation that SHOWS the idea (not a literal
+              picture of a metaphor word), 3) a different setting/place, 4) a close-up detail (hands, face,
+              meaningful object), 5) mood/atmosphere with people],
   "keywords": ["<1-2 important Russian words or short phrases copied EXACTLY from this scene's text>"],
   "on_screen_text": "<optional: 2-5 Russian words for an animated title card, only for key ideas, else empty>",
   "music_mood": one of {moods}
@@ -43,6 +45,7 @@ Rules:
 - Match the scene's meaning: fear, laziness, success, discipline, stress, relationships, etc. need
   DIFFERENT visuals — do not fall back to generic sunsets/mountains.
 - Do NOT use these queries (already overused in earlier videos): {avoid}
+{visual_rules}
 - on_screen_text in at most 1 of every 4 scenes.
 - Output JSON only.
 
@@ -68,7 +71,8 @@ class ScenesStage(Stage):
         g = gemini_of(ctx)
         numbered = "\n".join(f"{i + 1}. {t}" for i, t in enumerate(texts))
         meta = g.json(PROMPT.format(n=len(texts), emotions=EMOTIONS, moods=moods, scenes=numbered,
-                                  themes=THEME_KEYS, avoid="; ".join(avoid) or "(none)"),
+                                  themes=THEME_KEYS, avoid="; ".join(avoid) or "(none)",
+                                  visual_rules=VISUAL_RULES),
                       purpose="scenes", temperature=0.6)
         if isinstance(meta, dict):
             meta = meta.get("scenes") or next((v for v in meta.values() if isinstance(v, list)), [])
