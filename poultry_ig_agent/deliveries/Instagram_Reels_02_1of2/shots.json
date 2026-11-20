@@ -146,20 +146,17 @@
     "source": "stock",
     "visual": "Lamp in a poultry barn",
     "onscreen": "Жарык режимин көзөмөлдөңүз",
-    "stock_query": "light switch lamp",
+    "stock_query": "light switch",
     "stock_require": [
-      "lamp",
-      "bulb",
-      "light",
       "switch"
     ],
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_9.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 11414,
-      "url": "https://pixabay.com/videos/id-11414/",
-      "author": "anncapictures",
-      "query": "light switch lamp",
+      "id": 378976,
+      "url": "https://pixabay.com/videos/id-378976/",
+      "author": "computergottyt",
+      "query": "light switch",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -185,17 +182,20 @@
     "source": "stock",
     "visual": "Hen drinking from a water dispenser",
     "onscreen": "Таза суу — ар дайым",
-    "stock_query": "pouring water",
+    "stock_query": "glass of water",
     "stock_require": [
-      "water"
+      "glass",
+      "tap",
+      "faucet",
+      "drinking"
     ],
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_11.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 13100,
-      "url": "https://pixabay.com/videos/id-13100/",
-      "author": "StefWithAnF",
-      "query": "pouring water",
+      "id": 79872,
+      "url": "https://pixabay.com/videos/id-79872/",
+      "author": "NickyPe",
+      "query": "glass of water",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -205,19 +205,20 @@
     "source": "stock",
     "visual": "Chickens drinking water in the farm",
     "onscreen": "Суу аз → жумуртка аз",
-    "stock_query": "water drop",
+    "stock_query": "dry cracked earth",
     "stock_require": [
-      "water",
-      "drop",
-      "droplet"
+      "dry",
+      "drought",
+      "cracked",
+      "desert"
     ],
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_12.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 21536,
-      "url": "https://pixabay.com/videos/id-21536/",
-      "author": "Engin_Akyurt",
-      "query": "water drop",
+      "id": 328726,
+      "url": "https://pixabay.com/videos/id-328726/",
+      "author": "NguyenTham_NTB",
+      "query": "dry cracked earth",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
