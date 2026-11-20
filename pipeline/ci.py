@@ -127,6 +127,14 @@ def run_ci(topic: str, niche: str, workdir: Path, *, store: Store | None,
             store.publish("Logs", log_file, f"{video_id}.log")
 
     state = execute(ctx, rerun_from=rerun_from, stop_after=stop_after, checkpoint=checkpoint)
+    # ОРИГИНАЛДУУЛУК: QA концепцияны окшош деп жокко чыгарса — ЖАҢЫ концепция менен бир жолу автоматтык кайра (s4'төн)
+    ent = registry["videos"].get(video_id, {})
+    if ("s9_qa" in state.data.get("stages", {}) and state.status("s9_qa") == FAILED
+            and not ent.get("edit_brief") and ent.get("rejected_briefs")
+            and len(ent["rejected_briefs"]) <= 1 and not ent.get("auto_reworked")):
+        ent["auto_reworked"] = True
+        log("🔁 Видео мурунку видеого окшош чыкты — жаңы монтаж концепциясы менен автоматтык кайра иштетилет (s4'төн)")
+        state = execute(ctx, rerun_from="s4_subtitles", stop_after=stop_after, checkpoint=checkpoint)
     _write_summary(state, video_id, registry["videos"].get(video_id, {}).get("final_url"))
     return 1 if any(state.status(n) == FAILED for n in STAGE_NAMES) else 0
 

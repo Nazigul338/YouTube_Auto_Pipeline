@@ -85,6 +85,26 @@ def clean_source(shots: list[dict], t: float, work: Path, stock=None) -> tuple[P
     return dest, max(0.0, float(sh.get("offset", 0.0)) + (t - sh["start"]))
 
 
+def thumb_similarity(a: str, b: str) -> float:
+    import re
+
+    wa, wb = set(re.findall(r"\w{3,}", a.lower())), set(re.findall(r"\w{3,}", b.lower()))
+    return len(wa & wb) / len(wa | wb) if wa and wb else 0.0
+
+
+def check_unique(specs: list[tuple[float, str, str]], registry: dict, video_id: str,
+                 limit: float = 0.5) -> list[tuple[tuple[float, str, str], str | None]]:
+    """Оригиналдуулук: обложканын жазуусу мурунку видеолордукуна окшош болбосун → [(вариант, себеп|None)]."""
+    prev = [(vid, t) for vid, v in registry.get("videos", {}).items() if vid != video_id
+            for t in (v.get("thumbnail") or {}).get("texts", [])]
+    out = []
+    for sp in specs:
+        text = f"{sp[1]} {sp[2]}"
+        hit = next(((vid, t) for vid, t in prev if thumb_similarity(text, t) >= limit), None)
+        out.append((sp, f"{hit[0]}: «{hit[1]}»" if hit else None))
+    return out
+
+
 def make(src: Path, t: float, line1: str, line2: str, out: Path, work: Path) -> Path:
     frame = work / f"f_{int(t * 10)}.png"
     media.run(["ffmpeg", "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", str(src), "-frames:v", "1", str(frame)],
@@ -143,6 +163,18 @@ def main() -> int:
     if not item:
         print("❌ Видео табылган жок")
         return 2
+    from .storage import DriveStore
+
+    store = DriveStore(drive, root)
+    registry = store.load_registry()
+    checked = check_unique(specs, registry, vid)
+    for sp, why in checked:
+        if why:
+            print(f"⚠️ «{sp[1]} {sp[2]}» мурунку обложкага окшош ({why}) — четке кагылды (оригиналдуулук)")
+    specs = [sp for sp, why in checked if not why]
+    if not specs:
+        print("❌ Бардык варианттар мурунку обложкаларга окшош — башка жазуу бериңиз")
+        return 3
     with tempfile.TemporaryDirectory() as d:
         d = Path(d)
         import json
@@ -169,6 +201,9 @@ def main() -> int:
         sh = sheet(files, d / f"{vid}_thumbs.jpg")
         sid = drive.put_file(sh, folder, sh.name)
         lines.append(f"📋 БААРЫ БИР БАРАКТА: https://drive.google.com/file/d/{sid}/view")
+        registry.setdefault("videos", {}).setdefault(vid, {})["thumbnail"] = {
+            "texts": [f"{l1} {l2}".strip() for _, l1, l2 in specs], "times": [t for t, _, _ in specs]}
+        store.save_registry(registry)
         msg = "\n".join(lines)
         print(msg)
         path = os.environ.get("GITHUB_STEP_SUMMARY")

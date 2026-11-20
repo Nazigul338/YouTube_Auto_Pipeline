@@ -87,7 +87,7 @@ YouTube'дун **Inauthentic content** (repetitive / mass-produced, 2025-07-15 �
    Маанилүү талап аткарылбаса — акыркы чыгарылыш катары БЕРИЛБЕЙТ, кемчилик оңдолот.
 6. **Биринчи даяр видео (Video_001) өзгөртүлбөйт** — ал салыштыруунун негизи гана.
 
-Ишке ашыруу: `pipeline/edit_concept.py` (концепция), `pipeline/visual_rules.py` (кадр эрежелери),
+Ишке ашыруу: `pipeline/edit_concept.py` (Gemini жазган өз концепция + окшош болсо кайра жазуу; s4–s8 колдонот), `pipeline/visual_rules.py` (кадр эрежелери),
 `s1_script` (сценарий эрежелери), `s9_qa.check_originality / check_shot_meaning / originality_checklist`.
 
 ## Милдеттүү эрежелер (видео)

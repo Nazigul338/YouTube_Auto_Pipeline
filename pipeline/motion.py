@@ -43,6 +43,7 @@ ESTABLISHING = ["zoom_out", "ken_burns", "dolly_out", "pan_right", "pan_left"]  
 SPEED = {"calm": 0.75, "reflective": 0.7, "sad": 0.6, "hopeful": 0.9, "tense": 1.15,
          "determined": 1.05, "inspired": 1.0, "dramatic": 1.2}
 MAX_SHARE = 0.30
+MIN_TYPES = 6          # QA: видеодо кеминде ушунча кыймыл түрү
 
 
 def ease(p: str) -> str:
@@ -129,6 +130,16 @@ def plan_motions(shots: list[dict], scenes: dict, rng: random.Random,
             cand = [t for t in cand if LATERAL.get(t, d) == d] or cand
         head = cand[:3] if cand[:3] else TYPES
         motion = rng.choice(head) if rng.random() < 0.8 else rng.choice(cand or TYPES)
+        if prefer:
+            # концепциянын кыймылдары басымдуу, бирок ар түрдүүлүк сакталат (QA: ≥6 түр, бир түр ≤35%)
+            others = [t for t in cand if t not in prefer]
+            used = {t for t, c in counts.items() if c}
+            left = len(shots) - k
+            unused = [t for t in cand if t not in used]
+            if unused and len(used) < MIN_TYPES and left <= (MIN_TYPES - len(used)) * 2 + 1:
+                motion = rng.choice(unused)
+            elif others and rng.random() < 0.4:
+                motion = rng.choice(others)
         if motion in LATERAL and sh["scene"] not in scene_dir:
             scene_dir[sh["scene"]] = LATERAL[motion]
         counts[motion] += 1

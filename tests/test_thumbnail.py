@@ -32,6 +32,15 @@ class TestThumbnail(unittest.TestCase):
             shutil.rmtree(d, ignore_errors=True)
 
 
+class TestUnique(unittest.TestCase):
+    def test_similar_text_rejected(self):
+        reg = {"videos": {"Video_001": {"thumbnail": {"texts": ["ВЫ ЖИВЁТЕ ДЛЯ НИХ?"]}}}}
+        res = thumbnail.check_unique([(1.0, "ВЫ ЖИВЁТЕ", "ДЛЯ НИХ?"), (2.0, "СТРАХ", "ЧУЖОГО МНЕНИЯ")], reg, "Video_002")
+        self.assertIsNotNone(res[0][1])
+        self.assertIsNone(res[1][1])
+        self.assertIsNone(thumbnail.check_unique([(1.0, "ВЫ ЖИВЁТЕ", "ДЛЯ НИХ?")], reg, "Video_001")[0][1])
+
+
 class TestCleanSource(unittest.TestCase):
     def test_uses_source_clip_time(self):
         from types import SimpleNamespace
