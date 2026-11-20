@@ -65,7 +65,8 @@ def auto_rework(ctx, state, entry: dict, rerun, log):
         entry["reworks"] = entry.get("reworks", 0) + 1
         entry.setdefault("rework_log", []).append({"n": entry["reworks"], "reason": entry["rejected_briefs"][-1]})
         log(f"🔁 Видео мурунку видеого окшош чыкты ({entry['rejected_briefs'][-1].get('reason', '')[:120]}) — "
-            f"жаңы монтаж концепциясы менен автоматтык кайра монтаж №{entry['reworks']} ({REWORK_FROM}'тан)")
+            f"жаңы монтаж концепциясы менен автоматтык кайра монтаж №{entry['reworks']} "
+            f"({entry.get('rework_from', REWORK_FROM)}'тан)")
         state = rerun()
     return state
 
@@ -149,8 +150,10 @@ def run_ci(topic: str, niche: str, workdir: Path, *, store: Store | None,
             store.publish("Logs", log_file, f"{video_id}.log")
 
     state = execute(ctx, rerun_from=rerun_from, stop_after=stop_after, checkpoint=checkpoint)
-    state = auto_rework(ctx, state, registry["videos"].get(video_id, {}),
-                        lambda: execute(ctx, rerun_from=REWORK_FROM, stop_after=stop_after, checkpoint=checkpoint), log)
+    ent_ = registry["videos"].get(video_id, {})
+    state = auto_rework(ctx, state, ent_,
+                        lambda: execute(ctx, rerun_from=ent_.pop("rework_from", REWORK_FROM), stop_after=stop_after,
+                                        checkpoint=checkpoint), log)
     _write_summary(state, video_id, registry["videos"].get(video_id, {}).get("final_url"))
     return 1 if any(state.status(n) == FAILED for n in STAGE_NAMES) else 0
 

@@ -388,9 +388,13 @@ def get(ctx, scenes: list[dict] | None = None) -> dict:
     return b
 
 
-def reject(ctx, reason: str) -> None:
-    """QA окшоштук тапса: концепция жокко чыгарылат — кийинки иштетүүдө ЖАҢЫ концепция түзүлөт."""
+def reject(ctx, reason: str, rework_from: str = "s4_subtitles") -> None:
+    """QA окшоштук тапса: концепция жокко чыгарылат — кийинки иштетүүдө ЖАҢЫ концепция түзүлөт.
+    rework_from — кайсы этаптан кайра: монтаж окшош → s4; кадрлардын өзү окшош (клиптер) → s5 (жаңы клиптер)."""
     entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
+    order = ("s4_subtitles", "s5_visuals")
+    cur = entry.get("rework_from")
+    entry["rework_from"] = rework_from if cur not in order or order.index(rework_from) > order.index(cur) else cur
     old = entry.pop("edit_brief", None)
     if old:
         entry.setdefault("rejected_briefs", []).append({"name": old.get("name"), "reason": reason[:200]})

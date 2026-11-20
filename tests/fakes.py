@@ -28,13 +28,12 @@ def make_script(n_words: int = 1150, seed: str = "") -> str:
 
 def fake_source(asset_id: str) -> str:
     """Ар клипке өз көрүнүшү (визуалдык салыштыруу жасалма клиптерди «көчүрмө» деп таппасын):
-    testsrc2'нин башка бөлүгү + түс + айландыруу (бай текстура — кыймыл өлчөөсү иштейт, кара экран жок)."""
+    Mandelbrot'тун ар башка жери/масштабы — бай текстура (кыймыл өлчөөсү иштейт), кара экран эмес."""
     import hashlib
 
     k = int(hashlib.md5(asset_id.encode()).hexdigest(), 16)
-    x, y = k % 320, (k // 320) % 180
-    flip = ("", ",hflip", ",vflip", ",hflip,vflip")[k % 4]
-    return f"testsrc2=size=960x540:rate=30,crop=640:360:{x}:{y},hue=h={k % 360}:s={1 + (k % 3) / 2}{flip}"
+    return (f"mandelbrot=size=640x360:rate=30:start_x={-1.6 + (k % 997) / 800:.4f}:"
+            f"start_y={-0.6 + (k // 997 % 991) / 800:.4f}:start_scale={0.4 + (k % 13) / 10:.2f}:outer=normalized_iteration_count")
 
 
 class FakeGemini:

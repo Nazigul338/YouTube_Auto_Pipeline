@@ -352,7 +352,8 @@ class QAStage(Stage):
         note = "; ".join(f"{v}: окшош кадр {r['dup_frames']:.0%}, окшош өлчөм {r['similar'] or '-'}"
                          for v, r in res.items()) or "салыштырууга визуалдык изи бар мурунку видео жок"
         if bad:
-            ecm.reject(ctx, "визуалдык окшош: " + ", ".join(bad))
+            dup = any(r["dup_frames"] >= vc.DUP_LIMIT for r in bad.values())
+            ecm.reject(ctx, "визуалдык окшош: " + ", ".join(bad), "s5_visuals" if dup else "s4_subtitles")
             note += " → жаңы концепция менен КАЙРА МОНТАЖ"
         rep.add("visual_original", "Даяр видео мурункулардан визуалдык айырмаланат (кадр, түс, композиция, ыргак)",
                 not bad, note)

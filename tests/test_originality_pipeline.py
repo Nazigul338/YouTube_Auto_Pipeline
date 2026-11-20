@@ -128,11 +128,15 @@ class TestOriginalityPipeline(unittest.TestCase):
         """2-видеого 1-видеонун концепциясы атайын берилет (шаблон көчүрүү) → QA табат → жаңы концепция →
         монтаж s4'төн АВТОМАТТЫК кайра → видео даяр болот."""
         p1 = self.make("Почему мы откладываем важные дела", "Video_001")
-        reg = self.store.load_registry()
-        b1 = reg["videos"]["Video_001"]["edit_brief"]
-        reg["videos"]["Video_002"] = {"edit_brief": dict(b1)}                # көчүрмө концепция
-        self.store.save_registry(reg)
-        p2 = self.make("Как перестать бояться чужого мнения", "Video_002")
+        b1 = self.store.load_registry()["videos"]["Video_001"]["edit_brief"]
+        real_create, calls = ec.create, []
+
+        def create(ctx, scenes, title=""):                               # 1-жолу: шаблон көчүрмөсү (текшерүүсүз)
+            calls.append(1)
+            return dict(b1, checks={}) if len(calls) == 1 else real_create(ctx, scenes, title)
+
+        with mock.patch.object(ec, "create", side_effect=create):
+            p2 = self.make("Как перестать бояться чужого мнения", "Video_002")
         e2 = self.store.load_registry()["videos"]["Video_002"]
         self.assertEqual(e2.get("reworks"), 1, e2.get("rework_log"))
         self.assertEqual(e2["rejected_briefs"][0]["name"], b1["name"])

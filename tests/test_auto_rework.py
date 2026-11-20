@@ -58,3 +58,22 @@ class TestAutoRework(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestReworkFrom(unittest.TestCase):
+    def test_duplicate_frames_restart_from_visuals(self):
+        from types import SimpleNamespace
+        from pathlib import Path
+        import tempfile
+        from pipeline import edit_concept as ec
+
+        reg = {"videos": {"V": {"edit_brief": {"name": "a"}}}}
+        ctx = SimpleNamespace(registry=reg, video_id="V", path=lambda *p: Path(tempfile.mkdtemp()).joinpath(*p))
+        ec.reject(ctx, "монтаж окшош")
+        self.assertEqual(reg["videos"]["V"]["rework_from"], "s4_subtitles")
+        reg["videos"]["V"]["edit_brief"] = {"name": "b"}
+        ec.reject(ctx, "кадрлар окшош", "s5_visuals")                       # клиптердин өзү окшош → жаңы клиптер
+        self.assertEqual(reg["videos"]["V"]["rework_from"], "s5_visuals")
+        reg["videos"]["V"]["edit_brief"] = {"name": "c"}
+        ec.reject(ctx, "монтаж", "s4_subtitles")                             # эртерээк этап сакталат
+        self.assertEqual(reg["videos"]["V"]["rework_from"], "s5_visuals")
