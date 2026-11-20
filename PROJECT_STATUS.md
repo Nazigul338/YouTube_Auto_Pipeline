@@ -250,7 +250,11 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
        (эртеси сакталган CDN шилтемеси иштебей калды; HTTP коду логго жазылчу эмес). Оңдоо: `Stock.refresh_url()` — ID боюнча API'ден жаңы
        шилтеме, `ensure_media` аны колдонуп shots.json'го сактайт; клип өчүрүлгөн болсо — так ката (rerun_from s5). Ката билдирүүсүндө HTTP коду.
        Тест: tests/test_brand_filter.py::TestRefreshUrl. Кайра: rerun_from=s8_render.
-     ▶️ **run #44664216314** (rerun_from=s8_render, sound_effects ✓).
+     ✅ **run #44664216314 SUCCESS** (03:53 UTC): pixabay:5277 бул жолу эски шилтеме менен жүктөлдү (мурунку ката убактылуу болгон; refresh коду иштеген жок).
+       QA: music_audible ✅ 10.1 LU, sfx_license ✅ 12 аудио, sfx_level ✅ 11.0 LU (21 эффект паузада + 9 фон), −14.3 LUFS.
+       ❌ (кошумча) AI маани баалоосу 2.7/5 (10 кадр) — мааниге алыс кадрлар (мультфильм ж.б.) — колдонуучунун уруксатын күтөт.
+       Видео: https://drive.google.com/file/d/1eTYFgfh0EMFFk-I95D8jjgYJ_tgKpJ35/view ; 60 сек: https://drive.google.com/file/d/1L_AwR07i_jWvKxuCohkGCZFLEIRHIjb0/view
+       Колдонуучуга угуу үчүн убакыттар берилди (0:11 boom, 0:43 whoosh, 1:17 drone, 1:42 boom+жамгыр, 6:17 шамал, 9:06 толкун). Колдонуучунун угуп баалоосу күтүлөт.
    Эскертүү: cinematic_test'ти кезекке коюудан мурун make-video тобунда pending жок экенин текшер.
    Drive'дагы «YouTube Audio Library» файлдары — 13 музыка трек гана (Music/), үн эффекти эмес.
    ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
