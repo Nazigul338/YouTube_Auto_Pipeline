@@ -91,14 +91,14 @@ def audible_mode(ctx: Context) -> bool:
 
 
 def mix(ctx: Context, track_path: Path, total: float, sfx_bed: Path | None = None,
-        sfx_hits: Path | None = None, audible: bool = False) -> dict:
+        sfx_hits: Path | None = None, audible: bool = False, level: float = 0.0) -> dict:
     voice = ctx.path("audio", "voice.wav")
     bed = ctx.path("audio", "music_bed.wav")
     out = ctx.path("audio", "mix.wav")
     # 1) музыканын «төшөгү»: цикл, узактык, деңгээл, жумшак башталыш/аяктоо
     media.run(["ffmpeg", "-y", "-v", "error", "-stream_loop", "-1", "-i", str(track_path),
                "-t", f"{total:.3f}", "-af",
-               f"loudnorm=I={AUDIBLE_BED_LUFS if audible else MUSIC_BED_LUFS}:TP=-6:LRA=11,afade=t=in:d=2.5,"
+               f"loudnorm=I={(AUDIBLE_BED_LUFS + level) if audible else MUSIC_BED_LUFS}:TP=-6:LRA=11,afade=t=in:d=2.5,"
                f"afade=t=out:st={max(0.0, total - 3.5):.3f}:d=3.5",
                "-ar", "48000", "-ac", "2", str(bed)], "музыканы даярдоо")
     # 2) диктор сүйлөгөндө басаңдатуу + аралаштыруу + акыркы деңгээл
@@ -171,6 +171,10 @@ class MusicStage(Stage):
                 ctx.store.save_music_tags(tags)
 
         mood = video_mood(scenes)
+        from .. import edit_concept
+        brief = edit_concept.get(ctx, scenes) if edit_concept.enabled(ctx) else None
+        if brief and brief.get("music_mood") and any(v.get("mood") == brief["music_mood"] for v in tags.values()):
+            mood = brief["music_mood"]          # концепциянын музыкалык атмосферасы
         track, why = pick_track(tracks, tags, mood, ctx.registry, ctx.video_id)
         if track is None:
             raise StageError(f"Музыка тандалган жок: {why}")
@@ -186,7 +190,8 @@ class MusicStage(Stage):
             stale = ctx.path("music", "sfx.json")
             if stale.exists():
                 stale.unlink()   # мурунку сынактын эффекттери бул жолу колдонулбайт
-        levels = mix(ctx, track.path, total, sfx_bed, sfx_hits, audible=audible_mode(ctx))
+        levels = mix(ctx, track.path, total, sfx_bed, sfx_hits, audible=audible_mode(ctx),
+                     level=float((brief or {}).get("music_level", 0.0)))
         rel = levels["voice_lufs"] - levels["bed_lufs"]
         if levels.get("music_ducked_lufs") is not None:   # СЫНАК: чыныгы угулган деңгээл
             rel = levels["voice_lufs"] - levels["music_ducked_lufs"]
@@ -215,5 +220,7 @@ def ensure_mix(ctx: Context) -> Path:
         info = json.loads(ctx.path("music", "music.json").read_text(encoding="utf-8"))
         total = json.loads(ctx.path("clips", "shots.json").read_text(encoding="utf-8"))["total"]
         bed, hits = sfx.tracks_for_mix(ctx, total)
-        mix(ctx, ctx.cfg.music_root / info["track"], total, bed, hits, audible=audible_mode(ctx))
+        b = ctx.registry.get("videos", {}).get(ctx.video_id, {}).get("edit_brief") or {}
+        mix(ctx, ctx.cfg.music_root / info["track"], total, bed, hits, audible=audible_mode(ctx),
+            level=float(b.get("music_level", 0.0)) if audible_mode(ctx) else 0.0)
     return out

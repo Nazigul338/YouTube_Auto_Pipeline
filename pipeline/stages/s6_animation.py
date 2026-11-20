@@ -83,14 +83,14 @@ def choose_concept(registry: dict, video_id: str, theme: str | None = None) -> s
     return min(allowed, key=lambda k: (used[k], (int(hashlib.md5(k.encode()).hexdigest(), 16) ^ seed) % 997))
 
 
-def card_items(scenes: list[dict], scene_times: dict[int, dict]) -> list[dict]:
+def card_items(scenes: list[dict], scene_times: dict[int, dict], min_gap: float = 12) -> list[dict]:
     """Карточкалар: [{start, end, text}] (ASS жана HyperFrames экөө тең ушуну колдонот)."""
     items = []
     last_end = -99.0
     for s in scenes:
         txt = (s.get("on_screen_text") or "").strip().replace("{", "").replace("}", "")
         t = scene_times.get(s["id"])
-        if not txt or not t or t["start"] - last_end < 12:   # карточкалар сейрек болсун
+        if not txt or not t or t["start"] - last_end < min_gap:   # карточкалар сейрек (концепцияга жараша)
             continue
         start = t["start"] + 0.25
         end = min(start + 2.6, t["end"])
@@ -106,13 +106,13 @@ def card_line(c: dict) -> str:
             r"{\fad(260,320)\fscx92\fscy92\t(0,380,\fscx100\fscy100)\blur0.6}" + c["text"])
 
 
-def card_events(scenes: list[dict], scene_times: dict[int, dict], concept: dict) -> list[str]:
+def card_events(scenes: list[dict], scene_times: dict[int, dict], concept: dict, min_gap: float = 12) -> list[str]:
     ev = []
     last_end = -99.0
     for s in scenes:
         txt = (s.get("on_screen_text") or "").strip().replace("{", "").replace("}", "")
         t = scene_times.get(s["id"])
-        if not txt or not t or t["start"] - last_end < 12:   # карточкалар сейрек болсун
+        if not txt or not t or t["start"] - last_end < min_gap:   # карточкалар сейрек (концепцияга жараша)
             continue
         start = t["start"] + 0.25
         end = min(start + 2.6, t["end"])
@@ -143,10 +143,12 @@ class AnimationStage(Stage):
         name = choose_concept(ctx.registry, ctx.video_id, theme)
         ec = None
         from .. import edit_concept
-        if cine and edit_concept.enabled(ctx):   # ар видеонун өз монтаж концепциясы (оригиналдуулук)
+        if cine and edit_concept.enabled(ctx):   # ар видеонун ӨЗ чыгармачылык концепциясы (оригиналдуулук)
             ec = edit_concept.get(ctx, scenes)
-            name = ec["grade"]
-        concept = CONCEPTS[name]
+            name = ec["name"]
+            concept = edit_concept.concept_params(ec)
+        else:
+            concept = CONCEPTS[name]
         if cinematic.blocked_reason(ctx.store):
             ctx.log("   ⚠️ " + cinematic.blocked_reason(ctx.store))
         prev_trans = None
@@ -167,8 +169,9 @@ class AnimationStage(Stage):
                     used_black = sum(1 for p_ in plan if (p_["transition_out"] or {}).get("type") == "fadeblack")
                     prev_trans = cinematic.transition_for(
                         rng, prev_trans, sc["emotion"], by_id[nxt["scene"]]["emotion"], used_black, n_scenes,
-                        palette=edit_concept.TRANSITIONS.get(ec["transitions"]) if ec else None)
-                    trans = {"type": prev_trans, "dur": 0.0 if prev_trans == "cut" else cinematic.TRANSITION_SEC}
+                        palette=edit_concept.transition_palette(ec) if ec else None)
+                    trans = {"type": prev_trans, "dur": 0.0 if prev_trans == "cut" else
+                             (ec["transition_sec"] if ec else cinematic.TRANSITION_SEC)}
                 else:
                     trans = {"type": rng.choice(concept["transitions"]), "dur": 0.5}
             else:
@@ -181,14 +184,16 @@ class AnimationStage(Stage):
             from .. import motion as motion_v2
 
             mrng = random.Random(int(hashlib.md5((ctx.video_id + "motion").encode()).hexdigest(), 16))
-            prefer = edit_concept.MOTION.get(ec["motion"]) if ec else None
+            prefer = edit_concept.motion_prefer(ec) if ec else None
+            scale = ec["motion_intensity"] if ec else 1.0
             for p_, m in zip(plan, motion_v2.plan_motions(shots, by_id, mrng, prefer=prefer)):
-                p_["motion"], p_["intensity"] = m["motion"], m["intensity"]
+                p_["motion"], p_["intensity"] = m["motion"], round(m["intensity"] * scale, 2)
 
-        cards = card_events(scenes, scene_times, concept)
+        gap = 4.0 * concept.get("card_every", 3)       # концепция: карточкалардын жыштыгы
+        cards = card_events(scenes, scene_times, concept, gap)
         if cine:   # HyperFrames үчүн структуралуу тизме (8-этап колдонот; иштебесе ASS калат)
             ctx.path("animation", "cards.json").write_text(
-                json.dumps(card_items(scenes, scene_times), ensure_ascii=False, indent=1), encoding="utf-8")
+                json.dumps(card_items(scenes, scene_times, gap), ensure_ascii=False, indent=1), encoding="utf-8")
         header = ("[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n"
                   "ScaledBorderAndShadow: yes\n\n[V4+ Styles]\n"
                   "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "

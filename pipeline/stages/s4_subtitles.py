@@ -183,13 +183,18 @@ class SubtitlesStage(Stage):
         ctx.log(f"   Субтитр шрифти: {font}, {FONT_SIZE} px, түбүнөн {MARGIN_V} px")
         header, hl = ASS_HEADER.format(font=font, size=FONT_SIZE, margin=MARGIN_V), HIGHLIGHT
         from .. import edit_concept
-        if edit_concept.enabled(ctx):   # ар видеонун өз субтитр стили (оригиналдуулук)
-            st = edit_concept.SUBTITLES[edit_concept.get(ctx, scenes)["subtitles"]]
-            header = header.replace(
-                f"Style: Sub,{font},{FONT_SIZE},&H00FFFFFF,&H00FFFFFF,&H00101010,&H96000000,-1,0,0,0,100,100,0.6,0,1,4.4,2.0,",
-                f"Style: Sub,{font},{st['size']},{st['primary']},{st['primary']},{st['outline']},{st['back']},"
-                f"-1,0,0,0,100,100,0.6,0,{st['border']},{st['outline_w']},{st['shadow']},")
-            hl = "{\\c" + st["highlight"] + "}"
+        if edit_concept.enabled(ctx):   # ар видеонун ӨЗ концепциясынын субтитр стили (оригиналдуулук)
+            import re as _re
+
+            b = edit_concept.get(ctx, scenes)
+            fam = {"Montserrat Bold": "Montserrat", "DejaVu Sans Bold": "DejaVu Sans",
+                   "DejaVu Serif Bold": "DejaVu Serif"}.get(b["subtitles"]["font"], b["subtitles"]["font"])
+            sfont = pick_font(fam)
+            style, hl = edit_concept.subtitle_style(b, sfont, MARGIN_V)
+            header = _re.sub(r"Style: Sub,[^\n]*", lambda m: style, header)
+            ctx.log(f"   Субтитр стили (концепция «{b['name']}»): {sfont}, {b['subtitles']['size']} px, "
+                    f"{'кутуча' if b['subtitles']['box'] else 'контур'}, түс {b['subtitles']['primary']}/"
+                    f"{b['subtitles']['highlight']}")
         ass = [header]
         srt = []
         for n_, c in enumerate(cues, 1):

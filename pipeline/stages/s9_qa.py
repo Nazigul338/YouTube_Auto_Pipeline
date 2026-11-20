@@ -257,51 +257,76 @@ class QAStage(Stage):
                 f"{n} кадр, статикалык {len(static)}, план↔өлчөө {r['matched']}/{r['judged']} ({rate:.0%}), "
                 f"түр {len(r['by_type'])} (эң көп {share:.0%})")
 
+    @staticmethod
+    def script_profile(ctx) -> dict:
+        """Сценарийдин структурасы жана hook (биринчи 1–2 сүйлөм)."""
+        try:
+            text = ctx.path("script", "script.txt").read_text(encoding="utf-8")
+        except Exception:
+            return {}
+        paras = [p for p in re.split(r"\n\s*\n", text) if p.strip()]
+        sents = re.split(r"(?<=[.!?…])\s+", text.strip())
+        hook = " ".join(sents[:2])[:240]
+        return {"hook": hook, "hook_type": "question" if "?" in " ".join(sents[:2]) else "statement",
+                "paragraphs": len(paras), "questions": text.count("?"),
+                "examples": len(re.findall(r"(?i)представьте|возьм[её]м|например|по имени", text))}
+
+    @staticmethod
+    def _jacc(a: str, b: str) -> float:
+        wa, wb = set(re.findall(r"\w{4,}", a.lower())), set(re.findall(r"\w{4,}", b.lower()))
+        return len(wa & wb) / len(wa | wb) if wa and wb else 0.0
+
     def check_originality(self, ctx, rep, music: dict, meta: dict) -> None:
         """ОРИГИНАЛДУУЛУК — №1 приоритет (YouTube «Inauthentic content», 2025-07-15; колдонуучу 2026-11-20).
 
-        Жаңы видео ар бир мурунку ДАЯР видео менен салыштырылат: монтаж концепциясы (түс, ыргак, кыймыл, өтүүлөр,
-        субтитр стили — edit_concept), музыка трек/маанай, баяндоо структурасы, сценарий. Монтаж өлчөмдөрүнөн кеминде
-        MIN_DIFF жана жалпы 8 белгиден кеминде 4 айырмаланбаса — видео ДАЯР ЭМЕС (милдеттүү).
+        Жаңы видео ар бир мурунку ДАЯР видео менен салыштырылат:
+          монтаж концепциясы — 7 топ (түс, ыргак, кыймыл, өтүүлөр, субтитр, музыка атмосферасы, визуалдык мотивдер);
+          музыка трек; сценарийдин баяндоо стили/структурасы; hook (башталышы); сценарий окшоштугу (s1).
+        Окшош болсо — видео ДАЯР ЭМЕС (милдеттүү) жана концепция жокко чыгарылат: кайра иштетүүдө ЖАҢЫ концепция түзүлөт.
         """
         from .. import edit_concept as ecm
 
-        plan = json.loads(ctx.path("animation", "plan.json").read_text(encoding="utf-8"))
         entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
-        ec = entry.get("edit_concept") or {}
-        mine = ecm.fingerprint(entry)
-        mine["grade"] = mine.get("grade") or plan.get("concept")
-        mine.update({"music": (music.get("license") or {}).get("file"), "music_mood": music.get("mood"),
-                     "narrative": meta.get("style")})
-        entry["fingerprint"] = mine
-        rows, worst_edit, worst_all = [], None, None
+        brief = entry.get("edit_brief")
+        prof = self.script_profile(ctx)
+        mine = {"music": (music.get("license") or {}).get("file"), "music_mood": music.get("mood"),
+                "narrative": meta.get("style"), **prof}
+        entry["fingerprint"] = {**mine, "brief": (brief or {}).get("name")}
+        rows, problems = [], []
         for vid, v in ecm.finished_others(ctx.registry, ctx.video_id).items():
-            fp = dict(ecm.fingerprint(v))
-            old = v.get("fingerprint") or {}
-            fp.update({"music": old.get("music") or v.get("music"), "music_mood": old.get("music_mood"),
-                       "narrative": old.get("style") or old.get("narrative") or v.get("style")})
-            d_edit = sum(1 for k in ecm.DIMS if mine.get(k) != fp.get(k))
-            same = [k for k in mine if mine.get(k) and fp.get(k) == mine.get(k)]
-            d_all = len(mine) - len(same)
-            rows.append((vid, d_edit, d_all, same))
-            worst_edit = d_edit if worst_edit is None else min(worst_edit, d_edit)
-            worst_all = d_all if worst_all is None else min(worst_all, d_all)
+            c = ecm.compare(brief, ecm.brief_of(v)) if brief else None
+            fp = v.get("fingerprint") or {}
+            same_extra = [k for k in ("music", "narrative") if mine.get(k) and fp.get(k) == mine.get(k)]
+            hook_sim = self._jacc(mine.get("hook", ""), fp.get("hook", "")) if fp.get("hook") else 0.0
+            struct_same = bool(fp.get("paragraphs")) and fp.get("hook_type") == mine.get("hook_type") and \
+                abs(fp.get("paragraphs", 0) - mine.get("paragraphs", 0)) <= 1 and fp.get("narrative") == mine.get("narrative")
+            row = {"video": vid, "concept": c, "same_extra": same_extra, "hook_similarity": round(hook_sim, 2),
+                   "structure_same": struct_same}
+            rows.append(row)
+            if c and not c["ok"]:
+                problems.append(f"{vid}: монтаж концепциясы окшош (бирдей: {', '.join(c['same']) or '-'}; орточо {c['mean']})")
+            if hook_sim >= 0.35:
+                problems.append(f"{vid}: hook окшош ({hook_sim:.2f})")
+            if struct_same and len(same_extra) == 2:
+                problems.append(f"{vid}: баяндоо структурасы + музыка + стиль бирдей")
         sim = (meta.get("similarity") or {})
-        script_ok = not sim.get("too_similar")
-        concept_ok = bool(ec) or not self._cinematic(ctx)
-        edit_ok = worst_edit is None or worst_edit >= ecm.MIN_DIFF
-        all_ok = worst_all is None or worst_all >= 4
-        ok = script_ok and concept_ok and edit_ok and all_ok
-        note = (f"концепция: {', '.join(f'{k}={mine.get(k)}' for k in ecm.DIMS)}; сценарий окшоштугу "
-                f"{sim.get('max_jaccard')}; " + ("; ".join(
-                    f"{v}: монтаж айырма {de}/{len(ecm.DIMS)}, жалпы {da}/{len(mine)}, бирдей {s or '-'}" for v, de, da, s in rows[:5])
-                    or "салыштырууга мурунку даяр видео жок"))
-        rep.add("original_video", "Видео мурунку даяр видеолордон айырмаланат (өз монтаж концепциясы, шаблон эмес)",
-                ok, note)
+        if sim.get("too_similar"):
+            problems.append(f"сценарий мурункуга окшош ({sim.get('max_jaccard')})")
+        if self._cinematic(ctx) and not brief:
+            problems.append("видеонун өз монтаж концепциясы жок")
+        ok = not problems
+        if not ok and brief and any("концепциясы окшош" in p for p in problems):
+            ecm.reject(ctx, "; ".join(problems))      # кайра иштетүүдө жаңы концепция түзүлөт
+        note = (f"концепция «{(brief or {}).get('name', '-')}» ({(brief or {}).get('source', '-')}); hook: "
+                f"{mine.get('hook_type')}; " + ("; ".join(problems) if problems else "; ".join(
+                    f"{r['video']}: {len(r['concept']['differ']) if r['concept'] else '?'}/7 топ айырма, "
+                    f"hook {r['hook_similarity']}" for r in rows[:5]) or "салыштырууга мурунку даяр видео жок"))
+        if not ok:
+            note += " → КАЙРА ИШТЕТИҢИЗ (rerun_from: s4_subtitles): жаңы концепция автоматтык түзүлөт"
+        rep.add("original_video", "Видео мурунку даяр видеолордон айырмаланат (өз концепциясы, шаблон эмес)", ok, note)
         ctx.path("originality.json").write_text(json.dumps(
-            {"fingerprint": mine, "compared": [{"video": v, "edit_diff": de, "all_diff": da, "same": s}
-                                               for v, de, da, s in rows],
-             "min_edit_diff": ecm.MIN_DIFF, "script_similarity": sim}, ensure_ascii=False, indent=1), encoding="utf-8")
+            {"brief": brief, "fingerprint": mine, "compared": rows, "problems": problems,
+             "script_similarity": sim}, ensure_ascii=False, indent=1), encoding="utf-8")
 
     def check_shot_meaning(self, ctx, rep) -> None:
         """Кадрлар темага/сөзгө дал келеби: s5 AI баалоосу БАРДЫК кадр боюнча (s9'дагы 10 кадрдык сынак эмес)."""

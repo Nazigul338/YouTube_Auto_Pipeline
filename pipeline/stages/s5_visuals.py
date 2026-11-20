@@ -172,9 +172,16 @@ class VisualsStage(Stage):
         chosen: dict[int, tuple[Asset, str, float]] = {}
         pool_of: dict[int, Pool] = {}
         reused = 0
+        from .. import edit_concept
+        brief = edit_concept.get(ctx, list(scenes.values())) if quality and edit_concept.enabled(ctx) else None
+        motif_q = 0
         for sid in sorted(by_scene):
             sc = scenes[sid]
             sc.setdefault("theme", detect_theme(sc.get("text", "")))
+            mq = (brief or {}).get("scene_motifs", {}).get(str(sid))
+            if mq and mq.lower() not in {q.lower() for q in sc.get("queries", [])}:
+                sc["queries"] = [mq] + list(sc.get("queries", []))   # концепциянын мотив-кадры биринчи изделет
+                motif_q += 1
             group = by_scene[sid]
             pool = finder.pool_for(sc, len(group), max(s["dur"] for s in group))
             for sh in group:
@@ -182,6 +189,8 @@ class VisualsStage(Stage):
                 reused += tier == "reused"
                 chosen[sh["i"]] = (a, tier, score)
                 pool_of[sh["i"]] = pool
+        if brief:
+            ctx.log(f"   🎬 Концепция «{brief['name']}»: {motif_q} сахнага мотив-кадр издөөсү кошулду")
         ctx.log(f"   Издөө: {finder.calls} Pixabay суроо; кеңейтилген сахна: {finder.expanded_scenes}; "
                 f"кайра колдонулган клип: {reused}")
 
@@ -446,8 +455,15 @@ SHOTS:
         if not todo:
             return {}
         try:
+            from .. import edit_concept
+            world = ""
+            if edit_concept.enabled(ctx):
+                b = (getattr(ctx, "registry", {}) or {}).get("videos", {}).get(getattr(ctx, "video_id", ""), {}).get("edit_brief")
+                if b:
+                    world = (f"\nTHIS VIDEO'S OWN VISUAL WORLD (stay inside it): {b['world']} "
+                             f"Recurring motifs: {', '.join(b['motifs'])}.\n")
             data = gemini_of(ctx).json(self.BEAT_PROMPT.format(
-                rules=VISUAL_RULES, shots="\n".join(f"{i}. {stext[i][:300]}" for i in todo)),
+                rules=VISUAL_RULES + world, shots="\n".join(f"{i}. {stext[i][:300]}" for i in todo)),
                 purpose="visual_beats", temperature=0.7)
         except Exception as e:
             ctx.log(f"   ⚠️ Кадр идеялары жазылган жок ({type(e).__name__}) — сахнанын запас клиптери колдонулат")
