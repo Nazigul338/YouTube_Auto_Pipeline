@@ -42,3 +42,50 @@ class TestBrandFilter(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRefreshUrl(unittest.TestCase):
+    """run #44661498471: сакталган Pixabay шилтемеси эртеси иштеген жок → API'ден ID боюнча жаңы шилтеме."""
+
+    def test_refresh_and_stage_fallback(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from types import SimpleNamespace
+
+        from pipeline.errors import StageError, TransientError
+        from pipeline.stages.s5_visuals import ensure_media
+
+        s = Stock("k")
+        s._get = lambda url, params, headers=None: {"hits": [hit(5277, "road")]} if params.get("id") == "5277" else {"hits": []}
+        self.assertEqual(s.refresh_url("pixabay:5277"), "https://x/5277.mp4")
+        self.assertIsNone(s.refresh_url("pixabay:1"))
+
+        d = Path(tempfile.mkdtemp())
+        (d / "clips").mkdir()
+        shots = [{"i": 0, "file": "a.mp4", "source": "pixabay", "kind": "video", "asset": "pixabay:5277",
+                  "url": "https://old/expired.mp4"}]
+        (d / "clips" / "shots.json").write_text(json.dumps({"total": 3, "shots": shots}))
+        calls = []
+
+        def download(a, dest):
+            calls.append(a.url)
+            if "old" in a.url:
+                raise TransientError("Жүктөө ишке ашкан жок: pixabay:5277 (HTTP 403)")
+            dest.write_bytes(b"x" * 20000)
+            return dest
+
+        s.download = download
+        logs = []
+        ctx = SimpleNamespace(path=lambda *p: d.joinpath(*p), services={"stock": s}, log=logs.append, store=None)
+        ensure_media(ctx)
+        self.assertEqual(calls, ["https://old/expired.mp4", "https://x/5277.mp4"])
+        saved = json.loads((d / "clips" / "shots.json").read_text())["shots"][0]["url"]
+        self.assertEqual(saved, "https://x/5277.mp4")
+        # клип өчүрүлгөн → так ката (rerun_from s5)
+        (d / "clips" / "a.mp4").unlink()
+        shots[0]["asset"] = "pixabay:1"
+        (d / "clips" / "shots.json").write_text(json.dumps({"total": 3, "shots": shots}))
+        with self.assertRaises(StageError) as cm:
+            ensure_media(ctx)
+        self.assertIn("s5_visuals", str(cm.exception))

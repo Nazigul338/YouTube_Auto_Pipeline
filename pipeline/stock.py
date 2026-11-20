@@ -163,6 +163,7 @@ class Stock:
             return dest
         dest.parent.mkdir(parents=True, exist_ok=True)
         tmp = dest.with_suffix(dest.suffix + ".part")
+        last = ""
         for attempt in range(3):
             try:
                 with self.session.get(asset.url, stream=True, timeout=120) as r:
@@ -173,9 +174,40 @@ class Stock:
                             f.write(chunk)
                 tmp.rename(dest)
                 return dest
-            except requests.RequestException:
+            except requests.RequestException as e:
+                last = str(e)[:120]
                 self.sleep(3 * (attempt + 1))
-        raise TransientError(f"Жүктөө ишке ашкан жок: {asset.id}")
+        raise TransientError(f"Жүктөө ишке ашкан жок: {asset.id} ({last})")
+
+    def refresh_url(self, asset_id: str) -> str | None:
+        """Клиптин ЖАҢЫ жүктөө шилтемеси (сакталган шилтеме эскирсе). Клип өчүрүлгөн болсо — None.
+
+        Себеби (run #44661498471): эртеси күнү s8 сакталган Pixabay шилтемесинен pixabay:5277'ни жүктөй алган жок.
+        """
+        src, _, num = asset_id.partition(":")
+        try:
+            if src == "pixabay" and self.pixabay_key:
+                d = self._get("https://pixabay.com/api/videos/", {"key": self.pixabay_key, "id": num})
+                for h in d.get("hits", []):
+                    vids = h.get("videos", {})
+                    for size in ("small", "medium", "large"):
+                        v = vids.get(size) or {}
+                        if (v.get("width") or 0) >= 1920 and v.get("url"):
+                            return v["url"]
+            elif src == "pixabay-img" and self.pixabay_key:
+                d = self._get("https://pixabay.com/api/", {"key": self.pixabay_key, "id": num})
+                for h in d.get("hits", []):
+                    if h.get("largeImageURL"):
+                        return h["largeImageURL"]
+            elif src == "pexels" and self.pexels_key:
+                v = self._get(f"https://api.pexels.com/videos/videos/{num}", {}, {"Authorization": self.pexels_key})
+                files = sorted([f for f in v.get("video_files", []) if (f.get("width") or 0) >= 1920],
+                               key=lambda f: f["width"])
+                if files:
+                    return files[0]["link"]
+        except (StageError, requests.RequestException):
+            return None
+        return None
 
 
 def from_env() -> Stock:

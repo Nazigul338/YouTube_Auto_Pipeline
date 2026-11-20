@@ -246,6 +246,10 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
      Оңдоо (cinematic/TEST гана, production өзгөргөн жок): `s7_music.mix(audible=True)` −21 LUFS + ratio 2.5 → ~12 LU; басаңдатылган
      музыка өзүнчө өлчөнөт (`music_ducked_lufs`), QA `music_audible` 9–16 LU; SFX TRACK_REL hit 11 / bed 17. Тест: tests/test_music_audible.py.
      ▶️ Текшерүү run: **#44661498471** (rerun_from=s7_music, sound_effects ✓).
+     ❌ #44661498471 (02:51 UTC): s7 ✅ — угулган музыка 10.1 LU, эффекттер 11.0 LU (максатта); s8 ❌ «Жүктөө ишке ашкан жок: pixabay:5277»
+       (эртеси сакталган CDN шилтемеси иштебей калды; HTTP коду логго жазылчу эмес). Оңдоо: `Stock.refresh_url()` — ID боюнча API'ден жаңы
+       шилтеме, `ensure_media` аны колдонуп shots.json'го сактайт; клип өчүрүлгөн болсо — так ката (rerun_from s5). Ката билдирүүсүндө HTTP коду.
+       Тест: tests/test_brand_filter.py::TestRefreshUrl. Кайра: rerun_from=s8_render.
    Эскертүү: cinematic_test'ти кезекке коюудан мурун make-video тобунда pending жок экенин текшер.
    Drive'дагы «YouTube Audio Library» файлдары — 13 музыка трек гана (Music/), үн эффекти эмес.
    ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).

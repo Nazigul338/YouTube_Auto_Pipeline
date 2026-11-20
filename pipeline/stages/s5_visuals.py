@@ -25,6 +25,7 @@ from typing import Any
 from .. import media
 from ..clipmemory import ClipMemory
 from ..clipsearch import ClipFinder, Pool, detect_theme
+from ..errors import TransientError
 from ..stock import Asset, from_env
 from .base import Context, Stage, StageError
 
@@ -467,8 +468,19 @@ def ensure_media(ctx: Context) -> list[dict]:
                     raise StageError(f"AI-сүрөт кэште жок: {s['file']}")
                 return
             a = Asset(s["source"], s["kind"], s["asset"], s["url"], 1920, 1080, 0.0, "", "", "", "")
-            stock.download(a, ctx.path("clips", s["file"]))
+            try:
+                stock.download(a, ctx.path("clips", s["file"]))
+            except TransientError as e:
+                fresh = stock.refresh_url(s["asset"]) if hasattr(stock, "refresh_url") else None
+                if not fresh:
+                    raise StageError(f"{e}. Клиптин жаңы шилтемеси табылган жок (балким булактан өчүрүлгөн) — "
+                                     f"5-этаптан кайра иштетиңиз (rerun_from: s5_visuals)") from e
+                ctx.log(f"   ↻ {s['asset']}: эски шилтеме иштебейт — API'ден жаңы шилтеме алынды")
+                a.url = s["url"] = fresh
+                stock.download(a, ctx.path("clips", s["file"]))
 
         with ThreadPoolExecutor(4) as ex:
             list(ex.map(get, missing))
+        # жаңыланган шилтемелер сакталсын (кийинки runner эскисин колдонбосун)
+        ctx.path("clips", "shots.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     return data["shots"]
