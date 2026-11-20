@@ -74,7 +74,8 @@ def requested() -> bool:
 def enabled(store=None) -> bool:
     from . import cinematic
 
-    return requested() and cinematic.enabled(store)
+    # СЫНАК гана: production'го өткөрүлгөн жок (billing жок — колдонуучунун чечими 2026-11-19)
+    return requested() and cinematic.enabled(store) and cinematic.is_test_root(store)
 
 
 def price(model: str) -> float:

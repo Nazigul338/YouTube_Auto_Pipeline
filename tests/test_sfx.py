@@ -269,8 +269,12 @@ class TestModeAndStorage(Base):
         with mock.patch.dict(os.environ, {"YTA_SFX": "1"}):
             self.assertTrue(sfx.enabled(store))
             prod = SimpleNamespace(root_name="YouTube_Auto")
-            self.assertFalse(sfx.enabled(prod))
-            self.assertIn("Өчүк", sfx.blocked_reason(prod))
+            self.assertTrue(sfx.enabled(prod))                       # колдонуучу бекитти 2026-11-20
+            from pipeline import cinematic
+            with mock.patch.object(cinematic, "PRODUCTION_APPROVED", False):
+                self.assertFalse(sfx.enabled(prod))
+                self.assertIn("Өчүк", sfx.blocked_reason(prod))
+            self.assertFalse(sfx.enabled(SimpleNamespace(root_name="Other")))
             self.assertTrue(sfx.enabled(SimpleNamespace(root_name="YouTube_Auto_TEST")))
 
     def test_heavy_and_pull(self):

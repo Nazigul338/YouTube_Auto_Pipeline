@@ -481,7 +481,9 @@ class QAStage(Stage):
                                                          for i in rep.failed))
         url = None
         # cinematic СЫНАГЫ эски видеонун ҮСТҮНӨН жазбайт: өзүнчө аталыш (эски/жаңыны салыштыруу үчүн)
-        suffix = "_cinematic" if self._cinematic(ctx) else ""
+        from .. import cinematic as _cin
+
+        suffix = "_cinematic" if self._cinematic(ctx) and _cin.is_test_root(ctx.store) else ""   # production: <ID>.mp4
         if ctx.store:
             url = ctx.store.publish("Final_Videos", final, f"{ctx.video_id}{suffix}.mp4")
             ctx.store.publish("Licenses", lic, f"{ctx.video_id}_LICENSE.txt")

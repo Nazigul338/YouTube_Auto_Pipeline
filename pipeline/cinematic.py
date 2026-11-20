@@ -25,6 +25,26 @@ import subprocess
 from pathlib import Path
 
 TEST_ROOT = "YouTube_Auto_TEST"
+PROD_ROOT = "YouTube_Auto"
+# Колдонуучунун уруксаты (2026-11-20, «Өткөрө бер»): cinematic монтаж, угулуучу музыка, үн эффекттери жана
+# мотивациялык диктор production'до да иштейт. AI-сүрөттөр — СЫНАК гана (billing жок, колдонуучунун чечими).
+PRODUCTION_APPROVED = True
+
+
+def allowed_root(store=None) -> bool:
+    """СЫНАК папкасы; же колдонуучу бекиткенден кийин production папкасы; LocalStore — тесттер."""
+    from .storage import LocalStore
+
+    if isinstance(store, LocalStore):
+        return True
+    root = root_name(store)
+    return root == TEST_ROOT or (PRODUCTION_APPROVED and root == PROD_ROOT)
+
+
+def is_test_root(store=None) -> bool:
+    from .storage import LocalStore
+
+    return isinstance(store, LocalStore) or root_name(store) == TEST_ROOT
 
 # ---------------------------------------------------------------- режим
 
@@ -39,14 +59,8 @@ def root_name(store=None) -> str:
 
 
 def enabled(store=None) -> bool:
-    """Cinematic режими күйүкпү. Жергиликтүү тесттерде (LocalStore) — желек боюнча гана."""
-    if not requested():
-        return False
-    from .storage import LocalStore
-
-    if isinstance(store, LocalStore):
-        return True
-    return root_name(store) == TEST_ROOT
+    """Cinematic режими күйүкпү (желек + уруксат берилген папка)."""
+    return requested() and allowed_root(store)
 
 
 def blocked_reason(store=None) -> str | None:

@@ -220,6 +220,16 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
 
 ## 8. Кийинки аткарыла турган тапшырмалар (ирети менен)
 
+### 8з. PRODUCTION'ГО ӨТКӨРҮЛДҮ (2026-11-20, колдонуучу: «Өткөрө бер, видео мага жакты»)
+- `cinematic.PRODUCTION_APPROVED = True` + `allowed_root()`: cinematic монтаж, угулуучу музыка (−21 LUFS, жумшак ducking),
+  үн эффекттери (15 синтез CC0, Drive Sound_Effects/), мотивациялык диктор (B) — `YouTube_Auto` папкасында да иштейт.
+- `make_video.yml`, `resume_pending.yml`: Node + HyperFrames кадамы (continue-on-error) жана желектер YTA_CINEMATIC/HYPERFRAMES/SFX/VOICE_STYLE.
+- AI-сүрөттөр — TEST гана (`is_test_root`), billing жок. Production'до акыркы файл `Final_Videos/<ID>.mp4` (суффикссиз).
+- Кайтаруу: `PRODUCTION_APPROVED = False` (бир сап) же workflow'дордон желектерди алып салуу.
+- Production'до биринчи видео менен ЧЫНЫГЫ текшериле элек (TEST'те Video_001 толук өттү: run #44664216314).
+- Ачык: Halloween мультфильм кадры / мааниге алыс кадрлар (AI баа 2.7/5) — оңдоо колдонуучунун жообун күтөт; сценарийде «Ваша красота не обязан» грамматика катасы.
+- Video_001 үчүн обложка + аталыш/хештег/сүрөттөмө даярдалды (8и).
+
 ### 8ж. КИЙИНКИ КАДАМДАР (2026-11-19 жаңыртылды)
 1. ✅ (2026-11-19) Колдонуучу: «өзүң Pixabay'дан ал» → Pixabay API'де SFX жок, сайттан автоматтык жүктөө эрежеге каршы →
    `pipeline/sfx_synth.py`: 15 ОРИГИНАЛДУУ эффект (синтез, CC0, metadata+sha256) түзүлдү.

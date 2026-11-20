@@ -31,14 +31,22 @@ class TestGuard(unittest.TestCase):
             self.assertFalse(cinematic.enabled(DriveStore(FakeDrive(), "YouTube_Auto_TEST")))
 
     def test_on_only_in_test_root(self):
+        """Production — колдонуучунун уруксаты менен гана (PRODUCTION_APPROVED, 2026-11-20); башка папка — өчүк."""
         with mock.patch.dict(os.environ, {"YTA_CINEMATIC": "1"}):
             self.assertTrue(cinematic.enabled(DriveStore(FakeDrive(), "YouTube_Auto_TEST")))
             prod = DriveStore(FakeDrive(), "YouTube_Auto")
-            self.assertFalse(cinematic.enabled(prod))
-            self.assertIn("уруксат", cinematic.blocked_reason(prod))
+            self.assertTrue(cinematic.enabled(prod))
+            self.assertFalse(cinematic.enabled(DriveStore(FakeDrive(), "Other_Folder")))
+            with mock.patch.object(cinematic, "PRODUCTION_APPROVED", False):
+                self.assertFalse(cinematic.enabled(prod))
+                self.assertIn("уруксат", cinematic.blocked_reason(prod))
 
     def test_env_root_without_store(self):
         with mock.patch.dict(os.environ, {"YTA_CINEMATIC": "1", "YTA_DRIVE_FOLDER": "YouTube_Auto"}):
+            self.assertTrue(cinematic.enabled(None))
+            with mock.patch.object(cinematic, "PRODUCTION_APPROVED", False):
+                self.assertFalse(cinematic.enabled(None))
+        with mock.patch.dict(os.environ, {"YTA_CINEMATIC": "1", "YTA_DRIVE_FOLDER": "Other"}):
             self.assertFalse(cinematic.enabled(None))
 
 

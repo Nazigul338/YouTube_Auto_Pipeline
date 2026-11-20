@@ -37,15 +37,15 @@ def requested() -> bool:
 
 
 def enabled(store=None) -> bool:
+    """Желек + уруксат берилген папка (СЫНАК; 2026-11-20ден production да — cinematic.PRODUCTION_APPROVED)."""
     if not requested():
         return False
-    from .storage import LocalStore
+    from . import cinematic
 
-    if isinstance(store, LocalStore):
-        return True
-    root = store.root_name if store is not None and hasattr(store, "root_name") \
-        else os.environ.get("YTA_DRIVE_FOLDER", "")
-    return root == TEST_ROOT
+    if store is None:
+        root = os.environ.get("YTA_DRIVE_FOLDER", "")
+        return root == TEST_ROOT or (cinematic.PRODUCTION_APPROVED and root == cinematic.PROD_ROOT)
+    return cinematic.allowed_root(store)
 
 
 def direction(keywords: list[str] | None = None) -> str:

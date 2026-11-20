@@ -59,6 +59,10 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: FFmpeg жана шрифттер
         run: |
           sudo apt-get update -qq
@@ -74,6 +78,17 @@ jobs:
       - name: Китепканалар
         run: pip install -q -r requirements.txt
 
+      - name: HyperFrames (бекитилген версия) + браузер
+        continue-on-error: true       # иштебесе да видео ASS карточкалары менен жасалат
+        env:
+          HYPERFRAMES_NO_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+        run: |
+          cd tools/hyperframes
+          npm ci --no-fund --no-audit
+          npx hyperframes --version
+          npx hyperframes browser ensure
+
       - name: Тесттер
         env:
           YTA_SKIP_SLOW: "1"   # узак интеграциялык тест ар иштетүүдө керек эмес
@@ -88,6 +103,14 @@ jobs:
           VIDEO_RERUN_FROM: ${{ inputs.rerun_from }}
           VIDEO_STOP_AFTER: ${{ inputs.stop_after }}
           YTA_DRIVE_FOLDER: ${{ inputs.test_run && 'YouTube_Auto_TEST' || 'YouTube_Auto' }}
+          # Колдонуучу бекитти (2026-11-20): cinematic монтаж, угулуучу музыка, үн эффекттери, мотивациялык диктор.
+          # AI-сүрөттөр өчүк (billing жок).
+          YTA_CINEMATIC: "1"
+          YTA_HYPERFRAMES: "1"
+          YTA_SFX: "1"
+          YTA_VOICE_STYLE: motivational
+          HYPERFRAMES_NO_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}

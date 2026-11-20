@@ -97,7 +97,11 @@ legacy/          — эски Colab блокноттору (колдонулба
 API ачкычтары **GitHub Secrets'те гана**; логдо email жашырылат; видео ачык жерге (artifact)
 коюлбайт — Drive'га гана; видео YouTube'га **автоматтык жарыяланбайт**.
 
-## 🎞 Cinematic режими — СЫНАК (TEST гана)
+## 🎞 Cinematic режими — PRODUCTION'до күйүк (колдонуучу бекитти 2026-11-20)
+
+> `🎬 Видео жасоо` жана `🔁 улантуу` workflow'дору: `YTA_CINEMATIC=1`, `YTA_HYPERFRAMES=1`, `YTA_SFX=1`, `YTA_VOICE_STYLE=motivational`.
+> Код коргоосу: `pipeline/cinematic.py: PRODUCTION_APPROVED` (False кылса — кайра TEST гана). Production'до файл `Final_Videos/<ID>.mp4`.
+> AI-сүрөттөр — TEST гана (billing жок).
 
 Негизги өндүрүшкө КОШУЛГАН ЭМЕС: колдонуучунун уруксатысыз production'го өтпөйт.
 - Иштетүү: Actions → **🎞 Cinematic сынак (TEST гана)** → `video_id` (мис. `Video_003`). Ар дайым `YouTube_Auto_TEST`'ке жазат,
@@ -110,7 +114,7 @@ API ачкычтары **GitHub Secrets'те гана**; логдо email жаш
 - FFmpeg Skill (`.claude/skills/ffmpeg-skill`, MIT, v3.10.1): Claude сессияларында колдонулат; `check.py --platform youtube`
   cinematic сынагынын QA'сына кирет.
 
-## 🎙 Мотивациялык диктор — СЫНАК (TEST гана)
+## 🎙 Мотивациялык диктор — PRODUCTION'до күйүк (2026-11-20)
 
 - **Үн лабораториясы:** Actions → **🎙 Үн лабораториясы** → бир эле орусча текст 4 вариантта (Algenib учурдагы / Algenib
   мотивациялык / Orus / Charon). Drive → `YouTube_Auto_TEST/_voice_test/` (үн жана музыка менен MP3), run бетинде таблица:
@@ -136,7 +140,7 @@ API ачкычтары **GitHub Secrets'те гана**; логдо email жаш
 - **Текшерүү:** Actions → `🔬 Мүмкүнчүлүктөрдү сыноо` → `only=image` (1 сүрөт ≈ $0.04).
 
 
-## 🔊 Үн эффекттери (Sound Effects Library) — СЫНАК (TEST гана)
+## 🔊 Үн эффекттери (Sound Effects Library) — PRODUCTION'до күйүк (2026-11-20)
 
 - **Иштетүү:** `🎞 Cinematic сынак` → `rerun_from=s7_music` (же андан мурунку этап), `sound_effects` ✓.
   Код коргоосу: `YTA_SFX=1` + `YouTube_Auto_TEST` (production'да өчүк; желексиз 7-этап мурдагыдай).

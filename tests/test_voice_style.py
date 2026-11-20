@@ -33,7 +33,11 @@ class TestGuardAndText(unittest.TestCase):
     def test_only_test_root(self):
         with mock.patch.dict(os.environ, {"YTA_VOICE_STYLE": "motivational"}):
             self.assertTrue(voice_style.enabled(DriveStore(FakeDrive(), "YouTube_Auto_TEST")))
-            self.assertFalse(voice_style.enabled(DriveStore(FakeDrive(), "YouTube_Auto")))
+            self.assertTrue(voice_style.enabled(DriveStore(FakeDrive(), "YouTube_Auto")))   # бекитилди 2026-11-20
+            from pipeline import cinematic
+            with mock.patch.object(cinematic, "PRODUCTION_APPROVED", False):
+                self.assertFalse(voice_style.enabled(DriveStore(FakeDrive(), "YouTube_Auto")))
+            self.assertFalse(voice_style.enabled(DriveStore(FakeDrive(), "Other")))
         with mock.patch.dict(os.environ, {"YTA_VOICE_STYLE": ""}):
             self.assertFalse(voice_style.enabled(DriveStore(FakeDrive(), "YouTube_Auto_TEST")))
 

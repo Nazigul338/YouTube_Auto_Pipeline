@@ -89,15 +89,12 @@ def requested() -> bool:
 
 
 def enabled(store=None) -> bool:
-    """Желек + СЫНАК папкасы (LocalStore — тесттер). Production'го колдонуучунун уруксаты керек."""
+    """Желек + уруксат берилген папка (СЫНАК; 2026-11-20ден production да — cinematic.PRODUCTION_APPROVED)."""
     if not requested():
         return False
     from . import cinematic
-    from .storage import LocalStore
 
-    if isinstance(store, LocalStore):
-        return True
-    return cinematic.root_name(store) == cinematic.TEST_ROOT
+    return cinematic.allowed_root(store)
 
 
 def blocked_reason(store=None) -> str | None:
