@@ -181,13 +181,22 @@ class SubtitlesStage(Stage):
         kw_index = self.keyword_index(scenes, scene_times, raw_words)
         font = pick_font(ctx.cfg.niche_data.get("subtitle_font"))
         ctx.log(f"   Субтитр шрифти: {font}, {FONT_SIZE} px, түбүнөн {MARGIN_V} px")
-        ass = [ASS_HEADER.format(font=font, size=FONT_SIZE, margin=MARGIN_V)]
+        header, hl = ASS_HEADER.format(font=font, size=FONT_SIZE, margin=MARGIN_V), HIGHLIGHT
+        from .. import edit_concept
+        if edit_concept.enabled(ctx):   # ар видеонун өз субтитр стили (оригиналдуулук)
+            st = edit_concept.SUBTITLES[edit_concept.get(ctx, scenes)["subtitles"]]
+            header = header.replace(
+                f"Style: Sub,{font},{FONT_SIZE},&H00FFFFFF,&H00FFFFFF,&H00101010,&H96000000,-1,0,0,0,100,100,0.6,0,1,4.4,2.0,",
+                f"Style: Sub,{font},{st['size']},{st['primary']},{st['primary']},{st['outline']},{st['back']},"
+                f"-1,0,0,0,100,100,0.6,0,{st['border']},{st['outline_w']},{st['shadow']},")
+            hl = "{\\c" + st["highlight"] + "}"
+        ass = [header]
         srt = []
         for n_, c in enumerate(cues, 1):
             words = []
             for i in c["idx"]:
                 w = raw_words[i].replace("{", "(").replace("}", ")")
-                words.append(HIGHLIGHT + w + r"{\c&HFFFFFF&}" if i in kw_index else w)
+                words.append(hl + w + r"{\c&HFFFFFF&}" if i in kw_index else w)
             text = " ".join(words)
             plain = " ".join(raw_words[i] for i in c["idx"])
             ass.append(f"Dialogue: 0,{ts_ass(c['start'])},{ts_ass(c['end'])},Sub,,0,0,0,,"

@@ -105,14 +105,21 @@ _GROUP = {"calm": "low", "reflective": "low", "sad": "low", "hopeful": "up", "in
           "determined": "up", "tense": "high", "dramatic": "high"}
 
 
-def transition_for(rng, prev: str | None, emo_a: str, emo_b: str, used_black: int, total: int) -> str:
+def transition_for(rng, prev: str | None, emo_a: str, emo_b: str, used_black: int, total: int,
+                   palette: list[str] | None = None) -> str:
     """Сахналар ортосундагы өтүү — эмоциянын өзгөрүшүнө жараша (мазмунга ылайык):
     ошол эле маанай → dissolve/fade; энергия көтөрүлсө → slide; чыңалуудан тынчтыкка (бурулуш) → караңгы аркылуу
     (fadeblack, ≤8% жана катар эмес)."""
     a, b = _GROUP.get(emo_a, "low"), _GROUP.get(emo_b, "low")
-    black_ok = prev != "fadeblack" and used_black < max(1, int(0.08 * total))
+    limit = 0.15 if palette and "fadeblack" in palette else 0.08
+    black_ok = prev != "fadeblack" and used_black < max(1, int(limit * total))
     if a == "high" and b == "low" and black_ok and rng.random() < 0.6:
         return "fadeblack"
+    if palette:   # видеонун монтаж концепциясынын өтүү палитрасы (edit_concept.TRANSITIONS)
+        opts = [t for t in palette if t != "fadeblack" or black_ok]
+        if a != b and b in ("up", "high"):
+            opts = [t for t in opts if t.startswith("smooth") or t == "cut"] or opts
+        return rng.choice(opts or ["fade"])
     if a != b and (b in ("up", "high")):
         return rng.choice(["smoothleft", "smoothright"])
     return rng.choice(["dissolve", "fade", "dissolve"])

@@ -16,6 +16,10 @@
   кодго кантип киргизилген: [docs/RULES_IMPLEMENTATION.md](docs/RULES_IMPLEMENTATION.md)
 - 🤖 Claude үчүн сессия тартиби: [CLAUDE.md](CLAUDE.md)
 
+## 🥇 Оригиналдуулук — №1 приоритет
+Ар видео өз монтаж концепциясы менен жасалат жана мурунку даяр видеолор менен салыштырылат; окшош болсо QA
+видеону бербейт. Толук эреже: CLAUDE.md, docs/VIDEO_RULES.md (0-бөлүм), docs/RULES_IMPLEMENTATION.md.
+
 ## Керектүү API ачкычтар (GitHub → Settings → Secrets and variables → Actions)
 
 | Secret | Милдеттүүбү | Эмне үчүн |
@@ -62,6 +66,7 @@ pipeline/
   asr.py         — Whisper (PyAV'сыз)
   stock.py       — Pixabay / Pexels (беттөө менен; бренд/логотиптүү жана мультфильм/анимация клиптери чыпкаланат, Pixabay video_type=film)
   ai_images.py   — Gemini AI-сүрөттөр (СЫНАК): prompt, 16:9, бюджет/баа, Drive AI_Images/ кэши
+  edit_concept.py — ар видеонун ӨЗ монтаж концепциясы (түс, ыргак, кыймыл, өтүү, субтитр) — мурункулардан айырмалуу
   visual_rules.py — кадр тандоонун жалпы эрежелери: маани (метафора → турмуштук кырдаал), монетизация, шаблонго каршы
   thumbnail.py   — обложка видеонун кадрынан (1280×720, жазуу, градиент) → Drive Thumbnails/ (`🖼 Обложка` workflow)
   sfx_synth.py   — оригиналдуу үн эффекттерин синтездөө (CC0, жүктөө жок)

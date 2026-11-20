@@ -226,6 +226,7 @@ class QAStage(Stage):
             self.check_uniformity(ctx, rep, final, timing, total)
             self.check_motion(ctx, rep)
             self.check_originality(ctx, rep, music, meta)
+            self.check_shot_meaning(ctx, rep)
             self.check_policy(ctx, rep, clip_lic, music, meta)
             self.check_ai_images(ctx, rep, shots)
         self.check_subtitle_layout(ctx, rep)
@@ -257,35 +258,89 @@ class QAStage(Stage):
                 f"түр {len(r['by_type'])} (эң көп {share:.0%})")
 
     def check_originality(self, ctx, rep, music: dict, meta: dict) -> None:
-        """Бул видео мурункулардан айырмаланабы: түс концепциясы, музыка, баяндоо стили, кыймыл профили, клиптер,
-        сценарий. Ар бир мурунку видео менен кеминде 2 белги айырмаланышы керек (шаблондук массалык өндүрүш эмес)."""
+        """ОРИГИНАЛДУУЛУК — №1 приоритет (YouTube «Inauthentic content», 2025-07-15; колдонуучу 2026-11-20).
+
+        Жаңы видео ар бир мурунку ДАЯР видео менен салыштырылат: монтаж концепциясы (түс, ыргак, кыймыл, өтүүлөр,
+        субтитр стили — edit_concept), музыка трек/маанай, баяндоо структурасы, сценарий. Монтаж өлчөмдөрүнөн кеминде
+        MIN_DIFF жана жалпы 8 белгиден кеминде 4 айырмаланбаса — видео ДАЯР ЭМЕС (милдеттүү).
+        """
+        from .. import edit_concept as ecm
+
         plan = json.loads(ctx.path("animation", "plan.json").read_text(encoding="utf-8"))
-        mr = ctx.path("animation", "motion_report.json")
-        top_motion = None
-        if mr.exists():
-            bt = json.loads(mr.read_text(encoding="utf-8"))["by_type"]
-            top_motion = max(bt, key=bt.get) if bt else None
-        mine = {"concept": plan.get("concept"), "music": (music.get("license") or {}).get("file"),
-                "style": meta.get("style"), "top_motion": top_motion}
         entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
+        ec = entry.get("edit_concept") or {}
+        mine = ecm.fingerprint(entry)
+        mine["grade"] = mine.get("grade") or plan.get("concept")
+        mine.update({"music": (music.get("license") or {}).get("file"), "music_mood": music.get("mood"),
+                     "narrative": meta.get("style")})
         entry["fingerprint"] = mine
-        rows, worst = [], None
-        for vid, v in ctx.registry.get("videos", {}).items():
-            if vid == ctx.video_id or not (v.get("final") or v.get("final_cinematic")):
-                continue
-            fp = v.get("fingerprint") or {"concept": v.get("concept"), "music": None, "style": v.get("style"),
-                                           "top_motion": None}
-            diff = sum(1 for k in mine if mine[k] and fp.get(k) and mine[k] != fp.get(k)) + \
-                sum(1 for k in mine if mine[k] and not fp.get(k)) * 0      # белгисиз — эсептелбейт
-            same = [k for k in mine if mine[k] and fp.get(k) == mine[k]]
-            rows.append((vid, diff, same))
-            worst = min(worst, diff) if worst is not None else diff
+        rows, worst_edit, worst_all = [], None, None
+        for vid, v in ecm.finished_others(ctx.registry, ctx.video_id).items():
+            fp = dict(ecm.fingerprint(v))
+            old = v.get("fingerprint") or {}
+            fp.update({"music": old.get("music") or v.get("music"), "music_mood": old.get("music_mood"),
+                       "narrative": old.get("style") or old.get("narrative") or v.get("style")})
+            d_edit = sum(1 for k in ecm.DIMS if mine.get(k) != fp.get(k))
+            same = [k for k in mine if mine.get(k) and fp.get(k) == mine.get(k)]
+            d_all = len(mine) - len(same)
+            rows.append((vid, d_edit, d_all, same))
+            worst_edit = d_edit if worst_edit is None else min(worst_edit, d_edit)
+            worst_all = d_all if worst_all is None else min(worst_all, d_all)
         sim = (meta.get("similarity") or {})
         script_ok = not sim.get("too_similar")
-        ok = script_ok and (worst is None or worst >= 2 or all(len(s) <= 2 for _, _, s in rows))
-        note = f"сценарий окшоштугу {sim.get('max_jaccard')}; " + ("; ".join(
-            f"{v}: айырма {d}, бирдей {s or '-'}" for v, d, s in rows[:4]) or "салыштырууга мурунку видео жок")
-        rep.add("original_video", "Видео мурункулардан визуалдык/мазмундук айырмаланат", ok, note)
+        concept_ok = bool(ec) or not self._cinematic(ctx)
+        edit_ok = worst_edit is None or worst_edit >= ecm.MIN_DIFF
+        all_ok = worst_all is None or worst_all >= 4
+        ok = script_ok and concept_ok and edit_ok and all_ok
+        note = (f"концепция: {', '.join(f'{k}={mine.get(k)}' for k in ecm.DIMS)}; сценарий окшоштугу "
+                f"{sim.get('max_jaccard')}; " + ("; ".join(
+                    f"{v}: монтаж айырма {de}/{len(ecm.DIMS)}, жалпы {da}/{len(mine)}, бирдей {s or '-'}" for v, de, da, s in rows[:5])
+                    or "салыштырууга мурунку даяр видео жок"))
+        rep.add("original_video", "Видео мурунку даяр видеолордон айырмаланат (өз монтаж концепциясы, шаблон эмес)",
+                ok, note)
+        ctx.path("originality.json").write_text(json.dumps(
+            {"fingerprint": mine, "compared": [{"video": v, "edit_diff": de, "all_diff": da, "same": s}
+                                               for v, de, da, s in rows],
+             "min_edit_diff": ecm.MIN_DIFF, "script_similarity": sim}, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    def check_shot_meaning(self, ctx, rep) -> None:
+        """Кадрлар темага/сөзгө дал келеби: s5 AI баалоосу БАРДЫК кадр боюнча (s9'дагы 10 кадрдык сынак эмес)."""
+        try:
+            shots = json.loads(ctx.path("clips", "shots.json").read_text(encoding="utf-8"))["shots"]
+        except Exception:
+            return
+        sc = [s["ai_score"] for s in shots if isinstance(s.get("ai_score"), int)]
+        if len(sc) < max(5, len(shots) // 2):
+            rep.add("shot_meaning", "Кадрлар баяндалган ойго дал келет (бардык кадр, AI)", None,
+                    f"бааланган кадр аз ({len(sc)}/{len(shots)}) — Gemini жеткиликсиз болгон", required=False)
+            return
+        avg = sum(sc) / len(sc)
+        bad = sum(1 for x in sc if x <= 1)
+        rep.add("shot_meaning", "Кадрлар баяндалган ойго дал келет (бардык кадр, AI)",
+                avg >= 3.0 and bad <= max(2, len(sc) // 20),
+                f"орточо {avg:.2f}/5 ({len(sc)} кадр), 1 упай алган {bad} (керек: орточо ≥3.0, 1-упай ≤5%)")
+
+    ORIGINALITY_CHECKLIST = [
+        ("Бул видео мурункулардан мазмуну боюнча айырмаланабы?", ["original"]),
+        ("Өз алдынча монтаж концепциясы барбы?", ["original_video"]),
+        ("Кадрлар темага туура келеби?", ["shot_meaning", "relevance", "theme_match"]),
+        ("Бир эле монтаж шаблону кайталанган жокпу?", ["original_video", "motion"]),
+        ("Оригиналдуу баяндоо жана пайдалуу маалымат барбы?", ["original", "words"]),
+        ("Видеонун башынан аягына чейин кызыгуу сакталабы (ыргак, бирдей сапат)?", ["pacing", "uniform", "freeze", "silence"]),
+        ("Музыка жана материалдардын лицензиясы текшерилгенби?", ["licenses", "sfx_license", "music_audible"]),
+        ("Видео техникалык жактан толук жана сапаттуубу?", ["opens", "sync", "format", "loudness", "black", "duration"]),
+    ]
+
+    def originality_checklist(self, rep) -> list[dict]:
+        """Колдонуучунун 8 пункттук милдеттүү тизмеси (report.json → «originality_checklist»)."""
+        by = {i["key"]: i for i in rep.items}
+        out = []
+        for q, keys in self.ORIGINALITY_CHECKLIST:
+            got = [by[k] for k in keys if k in by]
+            ok = None if not got else all(g["ok"] is not False for g in got if g["required"]) and \
+                any(g["ok"] for g in got)
+            out.append({"question": q, "ok": ok, "checks": [g["key"] for g in got]})
+        return out
 
     @staticmethod
     def ai_images_info(ctx) -> dict:
@@ -466,16 +521,20 @@ class QAStage(Stage):
         ai = self.ai_usage(ctx)
         rep.add("ai_disclosure", "AI белгилөө сунушу", None, ai["recommendation"], required=False)
         passed = not rep.failed
+        checklist = self.originality_checklist(rep)
+        cl_text = "ОРИГИНАЛДУУЛУК ЖАНА САПАТ — МИЛДЕТТҮҮ ТЕКШЕРҮҮ:\n" + "\n".join(
+            f"  [{'x' if c['ok'] else (' ' if c['ok'] is False else '?')}] {c['question']}" for c in checklist) + "\n\n"
         header = (f"QA ОТЧЕТУ — {ctx.video_id}: {ctx.state.topic}\n"
                   f"Аталыш (сунуш): {meta.get('title')}\nКүнү: {date.today().isoformat()}\n"
                   f"ЖЫЙЫНТЫК: {'✅ ӨТТҮ — видео даяр' if passed else '❌ ӨТКӨН ЖОК — видео даяр эмес'}\n\n")
-        ctx.path("report.txt").write_text(header + rep.text() + "\n", encoding="utf-8")
-        ctx.path("report.json").write_text(json.dumps({"passed": passed, "checks": rep.items},
+        ctx.path("report.txt").write_text(header + cl_text + rep.text() + "\n", encoding="utf-8")
+        ctx.path("report.json").write_text(json.dumps({"passed": passed, "originality_checklist": checklist,
+                                                       "checks": rep.items},
                                                       ensure_ascii=False, indent=1), encoding="utf-8")
         ctx.path("ai_usage.json").write_text(json.dumps(ai, ensure_ascii=False, indent=1), encoding="utf-8")
         lic = self.license_txt(ctx, meta, music, clip_lic)
         self.description(ctx, meta, music)
-        ctx.log(rep.text())
+        ctx.log(cl_text + rep.text())
         if not passed:
             raise StageError("QA өткөн жок: " + "; ".join(f"{i['title']} ({i['note']})"
                                                          for i in rep.failed))

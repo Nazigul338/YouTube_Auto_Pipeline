@@ -137,6 +137,15 @@ class VisualsStage(Stage):
     title = "Видеоклиптер"
     retries = 2
 
+    @staticmethod
+    def targets(ctx, scenes: dict) -> dict:
+        """Сахналардын темпи: эмоция (PACE) × видеонун монтаж концепциясынын ыргагы (edit_concept)."""
+        t = scene_targets(scenes)
+        from .. import edit_concept
+        if edit_concept.enabled(ctx):
+            t = edit_concept.pacing_targets(t, scenes, edit_concept.get(ctx, list(scenes.values())))
+        return t
+
     def run(self, ctx: Context) -> dict[str, Any]:
         scenes = {s["id"]: s for s in
                   json.loads(ctx.path("scenes.json").read_text(encoding="utf-8"))["scenes"]}
@@ -145,7 +154,7 @@ class VisualsStage(Stage):
         from .. import cinematic
         quality = cinematic.enabled(ctx.store)           # СЫНАК: катуу темп (2.8–4.4) + AI маани текшерүүсү
         shots = plan_shots(timing["scenes"], timing["words"], total, strict=quality,
-                           targets=scene_targets(scenes) if quality else None)
+                           targets=self.targets(ctx, scenes) if quality else None)
         stock = ctx.services.get("stock") or from_env()
         rng = random.Random(int(hashlib.md5(ctx.video_id.encode()).hexdigest(), 16))
 

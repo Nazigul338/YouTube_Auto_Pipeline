@@ -141,6 +141,11 @@ class AnimationStage(Stage):
         cine = cinematic.enabled(ctx.store)       # СЫНАК режими гана (TEST папкасы + желек)
         theme = dominant_theme(scenes) if cine else None
         name = choose_concept(ctx.registry, ctx.video_id, theme)
+        ec = None
+        from .. import edit_concept
+        if cine and edit_concept.enabled(ctx):   # ар видеонун өз монтаж концепциясы (оригиналдуулук)
+            ec = edit_concept.get(ctx, scenes)
+            name = ec["grade"]
         concept = CONCEPTS[name]
         if cinematic.blocked_reason(ctx.store):
             ctx.log("   ⚠️ " + cinematic.blocked_reason(ctx.store))
@@ -160,9 +165,10 @@ class AnimationStage(Stage):
                 if cine:
                     n_scenes = len({s["scene"] for s in shots})
                     used_black = sum(1 for p_ in plan if (p_["transition_out"] or {}).get("type") == "fadeblack")
-                    prev_trans = cinematic.transition_for(rng, prev_trans, sc["emotion"],
-                                                          by_id[nxt["scene"]]["emotion"], used_black, n_scenes)
-                    trans = {"type": prev_trans, "dur": cinematic.TRANSITION_SEC}
+                    prev_trans = cinematic.transition_for(
+                        rng, prev_trans, sc["emotion"], by_id[nxt["scene"]]["emotion"], used_black, n_scenes,
+                        palette=edit_concept.TRANSITIONS.get(ec["transitions"]) if ec else None)
+                    trans = {"type": prev_trans, "dur": 0.0 if prev_trans == "cut" else cinematic.TRANSITION_SEC}
                 else:
                     trans = {"type": rng.choice(concept["transitions"]), "dur": 0.5}
             else:
@@ -175,7 +181,8 @@ class AnimationStage(Stage):
             from .. import motion as motion_v2
 
             mrng = random.Random(int(hashlib.md5((ctx.video_id + "motion").encode()).hexdigest(), 16))
-            for p_, m in zip(plan, motion_v2.plan_motions(shots, by_id, mrng)):
+            prefer = edit_concept.MOTION.get(ec["motion"]) if ec else None
+            for p_, m in zip(plan, motion_v2.plan_motions(shots, by_id, mrng, prefer=prefer)):
                 p_["motion"], p_["intensity"] = m["motion"], m["intensity"]
 
         cards = card_events(scenes, scene_times, concept)

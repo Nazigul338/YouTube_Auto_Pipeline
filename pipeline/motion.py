@@ -106,7 +106,8 @@ def build(motion: str, dur: float, intensity: float = 1.0, seed: int = 0) -> str
     return f"{cover},zoompan=z='{z}':x='{x}':y='{y}':d=1:s={W}x{H}:fps={FPS}"
 
 
-def plan_motions(shots: list[dict], scenes: dict, rng: random.Random) -> list[dict]:
+def plan_motions(shots: list[dict], scenes: dict, rng: random.Random,
+                 prefer: list[str] | None = None) -> list[dict]:
     """[{i, motion, intensity, seed}] — мааниге, позицияга жана ар түрдүүлүккө жараша."""
     out, prev, counts = [], None, {t: 0 for t in TYPES}
     limit = max(2, math.ceil(MAX_SHARE * len(shots)))
@@ -117,6 +118,8 @@ def plan_motions(shots: list[dict], scenes: dict, rng: random.Random) -> list[di
         first = k == 0 or shots[k - 1]["scene"] != sh["scene"]
         pool = list(ESTABLISHING if first and emo not in ("tense", "dramatic") else BY_EMOTION.get(emo, TYPES))
         pool += [t for t in TYPES if t not in pool]                 # запас — бардык түрлөр
+        if prefer:   # видеонун монтаж концепциясынын кыймыл палитрасы алдыга (edit_concept.MOTION)
+            pool = [t for t in prefer if t in pool] + [t for t in pool if t not in prefer]
         cand = [t for t in pool if t != prev and counts[t] < limit]
         if sh.get("kind") == "image":                                # сүрөт — Ken Burns кыймылы табигый
             cand = [t for t in cand if t in ("ken_burns", "zoom_in", "zoom_out", "dolly", "dolly_out")] or cand
