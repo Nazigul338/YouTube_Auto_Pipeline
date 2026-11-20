@@ -8,7 +8,9 @@
   structure   — видео 10 бөлүккө: ар бөлүктүн кесүү жыштыгы жана жарыгы (монтаждын түзүлүшү)
   transitions — plan.json'дагы өтүүлөрдүн бөлүштүрүлүшү (болсо)
 
-`compare(a, b)` → ар өлчөмдүн аралыгы + `too_similar` (кадрлардын ≥15% дээрлик бирдей, же 6 өлчөмдүн ≥4 окшош).
+`compare(a, b)` → ар өлчөмдүн аралыгы + `too_similar` (кадрлардын ≥15% дээрлик бирдей, же 6 өлчөмдүн ≥4 окшош
+жана алардын ≥2си монтаж өлчөмү: ыргак/өтүүлөр/түзүлүш). Чыныгы калибровка: run #44737672862 —
+Video_003 ↔ Video_001 (экөө тең эски бир шаблон): окшош кадр 4%, окшош: композиция, жарык, ыргак, өтүүлөр → ӨТӨ ОКШОШ.
 
 CLI (GitHub Actions `🎞 Визуалдык из`):  VIDEOS="Video_001:Video_001_cinematic.mp4,…" python -m pipeline.visual_compare
 """
@@ -32,6 +34,7 @@ DUP_LIMIT = 0.15
 SIMILAR = {"palette": 0.10, "composition": 0.05, "brightness": 0.06, "rhythm": 0.12, "structure": 0.25,
            "transitions": 0.25}
 MAX_SIMILAR = 4
+MONTAGE = ("rhythm", "transitions", "structure")
 
 
 # ---------------------------------------------------------------- өлчөө
@@ -154,7 +157,10 @@ def compare(a: dict, b: dict) -> dict:
         keys = set(a["transitions"]) | set(b["transitions"])
         d["transitions"] = float(sum(abs(a["transitions"].get(k, 0) - b["transitions"].get(k, 0)) for k in keys) / 2)
     similar = [k for k, v in d.items() if v < SIMILAR[k]]
-    too = dup >= DUP_LIMIT or len(similar) >= MAX_SIMILAR
+    # композиция/жарык сток видеолордо табигый окшош болот (run #44737672862) — шаблон деп эсептөө үчүн
+    # МОНТАЖ өлчөмдөрүнүн (ыргак, өтүүлөр, түзүлүш) кеминде экөө окшош болушу керек
+    montage = [k for k in similar if k in MONTAGE]
+    too = dup >= DUP_LIMIT or (len(similar) >= MAX_SIMILAR and len(montage) >= 2)
     return {"dup_frames": round(dup, 3), "distances": {k: round(v, 3) for k, v in d.items()},
             "similar": similar, "too_similar": too}
 

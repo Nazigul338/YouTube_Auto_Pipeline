@@ -47,6 +47,39 @@ def split_title(text: str) -> tuple[str, str]:
     return title, clean_script(body)
 
 
+HOOK_TYPES = {   # видеонун алгачкы 2 сүйлөмү (~8 сек) — ар видеодо мурункулардан БАШКА түр
+    "question": "личный, неудобный вопрос зрителю, на который хочется ответить честно",
+    "paradox": "парадокс: два утверждения, которые кажутся несовместимыми, но оба правда",
+    "micro_story": "сцена из жизни в настоящем времени: конкретный человек, место, деталь, момент напряжения",
+    "provocative": "неожиданное утверждение, которое идёт против привычного мнения (без лжи и без кликбейта)",
+    "scenario": "«Представьте…»: зритель мысленно оказывается в конкретной ситуации второго лица",
+    "observation": "точное наблюдение о мелочи, которую делают почти все, но не замечают",
+}
+HOOK_BANNED = ("сегодня поговорим", "в этом видео", "привет", "добро пожаловать", "давайте разберёмся",
+               "задумывались ли вы когда-нибудь")
+
+
+def choose_hook(registry: dict, video_id: str) -> str:
+    """Hook түрү: эң аз колдонулган жана акыркы видеодогудан башка."""
+    hist = [v.get("hook_type") for k, v in sorted(registry.get("videos", {}).items()) if k != video_id]
+    last = next((h for h in reversed(hist) if h), None)
+    seed = int(hashlib.md5(video_id.encode()).hexdigest(), 16)
+    return min((k for k in HOOK_TYPES if k != last), key=lambda k: (hist.count(k), (hash_str(k) ^ seed) % 97))
+
+
+def hash_str(s: str) -> int:
+    return int(hashlib.md5(s.encode()).hexdigest(), 16)
+
+
+def split_hook_card(text: str) -> tuple[str, str]:
+    """«КАРТОЧКА: …» сабын алат (экранга чыга турган hook), тексттен өчүрөт."""
+    m = re.search(r"^\s*КАРТОЧКА\s*:\s*(.+)$", text, re.M | re.I)
+    if not m:
+        return "", text
+    card = m.group(1).strip().strip('"«»')[:40]
+    return card, (text[:m.start()] + text[m.end():]).strip()
+
+
 def choose_style(styles: dict[str, str], registry: dict, video_id: str) -> str:
     used: dict[str, int] = {k: 0 for k in styles}
     last: dict[str, int] = {k: -1 for k in styles}
@@ -75,7 +108,7 @@ def previous_scripts(ctx: Context) -> list[dict[str, Any]]:
     return out
 
 
-def build_prompt(topic: str, niche: dict, style_text: str, prev: list[dict], cfg) -> str:
+def build_prompt(topic: str, niche: dict, style_text: str, prev: list[dict], cfg, hook: str = "question") -> str:
     rules = "\n".join(f"- {r}" for r in niche.get("script_rules", []))
     avoid = "\n".join(f"- «{p['title']}»: {p['hook']}…" for p in prev[:8]) or "- (пока нет)"
     return f"""{niche.get('script_role', '').strip()}
@@ -100,11 +133,18 @@ def build_prompt(topic: str, niche: dict, style_text: str, prev: list[dict], cfg
   «выйди из зоны комфорта») и общие слова без содержания. Каждый абзац должен добавлять смысл.
 - Пиши так, чтобы текст можно было ПОКАЗАТЬ: конкретные люди, действия, места и предметы, а не абстракции.
 
+HOOK — ПЕРВЫЕ 2 ПРЕДЛОЖЕНИЯ (≈8 секунд) решают, останется ли зритель:
+- Тип hook'а этого видео: {HOOK_TYPES.get(hook, HOOK_TYPES["question"])}.
+- Конкретно и про зрителя; не больше 35 слов в двух предложениях; сразу к сути.
+- Запрещено начинать с: {", ".join("«" + b + "»" for b in HOOK_BANNED)}.
+- Начало должно быть совсем другим, чем у наших предыдущих видео (ниже).
+
 НАШИ ПРЕДЫДУЩИЕ ВИДЕО (не повторяй их начало, примеры, метафоры и структуру):
 {avoid}
 
 ФОРМАТ ОТВЕТА:
 НАЗВАНИЕ: <честное, не кликбейтное название для YouTube, до 70 символов>
+КАРТОЧКА: <2–5 слов: самая цепляющая мысль hook'а, для экрана в первые секунды>
 
 <полный текст для озвучки>"""
 
@@ -214,9 +254,11 @@ class ScriptStage(Stage):
             tried.append(style)
             ctx.log(f"   Баяндоо стили: {style}")
 
-            draft = g.text(build_prompt(topic, niche, styles[style], prev, cfg),
+            hook = choose_hook(ctx.registry, ctx.video_id)
+            draft = g.text(build_prompt(topic, niche, styles[style], prev, cfg, hook),
                            purpose="script_draft", temperature=0.95)
-            title, body = split_title(draft)
+            hook_card, draft_wo = split_hook_card(draft)
+            title, body = split_title(draft_wo)
             ctx.path("script", f"draft_{round_ + 1}.txt").write_text(draft, encoding="utf-8")
             if word_count(body) < 0.4 * cfg.words_min:
                 raise StageError(f"Gemini өтө кыска текст берди ({word_count(body)} сөз)")
@@ -240,7 +282,12 @@ class ScriptStage(Stage):
         script = ctx.path("script", "script.txt")
         script.write_text(text + "\n", encoding="utf-8")
         ctx.path("script", "fact_check.txt").write_text(changes + "\n", encoding="utf-8")
-        meta = {"title": title, "style": style, "words": word_count(text),
+        first = " ".join(re.split(r"(?<=[.!?…])\s+", text.strip())[:2])
+        bad_open = next((b for b in HOOK_BANNED if first.lower().startswith(b)), None)
+        if bad_open:
+            ctx.log(f"   ⚠ Hook шаблон менен башталды («{bad_open}») — QA текшерет")
+        meta = {"title": title, "style": style, "words": word_count(text), "hook_type": hook,
+                "hook": first[:240], "hook_card": hook_card or " ".join(first.split()[:5]),
                 "similarity": sim, "fact_check_changes": changes.count("\n") + 1
                 if changes and changes.lower() != "нет" else 0}
         meta_file = ctx.path("script", "meta.json")
@@ -248,7 +295,7 @@ class ScriptStage(Stage):
         ctx.log(f"   ✓ «{title}» — {meta['words']} сөз, стиль: {style}")
 
         entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
-        entry.update({"title": title, "style": style, "script": True})
+        entry.update({"title": title, "style": style, "script": True, "hook_type": hook})
         if ctx.store:
             ctx.store.publish("Scripts", script, f"{ctx.video_id}.txt")
         return {"script_path": str(script), "meta_file": str(meta_file)}

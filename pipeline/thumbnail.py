@@ -25,18 +25,6 @@ FONT_CANDIDATES = ("Montserrat:style=Black", "Montserrat:style=ExtraBold", "Mont
                    "DejaVu Sans:style=Bold")
 
 
-def font_file() -> str:
-    for q in FONT_CANDIDATES:
-        try:
-            r = subprocess.run(["fc-match", "-f", "%{file}", q], capture_output=True, text=True, timeout=10)
-            fam = subprocess.run(["fc-match", "-f", "%{family}", q], capture_output=True, text=True, timeout=10)
-            if r.stdout and q.split(":")[0].lower() in fam.stdout.lower():
-                return r.stdout
-        except (OSError, subprocess.TimeoutExpired):
-            continue
-    return ""
-
-
 def parse(spec: str) -> list[tuple[float, str, str]]:
     out = []
     for part in spec.split(";"):
@@ -105,30 +93,170 @@ def check_unique(specs: list[tuple[float, str, str]], registry: dict, video_id: 
     return out
 
 
-def make(src: Path, t: float, line1: str, line2: str, out: Path, work: Path) -> Path:
-    frame = work / f"f_{int(t * 10)}.png"
+LAYOUTS = ("left", "right", "center")
+
+
+def make(src: Path, t: float, line1: str, line2: str, out: Path, work: Path, *, accent: str = YELLOW,
+         layout: str = "left", font_pref: str | None = None) -> Path:
+    """Обложка: кадр + градиент (жазуу жакта) + 2 сап (ак + акцент түс). layout: left/right/center (концепцияга жараша)."""
+    frame = work / f"f_{int(t * 10)}_{abs(hash(str(src))) % 10000}.png"
     media.run(["ffmpeg", "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", str(src), "-frames:v", "1", str(frame)],
               "обложка кадры")
-    t1, t2 = work / f"l1_{int(t * 10)}.txt", work / f"l2_{int(t * 10)}.txt"
+    key = f"{int(t * 10)}_{abs(hash(line1 + line2)) % 10000}"
+    t1, t2 = work / f"l1_{key}.txt", work / f"l2_{key}.txt"
     t1.write_text(line1, encoding="utf-8")
     t2.write_text(line2, encoding="utf-8")
-    font = font_file()
+    font = font_file(font_pref)
     ff = f"fontfile='{font}':" if font else ""
     s1, s2 = fit_size(line1, 112), fit_size(line2, 158)
     y2 = H - 70 - s2
     y1 = y2 - 18 - s1
+    if layout == "right":
+        x1, x2 = f"w-tw-58", f"w-tw-56"
+        alpha = "215*pow(max(0\\,X/W-0.3)/0.7\\,1.3)"
+    elif layout == "center":
+        x1 = x2 = "(w-tw)/2"
+        alpha = "225*pow(max(0\\,Y/H-0.35)/0.65\\,1.2)"
+    else:
+        x1, x2 = "58", "56"
+        alpha = "215*pow(max(0\\,1-X/(W*0.7))\\,1.3)"
     draw = (f"drawtext={ff}textfile='{t1}':fontsize={s1}:fontcolor=white:borderw=5:bordercolor=black@0.85:"
-            f"shadowx=4:shadowy=4:shadowcolor=black@0.6:x=58:y={y1},"
-            f"drawtext={ff}textfile='{t2}':fontsize={s2}:fontcolor={YELLOW}:borderw=6:bordercolor=black@0.9:"
-            f"shadowx=5:shadowy=5:shadowcolor=black@0.6:x=56:y={y2}") if line2 else \
-        (f"drawtext={ff}textfile='{t1}':fontsize={s1}:fontcolor=white:borderw=5:bordercolor=black@0.85:x=58:y={H - 70 - s1}")
+            f"shadowx=4:shadowy=4:shadowcolor=black@0.6:x={x1}:y={y1},"
+            f"drawtext={ff}textfile='{t2}':fontsize={s2}:fontcolor={accent}:borderw=6:bordercolor=black@0.9:"
+            f"shadowx=5:shadowy=5:shadowcolor=black@0.6:x={x2}:y={y2}") if line2 else \
+        (f"drawtext={ff}textfile='{t1}':fontsize={s1}:fontcolor=white:borderw=5:bordercolor=black@0.85:"
+         f"x={x1}:y={H - 70 - s1}")
     graph = (f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
              "eq=contrast=1.16:saturation=1.22:brightness=-0.02,unsharp=5:5:0.7,vignette=PI/5[b];"
-             f"color=black:s={W}x{H},format=rgba,geq=r=0:g=0:b=0:a='215*pow(max(0\\,1-X/(W*0.7))\\,1.3)'[g];"
+             f"color=black:s={W}x{H},format=rgba,geq=r=0:g=0:b=0:a='{alpha}'[g];"
              f"[b][g]overlay=format=auto,{draw},format=yuvj420p[o]")
     media.run(["ffmpeg", "-y", "-v", "error", "-i", str(frame), "-filter_complex", graph, "-map", "[o]",
                "-frames:v", "1", "-q:v", "2", str(out)], "обложка")
     return out
+
+
+def image_hash(path: Path) -> str:
+    """Обложканын dHash'ы (мурунку обложкалар менен сүрөт окшоштугу)."""
+    import numpy as np
+
+    from .visual_compare import dhash
+
+    r = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-vf", "scale=64:36,format=gray", "-f", "rawvideo",
+                        "-"], capture_output=True, timeout=60)
+    g = np.frombuffer(r.stdout[:64 * 36], np.uint8).reshape(36, 64).astype(float)
+    return f"{dhash(g):016x}"
+
+
+THUMB_PROMPT = """You design YouTube thumbnails for a Russian psychology channel. The thumbnail must make a viewer
+stop scrolling: intrigue, emotion, a question or tension — honest, no clickbait lies, no shouting caps words beyond
+the text itself. It must fit THIS video's own visual world and differ from our previous thumbnails.
+
+Title: {title}
+Hook (first seconds): {hook}
+Visual world of the video: {world}
+Previous thumbnail texts (do NOT repeat their wording or idea): {previous}
+Candidate frames (index. narration at that moment):
+{shots}
+
+Return JSON only: [{{"line1": "<1-3 Russian words, white>", "line2": "<1-3 Russian words, accent, the punch>",
+"shot": <index of the best frame for this text: a person/emotion or a strong motif, no text in frame>}}] — 3 options,
+each with a different angle."""
+
+
+def font_file(pref: str | None = None) -> str:
+    cands = ([f"{pref}:style=Black", f"{pref}:style=Bold", pref] if pref else []) + list(FONT_CANDIDATES)
+    for q in cands:
+        try:
+            r = subprocess.run(["fc-match", "-f", "%{file}", q], capture_output=True, text=True, timeout=10)
+            fam = subprocess.run(["fc-match", "-f", "%{family}", q], capture_output=True, text=True, timeout=10)
+            if r.stdout and q.split(":")[0].lower() in fam.stdout.lower():
+                return r.stdout
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+    return ""
+
+
+def auto_thumbnails(ctx, title: str = "") -> dict:
+    """s9 (QA өткөндөн кийин): Gemini жазуу сунуштайт → концепциянын стили → таза клиптен кадр → мурункулар менен
+    текст жана сүрөт боюнча салыштыруу → Drive Thumbnails/. Ката болсо видеого таасир этпейт."""
+    import json
+
+    from .stages.base import gemini_of
+
+    entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
+    brief = entry.get("edit_brief") or {}
+    meta = {}
+    try:
+        meta = json.loads(ctx.path("script", "meta.json").read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    shots = json.loads(ctx.path("clips", "shots.json").read_text(encoding="utf-8"))["shots"]
+    words = []
+    try:
+        words = json.loads(ctx.path("subtitles", "timings.json").read_text(encoding="utf-8"))["words"]
+    except Exception:
+        pass
+    cands = sorted([s for s in shots if s.get("source") != "gemini" and s.get("kind") == "video"],
+                   key=lambda s: -(s.get("ai_score") or 0))[:24]
+    cands.sort(key=lambda s: s["start"])
+    text_at = lambda s: " ".join(w["w"] for w in words if w["e"] > s["start"] and w["s"] < s["end"])[:120]
+    prev = [t for v, e in ctx.registry.get("videos", {}).items() if v != ctx.video_id
+            for t in (e.get("thumbnail") or {}).get("texts", [])]
+    prev_hashes = [h for v, e in ctx.registry.get("videos", {}).items() if v != ctx.video_id
+                   for h in (e.get("thumbnail") or {}).get("hashes", [])]
+    opts = []
+    try:
+        data = gemini_of(ctx).json(THUMB_PROMPT.format(
+            title=title or meta.get("title", ""), hook=meta.get("hook", ""), world=brief.get("world", ""),
+            previous="; ".join(prev[-12:]) or "(none)",
+            shots="\n".join(f"{k}. {text_at(s)}" for k, s in enumerate(cands))), purpose="thumbnail", temperature=0.9)
+        for o in data if isinstance(data, list) else []:
+            k = int(o.get("shot", 0))
+            if 0 <= k < len(cands) and str(o.get("line1", "")).strip():
+                opts.append((cands[k], str(o["line1"]).strip()[:22].upper(), str(o.get("line2", "")).strip()[:22].upper()))
+    except Exception as e:
+        ctx.log(f"   ⚠️ Обложка тексти Gemini'ден келген жок ({type(e).__name__}) — hook'тон")
+    if not opts and cands:
+        hc = (meta.get("hook_card") or title or "").upper().split()
+        mid = max(1, len(hc) // 2)
+        opts = [(cands[k * len(cands) // 3], " ".join(hc[:mid]), " ".join(hc[mid:])) for k in range(min(3, len(cands)))]
+    layout = LAYOUTS[int(hashlib_md5(ctx.video_id + brief.get("name", "")) % 3)]
+    accent = brief.get("subtitles", {}).get("highlight", "#FFD21F").replace("#", "0x")
+    font_pref = "Montserrat" if brief.get("subtitles", {}).get("font", "Montserrat").startswith("Montserrat") else "DejaVu Sans"
+    out_dir = ctx.path("thumbnails")
+    out_dir.mkdir(exist_ok=True)
+    made, rejected = [], []
+    for k, (sh, l1, l2) in enumerate(opts, 1):
+        if check_unique([(0.0, l1, l2)], ctx.registry, ctx.video_id)[0][1]:
+            rejected.append(f"«{l1} {l2}»: жазуусу мурункуга окшош")
+            continue
+        clip = ctx.path("clips", sh["file"])
+        if not clip.exists():
+            continue
+        at = float(sh.get("offset", 0.0)) + sh["dur"] / 2
+        out = make(clip, at, l1, l2, out_dir / f"{ctx.video_id}_thumb_{k}.jpg", out_dir, accent=accent, layout=layout,
+                   font_pref=font_pref)
+        h = image_hash(out)
+        if any(bin(int(h, 16) ^ int(p, 16)).count("1") <= 8 for p in prev_hashes):
+            rejected.append(f"«{l1} {l2}»: сүрөтү мурунку обложкага окшош")
+            continue
+        url = ctx.store.publish("Thumbnails", out, out.name) if ctx.store else None
+        made.append({"file": out.name, "text": f"{l1} {l2}".strip(), "shot": sh["i"], "hash": h, "url": url})
+    entry["thumbnail"] = {"texts": [m["text"] for m in made], "hashes": [m["hash"] for m in made],
+                          "layout": layout, "accent": accent, "files": [m["file"] for m in made],
+                          "urls": [m["url"] for m in made], "rejected": rejected}
+    (ctx.path("thumbnails", "thumbnails.json")).write_text(json.dumps(entry["thumbnail"], ensure_ascii=False, indent=1),
+                                                           encoding="utf-8")
+    ctx.log(f"   🖼 Обложка: {len(made)} вариант ({layout}, акцент {accent})" +
+            (f"; четке кагылды: {'; '.join(rejected)}" if rejected else "") +
+            "".join(f"\n      {m['text']}: {m['url']}" for m in made))
+    return entry["thumbnail"]
+
+
+def hashlib_md5(s: str) -> int:
+    import hashlib
+
+    return int(hashlib.md5(s.encode()).hexdigest(), 16)
 
 
 def sheet(files: list[Path], out: Path) -> Path:

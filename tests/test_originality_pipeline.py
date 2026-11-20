@@ -124,6 +124,25 @@ class TestOriginalityPipeline(unittest.TestCase):
         self.assertNotEqual(r1["brief"]["name"], r2["brief"]["name"]) if r1["brief"]["source"] == "gemini" else None
         self.assertEqual(r2["orig"]["problems"], [])
 
+    def test_copied_template_is_detected_and_reworked(self):
+        """2-видеого 1-видеонун концепциясы атайын берилет (шаблон көчүрүү) → QA табат → жаңы концепция →
+        монтаж s4'төн АВТОМАТТЫК кайра → видео даяр болот."""
+        p1 = self.make("Почему мы откладываем важные дела", "Video_001")
+        reg = self.store.load_registry()
+        b1 = reg["videos"]["Video_001"]["edit_brief"]
+        reg["videos"]["Video_002"] = {"edit_brief": dict(b1)}                # көчүрмө концепция
+        self.store.save_registry(reg)
+        p2 = self.make("Как перестать бояться чужого мнения", "Video_002")
+        e2 = self.store.load_registry()["videos"]["Video_002"]
+        self.assertEqual(e2.get("reworks"), 1, e2.get("rework_log"))
+        self.assertEqual(e2["rejected_briefs"][0]["name"], b1["name"])
+        self.assertIn("окшош", e2["rejected_briefs"][0]["reason"])
+        self.assertTrue(ec.compare(e2["edit_brief"], b1)["ok"])             # жаңы концепция башка
+        r2 = self.check_stages_use_concept(p2, "Video_002")                 # жаңы концепция менен монтаждалды
+        self.assertEqual(r2["brief"]["name"], e2["edit_brief"]["name"])
+        log = (p2 / "logs" / "run.log").read_text(encoding="utf-8")
+        self.assertIn("кайра монтаж №1", log)
+
 
 if __name__ == "__main__":
     unittest.main()

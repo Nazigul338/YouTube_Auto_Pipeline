@@ -83,10 +83,19 @@ def choose_concept(registry: dict, video_id: str, theme: str | None = None) -> s
     return min(allowed, key=lambda k: (used[k], (int(hashlib.md5(k.encode()).hexdigest(), 16) ^ seed) % 997))
 
 
-def card_items(scenes: list[dict], scene_times: dict[int, dict], min_gap: float = 12) -> list[dict]:
-    """Карточкалар: [{start, end, text}] (ASS жана HyperFrames экөө тең ушуну колдонот)."""
+HOOK_CARD = (0.4, 3.4)     # hook карточкасы видеонун алгачкы секунддарында
+
+
+def card_items(scenes: list[dict], scene_times: dict[int, dict], min_gap: float = 12,
+               hook: str = "") -> list[dict]:
+    """Карточкалар: [{start, end, text}] (ASS жана HyperFrames экөө тең ушуну колдонот).
+    hook — видеонун башындагы карточка (сценарийдин «КАРТОЧКА:» сабы): алгачкы секунддарда көңүл бурат."""
     items = []
     last_end = -99.0
+    hook = (hook or "").strip().replace("{", "").replace("}", "")
+    if hook:
+        items.append({"start": HOOK_CARD[0], "end": HOOK_CARD[1], "text": hook.upper(), "hook": True})
+        last_end = HOOK_CARD[1]
     for s in scenes:
         txt = (s.get("on_screen_text") or "").strip().replace("{", "").replace("}", "")
         t = scene_times.get(s["id"])
@@ -106,23 +115,9 @@ def card_line(c: dict) -> str:
             r"{\fad(260,320)\fscx92\fscy92\t(0,380,\fscx100\fscy100)\blur0.6}" + c["text"])
 
 
-def card_events(scenes: list[dict], scene_times: dict[int, dict], concept: dict, min_gap: float = 12) -> list[str]:
-    ev = []
-    last_end = -99.0
-    for s in scenes:
-        txt = (s.get("on_screen_text") or "").strip().replace("{", "").replace("}", "")
-        t = scene_times.get(s["id"])
-        if not txt or not t or t["start"] - last_end < min_gap:   # карточкалар сейрек (концепцияга жараша)
-            continue
-        start = t["start"] + 0.25
-        end = min(start + 2.6, t["end"])
-        if end - start < 1.2:
-            continue
-        ev.append(
-            f"Dialogue: 1,{ts_ass(start)},{ts_ass(end)},Card,,0,0,0,,"
-            r"{\fad(260,320)\fscx92\fscy92\t(0,380,\fscx100\fscy100)\blur0.6}" + txt.upper())
-        last_end = end
-    return ev
+def card_events(scenes: list[dict], scene_times: dict[int, dict], concept: dict, min_gap: float = 12,
+                hook: str = "") -> list[str]:
+    return [card_line(c) for c in card_items(scenes, scene_times, min_gap, hook)]
 
 
 class AnimationStage(Stage):
@@ -190,10 +185,16 @@ class AnimationStage(Stage):
                 p_["motion"], p_["intensity"] = m["motion"], round(m["intensity"] * scale, 2)
 
         gap = 4.0 * concept.get("card_every", 3)       # концепция: карточкалардын жыштыгы
-        cards = card_events(scenes, scene_times, concept, gap)
+        hook = ""
+        if cine:   # видеонун башындагы hook карточкасы (s1 «КАРТОЧКА:»)
+            try:
+                hook = json.loads(ctx.path("script", "meta.json").read_text(encoding="utf-8")).get("hook_card", "")
+            except Exception:
+                hook = ""
+        cards = card_events(scenes, scene_times, concept, gap, hook)
         if cine:   # HyperFrames үчүн структуралуу тизме (8-этап колдонот; иштебесе ASS калат)
             ctx.path("animation", "cards.json").write_text(
-                json.dumps(card_items(scenes, scene_times, gap), ensure_ascii=False, indent=1), encoding="utf-8")
+                json.dumps(card_items(scenes, scene_times, gap, hook), ensure_ascii=False, indent=1), encoding="utf-8")
         header = ("[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n"
                   "ScaledBorderAndShadow: yes\n\n[V4+ Styles]\n"
                   "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, "

@@ -226,6 +226,8 @@ class QAStage(Stage):
             self.check_uniformity(ctx, rep, final, timing, total)
             self.check_motion(ctx, rep)
             self.check_originality(ctx, rep, music, meta)
+            self.check_visual(ctx, rep, final)
+            self.check_hook(ctx, rep)
             self.check_shot_meaning(ctx, rep)
             self.check_policy(ctx, rep, clip_lic, music, meta)
             self.check_ai_images(ctx, rep, shots)
@@ -328,6 +330,144 @@ class QAStage(Stage):
             {"brief": brief, "fingerprint": mine, "compared": rows, "problems": problems,
              "script_similarity": sim}, ensure_ascii=False, indent=1), encoding="utf-8")
 
+    def check_visual(self, ctx, rep, final) -> None:
+        """ДАЯР видеону мурунку даяр видеолор менен визуалдык салыштыруу (кадрлар, палитра, композиция, ыргак,
+        монтаж түзүлүшү, өтүүлөр). Өтө окшош болсо — МИЛДЕТТҮҮ fail жана концепция жокко чыгарылат (кайра монтаж)."""
+        from .. import edit_concept as ecm, visual_compare as vc
+
+        try:
+            plan = json.loads(ctx.path("animation", "plan.json").read_text(encoding="utf-8"))
+        except Exception:
+            plan = None
+        try:
+            fp = vc.fingerprint(final, plan)
+        except Exception as e:
+            rep.add("visual_original", "Даяр видео мурункулардан визуалдык айырмаланат", None,
+                    f"өлчөнгөн жок: {type(e).__name__}", required=False)
+            return
+        entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
+        entry["visual_fp"] = fp
+        res = vc.against_finished(fp, ctx.registry, ctx.video_id)
+        bad = {v: r for v, r in res.items() if r["too_similar"]}
+        note = "; ".join(f"{v}: окшош кадр {r['dup_frames']:.0%}, окшош өлчөм {r['similar'] or '-'}"
+                         for v, r in res.items()) or "салыштырууга визуалдык изи бар мурунку видео жок"
+        if bad:
+            ecm.reject(ctx, "визуалдык окшош: " + ", ".join(bad))
+            note += " → жаңы концепция менен КАЙРА МОНТАЖ"
+        rep.add("visual_original", "Даяр видео мурункулардан визуалдык айырмаланат (кадр, түс, композиция, ыргак)",
+                not bad, note)
+        ctx.path("visual_compare.json").write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    def production_report(self, ctx, rep, passed: bool) -> None:
+        """Чыныгы иштөөнүн ДАЛИЛДҮҮ отчету (колдонуучунун 6 суроосу): Logs/<ID>_production_report.md + лог."""
+        import os
+
+        entry = ctx.registry.get("videos", {}).get(ctx.video_id, {})
+        st = ctx.state.data.get("stages", {})
+        by = {i["key"]: i for i in rep.items}
+        b = entry.get("edit_brief") or {}
+        L = [f"# Өндүрүш отчету — {ctx.video_id}: {ctx.state.topic}", "",
+             f"**Жыйынтык:** {'✅ QA өттү — видео даяр' if passed else '❌ QA өткөн жок — видео даяр эмес'}", "",
+             "## 1. Ар бир этап чындап иштедиби?"]
+        for name, v in st.items():
+            o = v.get("outputs") or {}
+            L.append(f"- {name}: **{v.get('status')}** (аракет {v.get('attempts', '-')}, бүттү {v.get('finished_at', '-')})" +
+                     (f" — {v.get('error')[:120]}" if v.get("error") else "") +
+                     (f" — {', '.join(f'{k}={o[k]}' for k in list(o)[:3])}" if o else ""))
+        L += ["", "## 2. Жаңы монтаж концепциясы колдонулдубу?",
+              f"- Концепция: **«{b.get('name', '-')}»** (булагы: {b.get('source', '-')}, аракет: {b.get('attempts', '-')})",
+              f"- Визуалдык дүйнө: {b.get('world', '-')}", f"- Мотивдер: {', '.join(b.get('motifs', [])) or '-'}",
+              f"- Түс: {b.get('grade')}", f"- Ыргак: кадр {b.get('base_shot')} сек, актылар {b.get('act_pace')}",
+              f"- Кыймыл (артыкчылык): {[k for k, w in sorted((b.get('motion') or {}).items(), key=lambda x: -x[1])][:4]}",
+              f"- Өтүүлөр: {[k for k, w in sorted((b.get('transitions') or {}).items(), key=lambda x: -x[1]) if w > 0][:4]}"
+              f", {b.get('transition_sec')} сек",
+              f"- Субтитр: {b.get('subtitles')}", f"- Музыка: {b.get('music_mood')} ({b.get('music_level')} LU)",
+              "", "## 3. Мурунку видеолордон айырмасы эмнеде?"]
+        for c in self._json(ctx, "originality.json").get("compared", []):
+            cc = c.get("concept") or {}
+            L.append(f"- {c['video']}: концепция айырмаланган топтор {cc.get('differ')}, окшош {cc.get('same')}, "
+                     f"орточо {cc.get('mean')}; hook окшоштугу {c.get('hook_similarity')}")
+        for vid, r in self._json(ctx, "visual_compare.json").items():
+            L.append(f"- {vid} (даяр видеону визуалдык салыштыруу): окшош кадр {r['dup_frames']:.0%}, аралыктар "
+                     f"{r['distances']}, окшош өлчөмдөр {r['similar'] or '-'}")
+        L += ["", "## 4. QA окшоштукту таптыбы?"]
+        for k in ("original_video", "visual_original", "original", "hook", "shot_meaning"):
+            if k in by:
+                L.append(f"- {by[k]['title']}: {'✅' if by[k]['ok'] else ('❌' if by[k]['ok'] is False else '—')} "
+                         f"{by[k]['note'][:300]}")
+        L += ["", "## 5. Кемчилик табылса, кайра монтаж жасадыбы?"]
+        if entry.get("rework_log"):
+            for r in entry["rework_log"]:
+                L.append(f"- Кайра монтаж №{r['n']}: четке кагылган концепция «{(r.get('reason') or {}).get('name')}» — "
+                         f"{(r.get('reason') or {}).get('reason', '')[:200]}")
+        else:
+            L.append("- Кайра монтаж керек болгон жок (окшоштук табылган жок)")
+        for rb in entry.get("rejected_briefs", []):
+            L.append(f"- Четке кагылган концепция: «{rb.get('name')}» — {rb.get('reason', '')[:160]}")
+        th = entry.get("thumbnail") or {}
+        L += ["", "## 6. Обложка жана Hook даярдалдыбы?",
+              f"- Hook: {by.get('hook', {}).get('note', '-')}",
+              f"- Обложка: {len(th.get('files', []))} вариант, жайгашуу {th.get('layout', '-')}, акцент {th.get('accent', '-')}"]
+        for t, u in zip(th.get("texts", []), th.get("urls", [])):
+            L.append(f"  - «{t}»: {u}")
+        if th.get("rejected"):
+            L.append(f"  - четке кагылды: {th['rejected']}")
+        if th.get("error"):
+            L.append(f"  - ❌ ката: {th['error']}")
+        text = "\n".join(L) + "\n"
+        out = ctx.path("production_report.md")
+        out.write_text(text, encoding="utf-8")
+        if ctx.store:
+            try:
+                url = ctx.store.publish("Logs", out, f"{ctx.video_id}_production_report.md")
+                ctx.log(f"   📋 Өндүрүш отчету: {url}")
+            except Exception:
+                pass
+        ctx.log(text)
+        path = os.environ.get("GITHUB_STEP_SUMMARY")
+        if path:
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(text)
+
+    @staticmethod
+    def _json(ctx, name: str) -> dict:
+        try:
+            return json.loads(ctx.path(name).read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    def check_hook(self, ctx, rep) -> None:
+        """Hook: алгачкы 2 сүйлөм кыска жана шаблонсуз, экранда hook карточкасы ≤4 сек, түрү мурунку видеодон башка."""
+        from .. import edit_concept as ecm
+        from .s1_script import HOOK_BANNED
+
+        try:
+            meta = json.loads(ctx.path("script", "meta.json").read_text(encoding="utf-8"))
+        except Exception:
+            meta = {}
+        hook, htype = meta.get("hook", ""), meta.get("hook_type")
+        try:
+            cards = json.loads(ctx.path("animation", "cards.json").read_text(encoding="utf-8"))
+        except Exception:
+            cards = []
+        card = next((c for c in cards if c.get("hook")), None)
+        prev = [v.get("hook_type") for v in ecm.finished_others(ctx.registry, ctx.video_id).values() if v.get("hook_type")]
+        last = prev[-1] if prev else None
+        problems = []
+        if not hook:
+            problems.append("hook жок")
+        elif len(hook.split()) > 45:
+            problems.append(f"hook узун ({len(hook.split())} сөз)")
+        if any(hook.lower().startswith(b) for b in HOOK_BANNED):
+            problems.append("шаблон башталыш")
+        if not card or card["start"] > 4.0:
+            problems.append("алгачкы 4 секундда hook карточкасы жок")
+        if htype and last and htype == last:
+            problems.append(f"hook түрү мурунку видеодогудай ({htype})")
+        rep.add("hook", "Hook: алгачкы секунддар көңүл бурат (өз түрү, кыска, экранда)", not problems,
+                (f"түрү {htype}; «{hook[:90]}»; карточка «{(card or {}).get('text', '-')}»" +
+                 (f" — {'; '.join(problems)}" if problems else "")))
+
     def check_shot_meaning(self, ctx, rep) -> None:
         """Кадрлар темага/сөзгө дал келеби: s5 AI баалоосу БАРДЫК кадр боюнча (s9'дагы 10 кадрдык сынак эмес)."""
         try:
@@ -349,9 +489,9 @@ class QAStage(Stage):
         ("Бул видео мурункулардан мазмуну боюнча айырмаланабы?", ["original"]),
         ("Өз алдынча монтаж концепциясы барбы?", ["original_video"]),
         ("Кадрлар темага туура келеби?", ["shot_meaning", "relevance", "theme_match"]),
-        ("Бир эле монтаж шаблону кайталанган жокпу?", ["original_video", "motion"]),
+        ("Бир эле монтаж шаблону кайталанган жокпу?", ["original_video", "visual_original", "motion"]),
         ("Оригиналдуу баяндоо жана пайдалуу маалымат барбы?", ["original", "words"]),
-        ("Видеонун башынан аягына чейин кызыгуу сакталабы (ыргак, бирдей сапат)?", ["pacing", "uniform", "freeze", "silence"]),
+        ("Видеонун башынан аягына чейин кызыгуу сакталабы (hook, ыргак, бирдей сапат)?", ["hook", "pacing", "uniform", "freeze", "silence"]),
         ("Музыка жана материалдардын лицензиясы текшерилгенби?", ["licenses", "sfx_license", "music_audible"]),
         ("Видео техникалык жактан толук жана сапаттуубу?", ["opens", "sync", "format", "loudness", "black", "duration"]),
     ]
@@ -560,6 +700,8 @@ class QAStage(Stage):
         lic = self.license_txt(ctx, meta, music, clip_lic)
         self.description(ctx, meta, music)
         ctx.log(cl_text + rep.text())
+        if not passed and self._cinematic(ctx):
+            self.production_report(ctx, rep, False)
         if not passed:
             raise StageError("QA өткөн жок: " + "; ".join(f"{i['title']} ({i['note']})"
                                                          for i in rep.failed))
@@ -576,6 +718,14 @@ class QAStage(Stage):
         if url:
             entry["final_url" + suffix] = url
             ctx.log(f"   ▶️ ВИДЕОНУН ШИЛТЕМЕСИ: {url}")
+        if self._cinematic(ctx):                   # ар видеого өз обложкасы (мурункулар менен салыштырылат)
+            try:
+                from ..thumbnail import auto_thumbnails
+                auto_thumbnails(ctx, meta.get("title", ""))
+            except Exception as e:                 # обложка жасалбаса да видео даяр (отчетто көрсөтүлөт)
+                ctx.log(f"   ⚠️ Обложка жасалган жок: {type(e).__name__}: {str(e)[:120]}")
+                entry["thumbnail"] = {"error": f"{type(e).__name__}: {str(e)[:200]}"}
+            self.production_report(ctx, rep, True)
         try:                                       # клиптер «жарыялангандай» белгиленет
             mem = ClipMemory.load(ctx.store, ctx.registry)
             if mem.mark_published(ctx.video_id):

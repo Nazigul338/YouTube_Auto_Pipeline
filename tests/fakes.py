@@ -26,6 +26,17 @@ def make_script(n_words: int = 1150, seed: str = "") -> str:
     return "\n\n".join(paras)
 
 
+def fake_source(asset_id: str) -> str:
+    """Ар клипке өз көрүнүшү (визуалдык салыштыруу жасалма клиптерди «көчүрмө» деп таппасын):
+    testsrc2'нин башка бөлүгү + түс + айландыруу (бай текстура — кыймыл өлчөөсү иштейт, кара экран жок)."""
+    import hashlib
+
+    k = int(hashlib.md5(asset_id.encode()).hexdigest(), 16)
+    x, y = k % 320, (k // 320) % 180
+    flip = ("", ",hflip", ",vflip", ",hflip,vflip")[k % 4]
+    return f"testsrc2=size=960x540:rate=30,crop=640:360:{x}:{y},hue=h={k % 360}:s={1 + (k % 3) / 2}{flip}"
+
+
 class FakeGemini:
     def __init__(self, words: int = 1150, same_text: bool = False):
         self.words = words
@@ -119,9 +130,9 @@ class FakeStock:
             return dest
         self.downloads += 1
         if asset.kind == "video":
-            subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
-                            f"testsrc2=size=640x360:rate=30:duration=8", "-c:v", "libx264",
-                            "-preset", "ultrafast", "-pix_fmt", "yuv420p", str(dest)], check=True)
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", fake_source(asset.id),
+                            "-t", "8", "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p", str(dest)],
+                           check=True)
         else:
             subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
                             "testsrc2=size=1280x720", "-frames:v", "1", str(dest)], check=True)

@@ -48,6 +48,28 @@ def prepare_folder(folder: Path) -> None:
         (folder / sub).mkdir(parents=True, exist_ok=True)
 
 
+REWORK_FROM = "s4_subtitles"
+MAX_REWORKS = 2
+
+
+def needs_rework(state, entry: dict) -> bool:
+    """QA окшоштук таап концепцияны жокко чыгарганбы (edit_brief жок, rejected_briefs бар)?"""
+    stages = state.data.get("stages", {})
+    return ("s9_qa" in stages and state.status("s9_qa") == FAILED and not entry.get("edit_brief")
+            and bool(entry.get("rejected_briefs")) and entry.get("reworks", 0) < MAX_REWORKS)
+
+
+def auto_rework(ctx, state, entry: dict, rerun, log):
+    """ОРИГИНАЛДУУЛУК: видео мурункуга окшош чыкса — ЖАҢЫ концепция түзүлүп, монтаж s4'төн кайра (≤MAX_REWORKS)."""
+    while needs_rework(state, entry):
+        entry["reworks"] = entry.get("reworks", 0) + 1
+        entry.setdefault("rework_log", []).append({"n": entry["reworks"], "reason": entry["rejected_briefs"][-1]})
+        log(f"🔁 Видео мурунку видеого окшош чыкты ({entry['rejected_briefs'][-1].get('reason', '')[:120]}) — "
+            f"жаңы монтаж концепциясы менен автоматтык кайра монтаж №{entry['reworks']} ({REWORK_FROM}'тан)")
+        state = rerun()
+    return state
+
+
 def run_ci(topic: str, niche: str, workdir: Path, *, store: Store | None,
            video_id: str | None = None, rerun_from: str | None = None,
            stop_after: str | None = None, services: dict | None = None) -> int:
@@ -127,14 +149,8 @@ def run_ci(topic: str, niche: str, workdir: Path, *, store: Store | None,
             store.publish("Logs", log_file, f"{video_id}.log")
 
     state = execute(ctx, rerun_from=rerun_from, stop_after=stop_after, checkpoint=checkpoint)
-    # ОРИГИНАЛДУУЛУК: QA концепцияны окшош деп жокко чыгарса — ЖАҢЫ концепция менен бир жолу автоматтык кайра (s4'төн)
-    ent = registry["videos"].get(video_id, {})
-    if ("s9_qa" in state.data.get("stages", {}) and state.status("s9_qa") == FAILED
-            and not ent.get("edit_brief") and ent.get("rejected_briefs")
-            and len(ent["rejected_briefs"]) <= 1 and not ent.get("auto_reworked")):
-        ent["auto_reworked"] = True
-        log("🔁 Видео мурунку видеого окшош чыкты — жаңы монтаж концепциясы менен автоматтык кайра иштетилет (s4'төн)")
-        state = execute(ctx, rerun_from="s4_subtitles", stop_after=stop_after, checkpoint=checkpoint)
+    state = auto_rework(ctx, state, registry["videos"].get(video_id, {}),
+                        lambda: execute(ctx, rerun_from=REWORK_FROM, stop_after=stop_after, checkpoint=checkpoint), log)
     _write_summary(state, video_id, registry["videos"].get(video_id, {}).get("final_url"))
     return 1 if any(state.status(n) == FAILED for n in STAGE_NAMES) else 0
 
