@@ -238,6 +238,7 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
   «кадр идеясы» + 2 издөө сөзү (`visual_beats`) → `ClipFinder.beat_candidate` (жаңы, мурда колдонулбаган) → жакшыраак бааланса гана алмаштырат;
   идея табылбаса — мурдагыдай сахнанын запас клиби. Бир видеодо кайталанган идея алынбайт.
 - `rate_frames`: шаблон кадрга ≤2 упай. Тест: tests/test_quality_pass.py::TestVisualBeats. Чыныгы run: Video_003 TEST (Video_001'ге тийилген жок — колдонуучу жүктөйт).
+- ▶️ Чыныгы сынак: **run #44726507305** (Video_003, TEST, rerun_from=s5_visuals, sound_effects ✓). Текшерүү: логдо «💡 Кадр идеялары», «🎯 AI маани», QA AI баа; контакт-барак.
 
 ### 8и. Video_001 ЖАРЫЯЛООГО ПАКЕТ (2026-11-20)
 - Обложкалар (`pipeline/thumbnail.py`, workflow `thumbnail.yml`, run #44677445557): таза булак клиптен (субтитрсиз), Montserrat Black,
