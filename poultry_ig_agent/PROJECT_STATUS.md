@@ -84,6 +84,12 @@ push rejected, '|| echo' жашырган → жоголгон) → оңдолд
 Оңдоо: settings `allow_tts_fallback: false` (запас моделге жашырын өтүү жок, квота бүтсө так ката), модель post.json → tts.
 Кийинки: квота калыбына келгенде (≈08:00 UTC) сериал Orus + 3.8 менен кайра жасалат; калган үндөр (Iapetus, Algieba, Schedar) сыналат.
 
+
+## ✅ Сериал Charon менен (2026-11-20, run 44703860643)
+Пландаштырылган тапшырма (trig_018oFazUCUvS7SX9ixZ2S5pD) 08:35 UTC иштеди. 3 бөлүк тең tts.model=gemini-3.8-flash-tts,
+Charon, warm; узундуктар 49/36/51.5с (нускама окулган жок). 3/3 акыркы кадр — балапандар (трактор жок). Колдонуучуга жөнөтүлдү.
+Калганы: WhatsApp шилтемеси (course.json), Instagram Meta API туташуусу (жарыялоо азырынча кол менен).
+
 ## 7 API абалы
 Gemini текст ✅ (2026-11-19, run 44533063140) · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (❓ = чыныгы чакыруу менен али текшерилген эмес). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
 
