@@ -1,0 +1,55 @@
+name: 🖼 Обложка (видеонун кадрынан)
+
+# Даяр видеонун кадрынан 1280×720 обложка(лар) жасап, Drive → <root>/Thumbnails/ салат. Видео өзгөрбөйт.
+on:
+  workflow_dispatch:
+    inputs:
+      video_file:
+        description: "Final_Videos ичиндеги файл"
+        required: true
+        default: Video_001_cinematic.mp4
+        type: string
+      video_id:
+        description: "Видео ID"
+        required: true
+        default: Video_001
+        type: string
+      thumbs:
+        description: "Варианттар: сек|1-сап|2-сап ; менен бөлүнөт"
+        required: true
+        default: "14|ВЫ ЖИВЁТЕ|ДЛЯ НИХ?;329|ТИХАЯ|МЕСТЬ;471|КОМУ ВЫ|ДОКАЗЫВАЕТЕ?"
+        type: string
+      test_run:
+        description: "YouTube_Auto_TEST папкасынан"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  thumb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: FFmpeg жана шрифттер
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-montserrat fonts-dejavu-core || sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+      - run: pip install -q -r requirements.txt
+      - name: Обложка
+        env:
+          VIDEO_FILE: ${{ inputs.video_file }}
+          VIDEO_ID: ${{ inputs.video_id }}
+          THUMBS: ${{ inputs.thumbs }}
+          YTA_DRIVE_FOLDER: ${{ inputs.test_run && 'YouTube_Auto_TEST' || 'YouTube_Auto' }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.thumbnail

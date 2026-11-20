@@ -62,6 +62,7 @@ pipeline/
   asr.py         — Whisper (PyAV'сыз)
   stock.py       — Pixabay / Pexels (беттөө менен; бренд/логотиптүү клиптер чыпкаланат)
   ai_images.py   — Gemini AI-сүрөттөр (СЫНАК): prompt, 16:9, бюджет/баа, Drive AI_Images/ кэши
+  thumbnail.py   — обложка видеонун кадрынан (1280×720, жазуу, градиент) → Drive Thumbnails/ (`🖼 Обложка` workflow)
   sfx_synth.py   — оригиналдуу үн эффекттерин синтездөө (CC0, жүктөө жок)
   sfx.py         — Sound Effects Library (СЫНАК): лицензия капкасы, сценага жараша тандоо, паузага коюу, деңгээл
   clipmemory.py  — Smart Video Memory: колдонулган клиптердин Drive базасы (JSON + CSV)
