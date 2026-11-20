@@ -250,6 +250,7 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
        (эртеси сакталган CDN шилтемеси иштебей калды; HTTP коду логго жазылчу эмес). Оңдоо: `Stock.refresh_url()` — ID боюнча API'ден жаңы
        шилтеме, `ensure_media` аны колдонуп shots.json'го сактайт; клип өчүрүлгөн болсо — так ката (rerun_from s5). Ката билдирүүсүндө HTTP коду.
        Тест: tests/test_brand_filter.py::TestRefreshUrl. Кайра: rerun_from=s8_render.
+     ▶️ **run #44664216314** (rerun_from=s8_render, sound_effects ✓).
    Эскертүү: cinematic_test'ти кезекке коюудан мурун make-video тобунда pending жок экенин текшер.
    Drive'дагы «YouTube Audio Library» файлдары — 13 музыка трек гана (Music/), үн эффекти эмес.
    ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
