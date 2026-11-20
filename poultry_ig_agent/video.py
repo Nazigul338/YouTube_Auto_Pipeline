@@ -235,12 +235,85 @@ def tts_from_settings(cfg=None, voice_file=None):
         return KaniTTS(v.get("kani_model", "nineninesix/kani-tts-400m-ky"), v.get("kani_ref_audio"),
                        v.get("owner_consent_confirmed", False))
     if v.get("provider", "gemini") == "gemini":
-        return GeminiTTS(v.get("gemini_voice"), style=v.get("gemini_style"),
-                         allow_fallback=v.get("allow_tts_fallback", False))
+        t = GeminiTTS(v.get("gemini_voice"), style=v.get("gemini_style"),
+                      allow_fallback=v.get("allow_tts_fallback", False))
+        ref = v.get("reference_sample")
+        if ref:
+            ref = ref if os.path.isabs(ref) else os.path.join(os.path.dirname(__file__), ref)
+            if os.path.exists(ref):
+                return ConsistentTTS(t, ref, v.get("consistency_tolerance", 0.10))
+        return t
     if v.get("provider") == "elevenlabs":
         return ElevenLabsTTS(v.get("elevenlabs_voice_id"), v.get("elevenlabs_model", "eleven_v3"),
                              v.get("owner_consent_confirmed", False))
     return GeminiTTS()
+
+
+def voice_signature(path):
+    """Үндүн жөнөкөй 'колу': (F0 медианасы Гц, спектрдик центроид Гц). Бир эле үн экенин болжолдуу салыштыруу үчүн."""
+    import numpy as np
+    raw = subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-ac", "1", "-ar", "16000", "-f", "s16le", "-"],
+                         capture_output=True, check=True).stdout
+    x = np.frombuffer(raw, dtype=np.int16).astype(float)
+    sr, fr, f0, cent = 16000, 640, [], []
+    win = np.hanning(fr); freqs = np.fft.rfftfreq(fr, 1 / sr)
+    for i in range(0, len(x) - fr, fr // 2):
+        s = x[i:i + fr] - x[i:i + fr].mean()
+        if np.sqrt((s ** 2).mean()) < 900:
+            continue
+        w = s * win
+        ac = np.correlate(w, w, "full")[fr - 1:]
+        lo, hi = int(sr / 400), int(sr / 60)
+        k = lo + int(np.argmax(ac[lo:hi]))
+        if ac[k] > 0.45 * ac[0]:
+            f0.append(sr / k)
+        X = np.abs(np.fft.rfft(w)); cent.append(float((X * freqs).sum() / X.sum()))
+    if not f0 or not cent:
+        return None
+    return float(np.median(f0)), float(np.median(cent))
+
+
+def signature_distance(a, b):
+    """Салыштырмалуу айырма (0 = окшош). Тембр (центроид) — негизги белги; F0 интонацияга жараша көбүрөөк
+    өзгөрөт, ошондуктан анын салмагы жарым. Калибровка (2026-11-20, колдонуучунун кулагы): 1/3 ✓ 6.5%,
+    2/3 ✓ 9.5%, 3/3 ✗ 13.8% (башка үн угулган)."""
+    return max(abs(a[1] - b[1]) / b[1], 0.5 * abs(a[0] - b[0]) / b[0])
+
+
+class ConsistentTTS:
+    """TTS'ти орой үлгүгө салыштырат: айырма чоң болсо кайра чыгарат, эң жакынын тандайт.
+    Gemini'нин стиль нускамасы ар бир чыгарылышта үндүн тембрин бир аз өзгөртүшү мүмкүн."""
+
+    def __init__(self, tts, reference, tolerance=0.10, max_tries=3):
+        self.tts, self.ref_path, self.tol, self.max_tries = tts, reference, tolerance, max_tries
+        self.voice, self.style = getattr(tts, "voice", None), getattr(tts, "style", None)
+        self.last_model, self.report = None, []
+
+    def synth(self, text, out_path):
+        ref = voice_signature(self.ref_path)
+        best = None
+        for i in range(self.max_tries):
+            cand = f"{out_path}.try{i}.wav"
+            self.tts.synth(text, cand)
+            self.last_model = getattr(self.tts, "last_model", None)
+            sig = voice_signature(cand)
+            d = signature_distance(sig, ref) if (sig and ref) else 0.0
+            self.report.append({"try": i + 1, "f0": round(sig[0]) if sig else None,
+                                "centroid": round(sig[1]) if sig else None, "distance": round(d, 3)})
+            log.get().info("Үн шайкештиги %d: F0=%s центроид=%s айырма=%.0f%% (чек %.0f%%)", i + 1,
+                           self.report[-1]["f0"], self.report[-1]["centroid"], d * 100, self.tol * 100)
+            if best is None or d < best[0]:
+                best = (d, cand)
+            if d <= self.tol:
+                break
+        os.replace(best[1], out_path)
+        for i in range(self.max_tries):
+            p = f"{out_path}.try{i}.wav"
+            if os.path.exists(p):
+                os.remove(p)
+        if best[0] > self.tol:
+            log.get().warning("Үн үлгүдөн %.0f%% айырмаланат — эң жакыны алынды, кулак менен текшериңиз", best[0] * 100)
+        return out_path
 
 
 # ---------------- кадрларды чечмелөө ----------------
