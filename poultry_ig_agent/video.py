@@ -366,6 +366,8 @@ def _escape(p):
 def normalize(src, seconds, out, onscreen="", label="", tmp="."):
     vf = ["scale=1080:1920:force_original_aspect_ratio=increase", "crop=1080:1920", "fps=30", "setsar=1"]
     for i, (text, y0, size) in enumerate([(onscreen, 0.12, 64), (label, 0.04, 36)]):
+        # DejaVu шрифтинде жок эмодзилер (🥚 👇 ...) видеодо □ болуп чыгат — алып салабыз
+        text = " ".join("".join(ch for ch in (text or "") if ord(ch) < 0x1F000).split())
         if not text:
             continue
         for j, line in enumerate(textwrap.wrap(text, 24)[:4]):   # ар сап өзүнчө: ffmpeg 7+ '\n'ди □ кылып көрсөтөт

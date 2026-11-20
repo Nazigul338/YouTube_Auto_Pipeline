@@ -114,3 +114,14 @@ class StaleStock(unittest.TestCase):
         post = {"content_type": "education", "shots": [{"n": 1, "duration": 4, "source": "stock", "visual": "chicks", "file": "/old/x.mp4"}]}
         out, missing = video.resolve_shots(post, d)
         self.assertEqual(missing, [1]); self.assertEqual(out[0]["source"], "real"); self.assertNotIn("file", out[0])
+
+
+@unittest.skipUnless(HAVE, "ffmpeg жок")
+class EmojiStrip(unittest.TestCase):
+    def test_unsupported_emoji_removed_supported_symbols_kept(self):
+        d = tempfile.mkdtemp(); src = os.path.join(d, "s.mp4")
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "color=c=gray:s=720x1280:d=1", "-pix_fmt", "yuv420p", src], check=True)
+        video.normalize(src, 1, os.path.join(d, "o.mp4"), "Жумуртка азайдыбы? 🥚 👇 → ✓", "", d)
+        txt = " ".join(open(os.path.join(d, f), encoding="utf-8").read() for f in sorted(os.listdir(d)) if f.startswith("t_"))
+        self.assertNotIn("🥚", txt); self.assertNotIn("👇", txt)
+        self.assertIn("→", txt); self.assertIn("✓", txt)

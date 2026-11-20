@@ -47,6 +47,8 @@ jobs:
             echo "статус: $st"
             if [ "$st" = '"ready"' ]; then
               cp poultry_ig_agent/out/$pid/{final.mp4,shots.json,post.json} "$D/$name/"
+              outname=$(python -c 'import json,sys; print(json.load(open(sys.argv[1])).get("output_name",""))' "$D/$name/post.json")
+              [ -n "$outname" ] && cp "$D/$name/final.mp4" "$D/$name/$outname"
               if [ -f poultry_ig_agent/out/$pid/licenses.json ]; then
                 cp poultry_ig_agent/out/$pid/licenses.json "$D/$name/"
                 ids=$(python -c 'import json,sys; print(",".join(str(l["id"]) for l in json.load(open(sys.argv[1]))))' poultry_ig_agent/out/$pid/licenses.json)

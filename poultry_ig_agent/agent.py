@@ -247,6 +247,8 @@ def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False, voice_file=No
     vcfg = settings.load_settings()["voice"]
     clone = vcfg.get("provider") in ("elevenlabs", "kani") and (vcfg.get("elevenlabs_voice_id") or vcfg.get("kani_ref_audio")) or voice_file
     post["ai_voice"] = ("clone" if clone else True) if vcfg.get("disclose_ai_voice", True) else False
+    if stock is not None and post.get("exclude_stock_ids"):
+        stock.used |= {int(i) for i in post["exclude_stock_ids"]}     # мурунку видеолордун клиптери кайталанбасын
     res = video.build(post, d, veo or video.VeoProvider(), tts,
                       os.path.join(os.path.dirname(__file__), "assets"), allow_ai_fallback, NICHE, stock=stock)
     if res["status"] == "ready":

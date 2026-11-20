@@ -1,0 +1,149 @@
+{
+  "format": "reel",
+  "lang": "ky",
+  "content_type": "education",
+  "purpose": "education",
+  "pillar": "education",
+  "topic_key": "layers",
+  "topic": "Тооктор эмне үчүн жумуртка туубай калат? 5 негизги себеп",
+  "hook": "Тоокторуңуз мурда көп жумуртка тууп, азыр жумурткасы азайып кеттиби?",
+  "hook_onscreen": "Жумуртка азайдыбы?",
+  "voiceover": "Тоокторуңуз мурда көп жумуртка тууп, азыр жумурткасы азайып кеттиби? Мунун беш негизги себеби болушу мүмкүн. Келгиле, карап көрөлү!\n\nБиринчи себеп — туура эмес тоюттандыруу.\n\nТоокторго жөн гана дан берүү жетишсиз. Жумуртка берүүчү тоокторго белок, кальций, витаминдер жана минералдар тең салмактуу өлчөмдө керек.\n\nЭкинчи себеп — жарыктын жетишсиздиги.\n\nЖарык убактысынын кыскарышы жумуртка берүүнүн төмөндөшүнө алып келиши мүмкүн. Ошондуктан жарыктандыруу режимине көңүл буруңуз.\n\nҮчүнчү себеп — суунун жетишсиздиги.\n\nТооктор ар дайым таза сууга жетиши керек. Суу жетишсиз болсо, жумуртка берүү да төмөндөшү мүмкүн.\n\nТоок чарбасы боюнча дагы пайдалуу кеңештер үчүн баракчабызга катталыңыз!",
+  "own_text": true,
+  "shots": [
+    {
+      "n": 1,
+      "duration": 3,
+      "source": "real",
+      "visual": "Hens laying eggs in a nest box",
+      "onscreen": "Жумуртка азайдыбы?"
+    },
+    {
+      "n": 2,
+      "duration": 3,
+      "source": "real",
+      "visual": "Hen eggs in a basket on a farm",
+      "onscreen": "5 НЕГИЗГИ СЕБЕП"
+    },
+    {
+      "n": 3,
+      "duration": 3,
+      "source": "real",
+      "visual": "Rooster and hens walking in a chicken coop",
+      "onscreen": "Карап көрөлү"
+    },
+    {
+      "n": 4,
+      "duration": 3,
+      "source": "real",
+      "visual": "Hens eating feed from a feeder",
+      "onscreen": "СЕБЕП №1 · ТОЮТ"
+    },
+    {
+      "n": 5,
+      "duration": 3,
+      "source": "real",
+      "visual": "Chickens pecking grain feeding",
+      "onscreen": "Жөн гана дан — жетишсиз"
+    },
+    {
+      "n": 6,
+      "duration": 4,
+      "source": "real",
+      "visual": "Laying hens eating feed close up",
+      "onscreen": "Белок · Кальций · Витамин · Минерал"
+    },
+    {
+      "n": 7,
+      "duration": 3,
+      "source": "real",
+      "visual": "Lamp light above hens in a coop",
+      "onscreen": "СЕБЕП №2 · ЖАРЫК"
+    },
+    {
+      "n": 8,
+      "duration": 3,
+      "source": "real",
+      "visual": "Hens under lamp light at night",
+      "onscreen": "Жарык аз → жумуртка аз"
+    },
+    {
+      "n": 9,
+      "duration": 4,
+      "source": "real",
+      "visual": "Lamp in a poultry barn",
+      "onscreen": "Жарык режимин көзөмөлдөңүз"
+    },
+    {
+      "n": 10,
+      "duration": 3,
+      "source": "real",
+      "visual": "Chickens drinking water",
+      "onscreen": "СЕБЕП №3 · СУУ"
+    },
+    {
+      "n": 11,
+      "duration": 3,
+      "source": "real",
+      "visual": "Hen drinking from a water dispenser",
+      "onscreen": "Таза суу — ар дайым"
+    },
+    {
+      "n": 12,
+      "duration": 3,
+      "source": "real",
+      "visual": "Chickens drinking water in the farm",
+      "onscreen": "Суу аз → жумуртка аз"
+    },
+    {
+      "n": 13,
+      "duration": 4,
+      "source": "real",
+      "visual": "Hens and rooster on a farm",
+      "onscreen": "Кийинки бөлүктө: 4–5-себеп →"
+    }
+  ],
+  "caption": "Тооктор эмне үчүн жумуртка туубай калат? 5 негизги себептин алгачкы үчөө: тоют, жарык, суу. (1/2) Видеону сактап коюңуз 👇\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\n📌 Бул маалымат — автордун балапан багуудагы өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.",
+  "hashtags": [
+    "#тоокферма",
+    "#жумуртка",
+    "#тоокчарбасы",
+    "#кыргызстан",
+    "#фермер",
+    "#тоок"
+  ],
+  "cta": {
+    "type": "direct",
+    "text": "Direct'ке «КУРС» деп жазыңыз"
+  },
+  "sources": [
+    {
+      "type": "author_experience",
+      "note": "Автордун сценарийи (колдонуучу берген текст, 2026-11-20)"
+    }
+  ],
+  "series": {
+    "name": "jumurtka_5_sebep",
+    "part": 1,
+    "of": 2
+  },
+  "exclude_stock_ids": [
+    10685,
+    29874,
+    36571,
+    76879,
+    76883,
+    76884,
+    118648,
+    130412,
+    139969,
+    147982,
+    190144,
+    331459
+  ],
+  "output_name": "Instagram_Reels_02_1of2.mp4",
+  "id": "2026-11-20-eeea8f2b-reel-ky",
+  "needs_vet_review": true,
+  "lint_issues": [],
+  "status": "pending_review"
+}

@@ -1,0 +1,142 @@
+{
+  "format": "reel",
+  "lang": "ky",
+  "content_type": "education",
+  "purpose": "education",
+  "pillar": "education",
+  "topic_key": "layers",
+  "topic": "Тооктор эмне үчүн жумуртка туубай калат? 5 негизги себеп",
+  "hook": "Тоокторуңуз мурда көп жумуртка тууп, азыр жумурткасы азайып кеттиби?",
+  "hook_onscreen": "Жумуртка азайдыбы?",
+  "voiceover": "Тоокторуңуз мурда көп жумуртка тууп, азыр жумурткасы азайып кеттиби?\n\nТөртүнчү себеп — стресс.\n\nКатуу ызы-чуу, өтө ысык же суук аба жана багуу шарттарынын кескин өзгөрүшү тоокторго терс таасир берет.\n\nБешинчи себеп — жаш курагы жана ден соолугу.\n\nТооктордун жашы өткөн сайын жумуртка берүү жөндөмү төмөндөшү мүмкүн. Ошондой эле мите курттар жана оорулар да жумуртканын азайышына себеп болот.\n\nЭсиңизде болсун! Тооктордун жумурткасын көбөйтүү үчүн тоютуна, суусуна, жарыгына жана ден соолугуна дайыма көңүл буруңуз.\n\nТоок чарбасы боюнча дагы пайдалуу кеңештер үчүн баракчабызга катталыңыз!",
+  "own_text": true,
+  "shots": [
+    {
+      "n": 1,
+      "duration": 3,
+      "source": "real",
+      "visual": "Hen sitting on a nest with eggs",
+      "onscreen": "Жумуртка азайдыбы?"
+    },
+    {
+      "n": 2,
+      "duration": 3,
+      "source": "real",
+      "visual": "Chickens in a crowded coop",
+      "onscreen": "СЕБЕП №4 · СТРЕСС"
+    },
+    {
+      "n": 3,
+      "duration": 3,
+      "source": "real",
+      "visual": "Rooster crowing loudly on a farm",
+      "onscreen": "Катуу ызы-чуу"
+    },
+    {
+      "n": 4,
+      "duration": 3,
+      "source": "real",
+      "visual": "Chickens in the snow in winter",
+      "onscreen": "Өтө ысык же суук аба"
+    },
+    {
+      "n": 5,
+      "duration": 3,
+      "source": "real",
+      "visual": "Hens moving in a barn",
+      "onscreen": "Шарттын кескин өзгөрүшү"
+    },
+    {
+      "n": 6,
+      "duration": 3,
+      "source": "real",
+      "visual": "Brown hens pecking in the farm yard",
+      "onscreen": "Тоокторго тынч шарт керек"
+    },
+    {
+      "n": 7,
+      "duration": 3,
+      "source": "real",
+      "visual": "Old hen walking in a farmyard",
+      "onscreen": "СЕБЕП №5 · ЖАШ ЖАНА ДЕН СООЛУК"
+    },
+    {
+      "n": 8,
+      "duration": 3,
+      "source": "real",
+      "visual": "Healthy brown hens on a farm",
+      "onscreen": "Жашы өткөн сайын — азыраак"
+    },
+    {
+      "n": 9,
+      "duration": 3,
+      "source": "real",
+      "visual": "Farmer checking hens",
+      "onscreen": "Мите курттар жана оорулар"
+    },
+    {
+      "n": 10,
+      "duration": 3,
+      "source": "real",
+      "visual": "Hen eggs in a nest",
+      "onscreen": "Ден соолук = жумуртка"
+    },
+    {
+      "n": 11,
+      "duration": 4,
+      "source": "real",
+      "visual": "Fresh chicken eggs collected in a basket",
+      "onscreen": "✓ Тоют ✓ Суу ✓ Жарык ✓ Ден соолук"
+    },
+    {
+      "n": 12,
+      "duration": 4,
+      "source": "real",
+      "visual": "Chickens and rooster on a sunny farm",
+      "onscreen": "Пайдалуу кеңештер үчүн катталыңыз"
+    }
+  ],
+  "caption": "Тооктор эмне үчүн жумуртка туубай калат? 4-себеп — стресс, 5-себеп — жаш курагы жана ден соолугу. (2/2)\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\n📌 Бул маалымат — автордун балапан багуудагы өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.",
+  "hashtags": [
+    "#тоокферма",
+    "#жумуртка",
+    "#тоокчарбасы",
+    "#кыргызстан",
+    "#фермер",
+    "#тоок"
+  ],
+  "cta": {
+    "type": "direct",
+    "text": "Direct'ке «КУРС» деп жазыңыз"
+  },
+  "sources": [
+    {
+      "type": "author_experience",
+      "note": "Автордун сценарийи (колдонуучу берген текст, 2026-11-20)"
+    }
+  ],
+  "series": {
+    "name": "jumurtka_5_sebep",
+    "part": 2,
+    "of": 2
+  },
+  "exclude_stock_ids": [
+    10685,
+    29874,
+    36571,
+    76879,
+    76883,
+    76884,
+    118648,
+    130412,
+    139969,
+    147982,
+    190144,
+    331459
+  ],
+  "output_name": "Instagram_Reels_02_2of2.mp4",
+  "id": "2026-11-20-e9043df9-reel-ky",
+  "needs_vet_review": true,
+  "lint_issues": [],
+  "status": "pending_review"
+}
