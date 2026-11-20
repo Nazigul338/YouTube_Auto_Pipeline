@@ -2,7 +2,7 @@
   "default_lang": "ky",
   "graph_version": "v23.0",
   "publish_live": false,
-  "voice": {"provider": "gemini", "gemini_voice": "Charon", "gemini_style": "warm", "allow_tts_fallback": false, "elevenlabs_voice_id": null, "elevenlabs_model": "eleven_v3", "owner_consent_confirmed": false, "disclose_ai_voice": true},
+  "voice": {"provider": "gemini", "gemini_voice": "Charon", "gemini_style": "warm", "allow_tts_fallback": false, "reference_sample": "voice_probe/qa/Charon_warm.mp3", "consistency_tolerance": 0.10, "elevenlabs_voice_id": null, "elevenlabs_model": "eleven_v3", "owner_consent_confirmed": false, "disclose_ai_voice": true},
   "autopilot": {"enabled": false, "required_approved_publishes": 5},
   "video": {"min_seconds": 15, "max_seconds": 60, "ai_label": {"ky": "AI иллюстрация", "ru": "AI-иллюстрация"}}
 }

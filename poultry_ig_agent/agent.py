@@ -254,7 +254,8 @@ def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False, voice_file=No
         if res.get("licenses"):
             post["licenses"] = res["licenses"]
         if res.get("tts_model"):
-            post["tts"] = {"model": res["tts_model"], "voice": getattr(tts, "voice", None), "style": getattr(tts, "style", None)}
+            post["tts"] = {"model": res["tts_model"], "voice": getattr(tts, "voice", None), "style": getattr(tts, "style", None),
+                           "consistency": getattr(tts, "report", None)}
         post["lint_issues"] = review(post)          # AI ачыктоосу caption'ко кошулсун
         post["video"] = "final.mp4"
     post["video_status"] = res["status"]

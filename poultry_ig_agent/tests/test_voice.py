@@ -185,3 +185,41 @@ class NoSilentFallback(unittest.TestCase):
                 video.GeminiTTS("Orus", tries=2, allow_fallback=False).synth("x", os.path.join(tempfile.mkdtemp(), "v.wav"))
         self.assertIn("квотасы бүттү", str(cm.exception))
         self.assertFalse(any("2.5" in u for u in calls))      # запас моделге өткөн жок
+
+
+@unittest.skipUnless(__import__("shutil").which("ffmpeg"), "ffmpeg жок")
+class Consistency(unittest.TestCase):
+    def _tone(self, path, hz):
+        import subprocess
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i",
+                        f"sine=f={hz}:d=2,volume=0.5", "-ar", "24000", path], check=True)
+
+    def test_retries_until_close_and_picks_best(self):
+        d = tempfile.mkdtemp(); ref = os.path.join(d, "ref.wav"); self._tone(ref, 120)
+        outer = self
+        class Fake:
+            voice, style, last_model = "Charon", "warm", "m"
+            def __init__(self): self.hz = iter([200, 125, 300])
+            def synth(self, text, path): outer._tone(path, next(self.hz)); return path
+        t = video.ConsistentTTS(Fake(), ref, tolerance=0.10, max_tries=3)
+        out = t.synth("x", os.path.join(d, "v.wav"))
+        self.assertEqual(len(t.report), 2)                         # 200 Гц четке, 125 Гц кабыл
+        self.assertLess(t.report[-1]["distance"], 0.10)
+        self.assertTrue(os.path.exists(out))
+        self.assertFalse([f for f in os.listdir(d) if ".try" in f])
+
+    def test_settings_wraps_with_reference(self):
+        t = video.tts_from_settings({"voice": {"provider": "gemini", "gemini_voice": "Charon",
+                                               "reference_sample": "voice_probe/qa/Charon_warm.mp3"}})
+        self.assertIsInstance(t, video.ConsistentTTS)
+        self.assertEqual(t.voice, "Charon")
+
+
+class Calibration(unittest.TestCase):
+    def test_user_judgement_reproduced(self):
+        ref = (111, 930)                                   # Charon_warm үлгүсү
+        ok = [(123, 870), (132, 925)]                      # 1/3, 2/3 — колдонуучу кабыл алды
+        bad = (119, 802)                                   # 3/3 — 'Charon болбой калыптыр'
+        for s in ok:
+            self.assertLessEqual(video.signature_distance(s, ref), 0.10)
+        self.assertGreater(video.signature_distance(bad, ref), 0.10)
