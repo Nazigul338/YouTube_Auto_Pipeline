@@ -245,6 +245,7 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
      (−31 LUFS + sidechain ratio 6) сүйлөө учурунда музыканы диктордон ~27 LU төмөн түшүрөт; эффекттер 13/23 LU — телефондо угулбайт.
      Оңдоо (cinematic/TEST гана, production өзгөргөн жок): `s7_music.mix(audible=True)` −21 LUFS + ratio 2.5 → ~12 LU; басаңдатылган
      музыка өзүнчө өлчөнөт (`music_ducked_lufs`), QA `music_audible` 9–16 LU; SFX TRACK_REL hit 11 / bed 17. Тест: tests/test_music_audible.py.
+     ▶️ Текшерүү run: **#44661498471** (rerun_from=s7_music, sound_effects ✓).
    Эскертүү: cinematic_test'ти кезекке коюудан мурун make-video тобунда pending жок экенин текшер.
    Drive'дагы «YouTube Audio Library» файлдары — 13 музыка трек гана (Music/), үн эффекти эмес.
    ✅ Drive'да `YouTube_Auto/Sound_Effects/` + 6 категория папкасы түзүлдү (2026-11-19 ~15:58 UTC, Claude, колдонуучунун макулдугу менен; бош).
