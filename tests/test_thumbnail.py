@@ -32,5 +32,25 @@ class TestThumbnail(unittest.TestCase):
             shutil.rmtree(d, ignore_errors=True)
 
 
+class TestCleanSource(unittest.TestCase):
+    def test_uses_source_clip_time(self):
+        from types import SimpleNamespace
+
+        shots = [{"i": 0, "start": 0.0, "end": 3.0, "source": "pixabay", "kind": "video", "asset": "pixabay:1",
+                  "url": "https://x/1.mp4", "file": "a.mp4", "offset": 2.0},
+                 {"i": 1, "start": 3.0, "end": 6.0, "source": "gemini", "kind": "image", "asset": "g", "url": "",
+                  "file": "b.jpg"}]
+        d = Path(tempfile.mkdtemp())
+        try:
+            got = []
+            st = SimpleNamespace(download=lambda a, dest: got.append(a.url) or dest)
+            src, at = thumbnail.clean_source(shots, 1.5, d, st)
+            self.assertEqual((src.name, at, got), ("clip_0.mp4", 3.5, ["https://x/1.mp4"]))
+            self.assertIsNone(thumbnail.clean_source(shots, 4.0, d, st))     # AI-сүрөт — булак жок
+            self.assertIsNone(thumbnail.clean_source(shots, 99, d, st))
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

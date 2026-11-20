@@ -5,7 +5,8 @@
 
 THUMBS: `сек|1-сап|2-сап` вариант, `;` менен бөлүнөт. Натыйжа: Drive → <root>/Thumbnails/<ID>_thumb_<N>.jpg
 жана бардык варианттар бир барakta (<ID>_thumbs.jpg). Кадр — видеонун лицензиясы катталган материалы
-(Pixabay/Pexels), жазуу — оригиналдуу; бөтөн логотип/адамдын сүрөтү кошулбайт.
+(Pixabay/Pexels), жазуу — оригиналдуу; бөтөн логотип/адамдын сүрөтү кошулбайт. Кадр ТАЗА булак клиптен
+алынат (субтитр/карточка жок); табылбаса гана даяр видеодон.
 """
 
 from __future__ import annotations
@@ -49,6 +50,39 @@ def fit_size(text: str, base: int, max_w: int = int(W * 0.66)) -> int:
     """Болжолдуу кенендик (жоон шрифт ≈ 0.68×өлчөм бир тамгага) — сапка батсын."""
     n = max(1, len(text))
     return int(max(56, min(base, max_w / (0.68 * n))))
+
+
+def shot_at(shots: list[dict], t: float) -> dict | None:
+    for sh in shots:
+        if sh.get("start", 0) <= t < sh.get("end", 0):
+            return sh
+    return None
+
+
+def clean_source(shots: list[dict], t: float, work: Path, stock=None) -> tuple[Path, float] | None:
+    """Субтитрсиз/карточкасыз ТАЗА кадр үчүн: ошол учурдагы булак клип жана андагы убакыт.
+
+    Себеби (2026-11-20): даяр видеодон алынган кадрда субтитр жана текст-карточка калып калган.
+    """
+    sh = shot_at(shots, t)
+    if not sh or not sh.get("url") or sh.get("source") == "gemini":
+        return None
+    from .stock import Asset, Stock
+
+    stock = stock or Stock(os.environ.get("PIXABAY_API_KEY", ""), os.environ.get("PEXELS_API_KEY"))
+    dest = work / f"clip_{sh.get('i', 0)}{Path(sh.get('file', 'x.mp4')).suffix or '.mp4'}"
+    a = Asset(sh["source"], sh.get("kind", "video"), sh["asset"], sh["url"], 1920, 1080, 0.0, "", "", "", "")
+    try:
+        stock.download(a, dest)
+    except Exception:
+        fresh = stock.refresh_url(sh["asset"]) if hasattr(stock, "refresh_url") else None
+        if not fresh:
+            return None
+        a.url = fresh
+        stock.download(a, dest)
+    if sh.get("kind") == "image":
+        return dest, 0.0
+    return dest, max(0.0, float(sh.get("offset", 0.0)) + (t - sh["start"]))
 
 
 def make(src: Path, t: float, line1: str, line2: str, out: Path, work: Path) -> Path:
@@ -111,11 +145,24 @@ def main() -> int:
         return 2
     with tempfile.TemporaryDirectory() as d:
         d = Path(d)
-        src = drive.download_file(item["id"], d / "src.mp4")
+        import json
+
+        shots = []
+        cdir = drive.find_path(root, "Projects", vid, "clips")
+        sj = drive.find_file("shots.json", cdir) if cdir else None
+        if sj:
+            shots = json.loads(drive.download_file(sj["id"], d / "shots.json").read_text(encoding="utf-8"))["shots"]
+        src = None
         folder = drive.ensure_path(root, "Thumbnails")
         files, lines = [], []
         for k, (t, l1, l2) in enumerate(specs, 1):
-            out = make(src, t, l1, l2, d / f"{vid}_thumb_{k}.jpg", d)
+            clean = clean_source(shots, t, d) if shots else None
+            if clean:
+                out = make(clean[0], clean[1], l1, l2, d / f"{vid}_thumb_{k}.jpg", d)
+            else:
+                print(f"⚠️ {t:.0f} сек: таза булак клип табылган жок — даяр видеодон (субтитр калышы мүмкүн)")
+                src = src or drive.download_file(item["id"], d / "src.mp4")
+                out = make(src, t, l1, l2, d / f"{vid}_thumb_{k}.jpg", d)
             files.append(out)
             pid = drive.put_file(out, folder, out.name)
             lines.append(f"🖼 ОБЛОЖКА {k} ({t:.0f} сек, «{l1} {l2}»): https://drive.google.com/file/d/{pid}/view")
