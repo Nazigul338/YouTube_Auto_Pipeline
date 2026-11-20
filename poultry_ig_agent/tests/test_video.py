@@ -125,3 +125,13 @@ class EmojiStrip(unittest.TestCase):
         txt = " ".join(open(os.path.join(d, f), encoding="utf-8").read() for f in sorted(os.listdir(d)) if f.startswith("t_"))
         self.assertNotIn("🥚", txt); self.assertNotIn("👇", txt)
         self.assertIn("→", txt); self.assertIn("✓", txt)
+
+
+@unittest.skipUnless(HAVE, "ffmpeg жок")
+class UpperWrap(unittest.TestCase):
+    def test_uppercase_wrapped_shorter(self):
+        d = tempfile.mkdtemp(); src = os.path.join(d, "s.mp4")
+        subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "color=c=gray:s=720x1280:d=1", "-pix_fmt", "yuv420p", src], check=True)
+        video.normalize(src, 1, os.path.join(d, "o.mp4"), "СЕБЕП №5 · ЖАШ ЖАНА ДЕН СООЛУК", "", d)
+        lines = [open(os.path.join(d, f), encoding="utf-8").read() for f in sorted(os.listdir(d)) if f.startswith("t_")]
+        self.assertTrue(all(len(l) <= 18 for l in lines)); self.assertGreaterEqual(len(lines), 2)

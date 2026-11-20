@@ -186,3 +186,21 @@ class MachineryFilter(unittest.TestCase):
         self.assertFalse(pexels.relevant("farm, tractor, agriculture, chicken"))
         self.assertFalse(pexels.relevant("aerial, drone, farm, poultry"))
         self.assertTrue(pexels.relevant("hens, rooster, farmyard, chicken"))
+
+
+class ShotOverrides(unittest.TestCase):
+    def test_livestock_rejected(self):
+        self.assertFalse(pexels.relevant("sheep, farm, chicken"))
+        self.assertFalse(pexels.relevant("cow, poultry, farm"))
+
+    def test_explicit_query_and_require(self):
+        from poultry_ig_agent import pixabay
+        bulb = {**hit(9), "tags": "light bulb, lamp, electricity"}
+        urls = []
+        st = pixabay.PixabayStock("K", transport=lambda u: urls.append(u) or {"hits": [bulb]}, downloader=lambda u, p: open(p, "wb").close())
+        _, lic = st.fetch("Lamp", 3, os.path.join(tempfile.mkdtemp(), "a.mp4"), query="light bulb", require=["bulb", "lamp"])
+        self.assertEqual(lic["id"], 9); self.assertIn("q=light+bulb", urls[0])
+        self.assertFalse(pexels.relevant("light bulb, lamp"))           # демейки эрежеде тоок шарт
+
+    def test_require_still_blocks_negative(self):
+        self.assertFalse(pexels.relevant("water, sheep", require=["water"]))

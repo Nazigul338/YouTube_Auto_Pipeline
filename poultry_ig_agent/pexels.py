@@ -30,7 +30,9 @@ NEGATIVE = ("duck", "goose", "geese", "gosling", "swan", "sparrow", "pigeon", "o
             "frying", "roast", "roasted", "recipe", "dish", "meal", "soup", "kitchen", "wok", "restaurant", "dinner",
             "lunch", "kebab", "wings", "nuggets", "curry", "delicious", "eat", "fry",
             # айыл чарба техникасы/талаа: 'farm' тегдүү, бирок тоок жок кадрлар
-            "tractor", "harvester", "combine", "machinery", "aerial", "drone", "crop", "crops", "cornfield", "wheat")
+            "tractor", "harvester", "combine", "machinery", "aerial", "drone", "crop", "crops", "cornfield", "wheat",
+            # башка мал (тег 'farm' болсо да)
+            "sheep", "lamb", "cow", "cows", "cattle", "calf", "goat", "goats", "horse", "horses", "pig", "pigs", "dog", "cat")
 
 
 def keywords(visual, n=5):
@@ -50,12 +52,13 @@ def poultry_query(visual):
     return f"{anchor} {detail}".strip()
 
 
-def relevant(text):
+def relevant(text, require=None):
+    """require: кадрдын өз талабы (мис. ['bulb','lamp'] — жарык кадры үчүн тоок шарт эмес). NEGATIVE ар дайым иштейт."""
     t = (text or "").lower()
     words = set(re.findall(r"[a-z]+", t))
     if any(n in words or n + "s" in words or n + "lings" in words or n + "ling" in words for n in NEGATIVE):
         return False
-    return any(r in words or r + "s" in words for r in RELEVANT)
+    return any(r in words or r + "s" in words for r in (require or RELEVANT))
 
 
 def excluded_ids():
@@ -91,12 +94,13 @@ class PexelsStock:
         q = urllib.parse.urlencode({"query": query, "orientation": "portrait", "per_page": per_page, "size": "medium"})
         return _get(f"{API}?{q}", self.key, self.tx).get("videos", [])
 
-    def find(self, visual, min_seconds):
-        for q in [poultry_query(visual)] + list(FALLBACK_QUERIES):
+    def find(self, visual, min_seconds, query=None, require=None):
+        queries = [query] if query else [poultry_query(visual)] + list(FALLBACK_QUERIES)
+        for q in queries:
             for v in self.search(q):
                 if v["id"] in self.used or v.get("duration", 0) < min(min_seconds, 8):
                     continue
-                if not relevant(v.get("url", "")):          # Pexels: URL slug'ында тоок сөзү болушу керек
+                if not relevant(v.get("url", ""), require):   # Pexels: URL slug'ында керектүү сөз болушу керек
                     continue
                 f = pick_file(v)
                 if f:
@@ -104,8 +108,8 @@ class PexelsStock:
                     return v, f, q
         raise StockError(f"Pexels'тен ылайыктуу видео табылган жок: {visual[:60]}")
 
-    def fetch(self, visual, min_seconds, out_path):
-        v, f, q = self.find(visual, min_seconds)
+    def fetch(self, visual, min_seconds, out_path, query=None, require=None):
+        v, f, q = self.find(visual, min_seconds, query, require)
         if self.dl:
             self.dl(f["link"], out_path)
         else:

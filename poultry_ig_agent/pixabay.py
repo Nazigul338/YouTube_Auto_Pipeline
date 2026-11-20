@@ -41,12 +41,13 @@ class PixabayStock:
         except urllib.error.HTTPError as e:   # ачкыч URL'де — катада көрсөтүлбөйт
             raise StockError(f"Pixabay HTTP {e.code}") from None
 
-    def find(self, visual, min_seconds):
-        for q in [poultry_query(visual)] + list(FALLBACK_QUERIES):
+    def find(self, visual, min_seconds, query=None, require=None):
+        queries = [query] if query else [poultry_query(visual)] + list(FALLBACK_QUERIES)
+        for q in queries:
             for h in self.search(q):
                 if h["id"] in self.used or h.get("duration", 0) < min(min_seconds, 8):
                     continue
-                if not relevant(h.get("tags", "")):          # тегдеринде тоок/балапан сөзү жок болсо — колдонбойбуз
+                if not relevant(h.get("tags", ""), require):  # тегдеринде керектүү сөз жок болсо — колдонбойбуз
                     continue
                 f = pick_file(h)
                 if f:
@@ -54,8 +55,8 @@ class PixabayStock:
                     return h, f, q
         raise StockError(f"Pixabay'дан ылайыктуу видео табылган жок: {visual[:60]}")
 
-    def fetch(self, visual, min_seconds, out_path):
-        h, f, q = self.find(visual, min_seconds)
+    def fetch(self, visual, min_seconds, out_path, query=None, require=None):
+        h, f, q = self.find(visual, min_seconds, query, require)
         if self.dl:
             self.dl(f["url"], out_path)
         else:

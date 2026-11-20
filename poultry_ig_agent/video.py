@@ -370,7 +370,9 @@ def normalize(src, seconds, out, onscreen="", label="", tmp="."):
         text = " ".join("".join(ch for ch in (text or "") if ord(ch) < 0x1F000).split())
         if not text:
             continue
-        for j, line in enumerate(textwrap.wrap(text, 24)[:4]):   # ар сап өзүнчө: ffmpeg 7+ '\n'ди □ кылып көрсөтөт
+        letters = [c for c in text if c.isalpha()]
+        upper = letters and sum(c.isupper() for c in letters) / len(letters) > 0.6
+        for j, line in enumerate(textwrap.wrap(text, 18 if upper else 24)[:4]):   # БАС тамгалар кененирээк   # ар сап өзүнчө: ffmpeg 7+ '\n'ди □ кылып көрсөтөт
             tf = os.path.join(tmp, f"t_{os.path.basename(out)}_{i}_{j}.txt")
             with open(tf, "w", encoding="utf-8") as f:
                 f.write(line)
@@ -413,7 +415,8 @@ def fill_stock(shots, missing, stock, work):
     for s in shots:
         if s["n"] in missing:
             try:
-                path, lic = stock.fetch(s.get("visual", ""), float(s.get("duration", 4)), os.path.join(work, f"stock_{s['n']}.mp4"))
+                path, lic = stock.fetch(s.get("visual", ""), float(s.get("duration", 4)), os.path.join(work, f"stock_{s['n']}.mp4"),
+                                        query=s.get("stock_query"), require=s.get("stock_require"))
                 s.update(source="stock", file=path, stock=lic)
                 lics.append({"shot": s["n"], **lic})
             except Exception as e:
