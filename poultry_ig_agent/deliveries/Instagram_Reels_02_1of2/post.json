@@ -13,97 +13,214 @@
   "shots": [
     {
       "n": 1,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Hens laying eggs in a nest box",
-      "onscreen": "Жумуртка азайдыбы?"
+      "onscreen": "Жумуртка азайдыбы?",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_1.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 157263,
+        "url": "https://pixabay.com/videos/id-157263/",
+        "author": "Kmeel_com",
+        "query": "hens eggs",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 2,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Hen eggs in a basket on a farm",
-      "onscreen": "5 НЕГИЗГИ СЕБЕП"
+      "onscreen": "5 НЕГИЗГИ СЕБЕП",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_2.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 66635,
+        "url": "https://pixabay.com/videos/id-66635/",
+        "author": "Engin_Akyurt",
+        "query": "hen eggs",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 3,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Rooster and hens walking in a chicken coop",
-      "onscreen": "Карап көрөлү"
+      "onscreen": "Карап көрөлү",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_3.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 44626,
+        "url": "https://pixabay.com/videos/id-44626/",
+        "author": "sergo75-75",
+        "query": "rooster coop",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 4,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Hens eating feed from a feeder",
-      "onscreen": "СЕБЕП №1 · ТОЮТ"
+      "onscreen": "СЕБЕП №1 · ТОЮТ",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_4.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 67069,
+        "url": "https://pixabay.com/videos/id-67069/",
+        "author": "BenjaminNelan",
+        "query": "hens eating",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 5,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Chickens pecking grain feeding",
-      "onscreen": "Жөн гана дан — жетишсиз"
+      "onscreen": "Жөн гана дан — жетишсиз",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_5.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 22562,
+        "url": "https://pixabay.com/videos/id-22562/",
+        "author": "adege",
+        "query": "chickens feeding",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 6,
-      "duration": 4,
-      "source": "real",
+      "duration": 4.74,
+      "source": "stock",
       "visual": "Laying hens eating feed close up",
-      "onscreen": "Белок · Кальций · Витамин · Минерал"
+      "onscreen": "Белок · Кальций · Витамин · Минерал",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_6.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 69729,
+        "url": "https://pixabay.com/videos/id-69729/",
+        "author": "ringtailed",
+        "query": "hens eating",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 7,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Lamp light above hens in a coop",
-      "onscreen": "СЕБЕП №2 · ЖАРЫК"
+      "onscreen": "СЕБЕП №2 · ЖАРЫК",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_7.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 45789,
+        "url": "https://pixabay.com/videos/id-45789/",
+        "author": "powerp540",
+        "query": "hens lamp",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 8,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Hens under lamp light at night",
-      "onscreen": "Жарык аз → жумуртка аз"
+      "onscreen": "Жарык аз → жумуртка аз",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_8.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 188986,
+        "url": "https://pixabay.com/videos/id-188986/",
+        "author": "Danganhfoto",
+        "query": "hens lamp",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 9,
-      "duration": 4,
-      "source": "real",
+      "duration": 4.74,
+      "source": "stock",
       "visual": "Lamp in a poultry barn",
-      "onscreen": "Жарык режимин көзөмөлдөңүз"
+      "onscreen": "Жарык режимин көзөмөлдөңүз",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_9.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 105228,
+        "url": "https://pixabay.com/videos/id-105228/",
+        "author": "Eaktas06",
+        "query": "poultry lamp",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 10,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Chickens drinking water",
-      "onscreen": "СЕБЕП №3 · СУУ"
+      "onscreen": "СЕБЕП №3 · СУУ",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_10.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 130614,
+        "url": "https://pixabay.com/videos/id-130614/",
+        "author": "Dx21",
+        "query": "chickens drinking",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 11,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Hen drinking from a water dispenser",
-      "onscreen": "Таза суу — ар дайым"
+      "onscreen": "Таза суу — ар дайым",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_11.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 105226,
+        "url": "https://pixabay.com/videos/id-105226/",
+        "author": "Eaktas06",
+        "query": "hen drinking",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 12,
-      "duration": 3,
-      "source": "real",
+      "duration": 3.55,
+      "source": "stock",
       "visual": "Chickens drinking water in the farm",
-      "onscreen": "Суу аз → жумуртка аз"
+      "onscreen": "Суу аз → жумуртка аз",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_12.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 105229,
+        "url": "https://pixabay.com/videos/id-105229/",
+        "author": "Eaktas06",
+        "query": "chickens drinking",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "n": 13,
-      "duration": 4,
-      "source": "real",
+      "duration": 4.74,
+      "source": "stock",
       "visual": "Hens and rooster on a farm",
-      "onscreen": "Кийинки бөлүктө: 4–5-себеп →"
+      "onscreen": "Кийинки бөлүктө: 4–5-себеп →",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-20-eeea8f2b-reel-ky/work/stock_13.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 144679,
+        "url": "https://pixabay.com/videos/id-144679/",
+        "author": "Dx21",
+        "query": "hens farm",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     }
   ],
-  "caption": "Тооктор эмне үчүн жумуртка туубай калат? 5 негизги себептин алгачкы үчөө: тоют, жарык, суу. (1/2) Видеону сактап коюңуз 👇\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\n📌 Бул маалымат — автордун балапан багуудагы өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.",
+  "caption": "Тооктор эмне үчүн жумуртка туубай калат? 5 негизги себептин алгачкы үчөө: тоют, жарык, суу. (1/2) Видеону сактап коюңуз 👇\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\n📌 Бул маалымат — автордун балапан багуудагы өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.\n🎞 Айрым кадрлар — стоктук видео (Pixabay/Pexels; иллюстрация, биздин ферма эмес).\n🎙 Диктордун үнү AI менен түзүлгөн.",
   "hashtags": [
     "#тоокферма",
     "#жумуртка",
@@ -145,5 +262,140 @@
   "id": "2026-11-20-eeea8f2b-reel-ky",
   "needs_vet_review": true,
   "lint_issues": [],
-  "status": "pending_review"
+  "status": "pending_review",
+  "ai_voice": true,
+  "licenses": [
+    {
+      "shot": 1,
+      "source": "Pixabay",
+      "id": 157263,
+      "url": "https://pixabay.com/videos/id-157263/",
+      "author": "Kmeel_com",
+      "query": "hens eggs",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 2,
+      "source": "Pixabay",
+      "id": 66635,
+      "url": "https://pixabay.com/videos/id-66635/",
+      "author": "Engin_Akyurt",
+      "query": "hen eggs",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 3,
+      "source": "Pixabay",
+      "id": 44626,
+      "url": "https://pixabay.com/videos/id-44626/",
+      "author": "sergo75-75",
+      "query": "rooster coop",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 4,
+      "source": "Pixabay",
+      "id": 67069,
+      "url": "https://pixabay.com/videos/id-67069/",
+      "author": "BenjaminNelan",
+      "query": "hens eating",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 5,
+      "source": "Pixabay",
+      "id": 22562,
+      "url": "https://pixabay.com/videos/id-22562/",
+      "author": "adege",
+      "query": "chickens feeding",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 6,
+      "source": "Pixabay",
+      "id": 69729,
+      "url": "https://pixabay.com/videos/id-69729/",
+      "author": "ringtailed",
+      "query": "hens eating",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 7,
+      "source": "Pixabay",
+      "id": 45789,
+      "url": "https://pixabay.com/videos/id-45789/",
+      "author": "powerp540",
+      "query": "hens lamp",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 8,
+      "source": "Pixabay",
+      "id": 188986,
+      "url": "https://pixabay.com/videos/id-188986/",
+      "author": "Danganhfoto",
+      "query": "hens lamp",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 9,
+      "source": "Pixabay",
+      "id": 105228,
+      "url": "https://pixabay.com/videos/id-105228/",
+      "author": "Eaktas06",
+      "query": "poultry lamp",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 10,
+      "source": "Pixabay",
+      "id": 130614,
+      "url": "https://pixabay.com/videos/id-130614/",
+      "author": "Dx21",
+      "query": "chickens drinking",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 11,
+      "source": "Pixabay",
+      "id": 105226,
+      "url": "https://pixabay.com/videos/id-105226/",
+      "author": "Eaktas06",
+      "query": "hen drinking",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 12,
+      "source": "Pixabay",
+      "id": 105229,
+      "url": "https://pixabay.com/videos/id-105229/",
+      "author": "Eaktas06",
+      "query": "chickens drinking",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 13,
+      "source": "Pixabay",
+      "id": 144679,
+      "url": "https://pixabay.com/videos/id-144679/",
+      "author": "Dx21",
+      "query": "hens farm",
+      "license": "https://pixabay.com/service/license-summary/"
+    }
+  ],
+  "tts": {
+    "model": "gemini-3.8-flash-tts",
+    "voice": "Charon",
+    "style": "warm",
+    "consistency": [
+      {
+        "try": 1,
+        "f0": 122,
+        "centroid": 910,
+        "distance": 0.05
+      }
+    ]
+  },
+  "video": "final.mp4",
+  "video_status": "ready"
 }
