@@ -32,8 +32,10 @@ def fake_source(asset_id: str) -> str:
     import hashlib
 
     k = int(hashlib.md5(asset_id.encode()).hexdigest(), 16)
+    sc = 0.4 + (k % 13) / 10
     return (f"mandelbrot=size=640x360:rate=30:start_x={-1.6 + (k % 997) / 800:.4f}:"
-            f"start_y={-0.6 + (k // 997 % 991) / 800:.4f}:start_scale={0.4 + (k % 13) / 10:.2f}:outer=normalized_iteration_count")
+            f"start_y={-0.6 + (k // 997 % 991) / 800:.4f}:start_scale={sc:.2f}:end_scale={sc:.2f}:"
+            f"outer=normalized_iteration_count")       # end_scale = start_scale: өзү zoom кылбайт (камера кыймылы так)
 
 
 class FakeGemini:
