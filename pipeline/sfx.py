@@ -65,7 +65,7 @@ REQUIRED = ("title", "file", "category", "source", "source_url", "license", "com
 REL_LU = {"transitions": 14.0, "impact": 12.0, "cinematic": 13.0, "emotional": 14.0,
           "atmosphere": 24.0, "nature": 22.0}
 PEAK_CEIL_DB = -6.0        # эффекттин пиги мындан ашпайт
-TRACK_REL_LU = {"hit": 13.0, "bed": 23.0}   # даяр трек диктордон канча LU акырын (ЧЫНЫГЫ өлчөө боюнча)
+TRACK_REL_LU = {"hit": 11.0, "bed": 17.0}   # трек диктордон канча LU акырын (ЧЫНЫГЫ өлчөө); 13/23 угулган эмес (2026-11-20)
 MAX_GAIN_DB = 12.0
 # Тандоо эрежелери
 MIN_PAUSE = 0.35          # диктордун паузасы (сек)

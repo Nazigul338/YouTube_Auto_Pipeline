@@ -154,6 +154,13 @@ class QAStage(Stage):
         rel = music.get("voice_minus_music_lu")
         rep.add("music_level", "Музыка дикторду баспайт", rel is not None and rel >= 10,
                 f"диктор музыкадан {rel} LU катуу (керек ≥ 10)")
+        audible = (music.get("levels") or {}).get("voice_minus_ducked_music_lu")
+        if audible is not None:   # СЫНАК: музыка чындап угулабы (колдонуучу 2026-11-20: «музыка жок го»)
+            from .s7_music import AUDIBLE_RANGE
+
+            lo, hi = AUDIBLE_RANGE
+            rep.add("music_audible", "Фондук музыка угулат (бирок дикторду баспайт)", lo <= audible <= hi,
+                    f"басаңдатылгандан кийин диктордон {audible} LU акырын (керек {lo:.0f}–{hi:.0f})")
         self.check_sfx(ctx, rep, music)
 
         # 6. Кара экран, катып калган кадр, тынчтык

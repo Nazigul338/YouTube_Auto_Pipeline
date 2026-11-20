@@ -20,6 +20,12 @@ from ..music import attribution_text, scan
 from .base import Context, Stage, StageError, gemini_of
 
 MUSIC_BED_LUFS = -31.0     # дикторго (−16) салыштырмалуу ~15 LU төмөн
+DUCK = "threshold=0.02:ratio=6:attack=25:release=450:makeup=1"
+# СЫНАК (cinematic): «угулуучу» музыка. Колдонуучу (2026-11-20): «фоновой музыка, үн эффект жок го» —
+# −31 LUFS + ratio 6 басаңдатуу сүйлөө учурунда музыканы диктордон ~26 LU төмөн түшүргөн (телефондо угулбайт).
+AUDIBLE_BED_LUFS = -21.0     # сүйлөө учурунда диктордон ~12 LU акырын (мурунку жол: ~27 LU — угулбайт)
+AUDIBLE_DUCK = "threshold=0.05:ratio=2.5:attack=60:release=900:makeup=1"
+AUDIBLE_RANGE = (9.0, 16.0)   # диктор − басаңдатылган музыка, LU: угулат, бирок дикторду баспайт
 TAG_PROMPT = ("Listen to this music track. Return JSON only: "
               '{{"mood": one of {moods}, "energy": "low"|"medium"|"high", '
               '"vocals": true|false}}. "vocals" is true if there is any singing or speech.')
@@ -78,19 +84,26 @@ def pick_track(tracks, tags: dict, mood: str, registry: dict, video_id: str):
     return best, why
 
 
+def audible_mode(ctx: Context) -> bool:
+    from .. import cinematic
+
+    return cinematic.enabled(ctx.store)
+
+
 def mix(ctx: Context, track_path: Path, total: float, sfx_bed: Path | None = None,
-        sfx_hits: Path | None = None) -> dict:
+        sfx_hits: Path | None = None, audible: bool = False) -> dict:
     voice = ctx.path("audio", "voice.wav")
     bed = ctx.path("audio", "music_bed.wav")
     out = ctx.path("audio", "mix.wav")
     # 1) музыканын «төшөгү»: цикл, узактык, деңгээл, жумшак башталыш/аяктоо
     media.run(["ffmpeg", "-y", "-v", "error", "-stream_loop", "-1", "-i", str(track_path),
                "-t", f"{total:.3f}", "-af",
-               f"loudnorm=I={MUSIC_BED_LUFS}:TP=-6:LRA=11,afade=t=in:d=2.5,"
+               f"loudnorm=I={AUDIBLE_BED_LUFS if audible else MUSIC_BED_LUFS}:TP=-6:LRA=11,afade=t=in:d=2.5,"
                f"afade=t=out:st={max(0.0, total - 3.5):.3f}:d=3.5",
                "-ar", "48000", "-ac", "2", str(bed)], "музыканы даярдоо")
     # 2) диктор сүйлөгөндө басаңдатуу + аралаштыруу + акыркы деңгээл
-    if sfx_bed is None and sfx_hits is None:   # негизги жол (өзгөргөн жок)
+    duck = AUDIBLE_DUCK if audible else DUCK
+    if sfx_bed is None and sfx_hits is None and not audible:   # негизги жол (өзгөргөн жок)
         media.run(["ffmpeg", "-y", "-v", "error", "-i", str(voice), "-i", str(bed), "-filter_complex",
                    "[0:a]aresample=48000,pan=stereo|c0=c0|c1=c0,apad[v];"
                    "[v]asplit=2[vk][vm];"
@@ -99,7 +112,7 @@ def mix(ctx: Context, track_path: Path, total: float, sfx_bed: Path | None = Non
                    "loudnorm=I=-14:TP=-1.5:LRA=11[m]",
                    "-map", "[m]", "-t", f"{total:.3f}", "-ar", "48000", "-ac", "2", str(out)],
                   "аралаштыруу")
-    else:   # СЫНАК: үн эффекттери (фон музыка менен бирге басаңдайт; «сокку» — паузада, басаңдабайт)
+    else:   # СЫНАК: угулуучу музыка / үн эффекттери (фон музыка менен бирге басаңдайт; «сокку» — паузада)
         ins = ["-i", str(voice), "-i", str(bed)]
         g = "[0:a]aresample=48000,pan=stereo|c0=c0|c1=c0,apad[v];[v]asplit=2[vk][vm];"
         if sfx_bed is not None:
@@ -107,7 +120,7 @@ def mix(ctx: Context, track_path: Path, total: float, sfx_bed: Path | None = Non
             g += "[1:a][2:a]amix=inputs=2:duration=first:normalize=0[bx];"
         else:
             g += "[1:a]anull[bx];"
-        g += "[bx][vk]sidechaincompress=threshold=0.02:ratio=6:attack=25:release=450:makeup=1[duck];"
+        g += f"[bx][vk]sidechaincompress={duck}[duck];"
         if sfx_hits is not None:
             ins += ["-i", str(sfx_hits)]
             n = len(ins) // 2 - 1
@@ -120,6 +133,17 @@ def mix(ctx: Context, track_path: Path, total: float, sfx_bed: Path | None = Non
                   "аралаштыруу (+ үн эффекттери)")
     res = {"bed_lufs": media.loudness(bed)["I"], "voice_lufs": media.loudness(voice)["I"],
            "mix": media.loudness(out)}
+    if audible:   # угулган деңгээл: диктор сүйлөгөндө басаңдатылган музыка (+фон эффекттери) өзүнчө өлчөнөт
+        tmp = ctx.path("audio", "_ducked_check.wav")
+        ins = ["-i", str(voice), "-i", str(bed)] + (["-i", str(sfx_bed)] if sfx_bed is not None else [])
+        g = ("[0:a]aresample=48000,pan=stereo|c0=c0|c1=c0,apad[vk];"
+             + ("[1:a][2:a]amix=inputs=2:duration=first:normalize=0[bx];" if sfx_bed is not None else "[1:a]anull[bx];")
+             + f"[bx][vk]sidechaincompress={duck}[d]")
+        media.run(["ffmpeg", "-y", "-v", "error", *ins, "-filter_complex", g, "-map", "[d]",
+                   "-t", f"{total:.3f}", "-ar", "48000", "-ac", "2", str(tmp)], "музыканын угулушу")
+        res["music_ducked_lufs"] = media.loudness(tmp)["I"]
+        res["profile"] = "audible"
+        tmp.unlink(missing_ok=True)
     for key, p in (("sfx_bed_lufs", sfx_bed), ("sfx_hits_lufs", sfx_hits)):
         if p is not None:
             res[key] = media.loudness(p)["I"]
@@ -162,8 +186,13 @@ class MusicStage(Stage):
             stale = ctx.path("music", "sfx.json")
             if stale.exists():
                 stale.unlink()   # мурунку сынактын эффекттери бул жолу колдонулбайт
-        levels = mix(ctx, track.path, total, sfx_bed, sfx_hits)
+        levels = mix(ctx, track.path, total, sfx_bed, sfx_hits, audible=audible_mode(ctx))
         rel = levels["voice_lufs"] - levels["bed_lufs"]
+        if levels.get("music_ducked_lufs") is not None:   # СЫНАК: чыныгы угулган деңгээл
+            rel = levels["voice_lufs"] - levels["music_ducked_lufs"]
+            levels["voice_minus_ducked_music_lu"] = round(rel, 1)
+            ctx.log(f"   🎵 Угулган музыка (басаңдатылгандан кийин) диктордон {rel:.1f} LU акырын "
+                    f"(керек {AUDIBLE_RANGE[0]:.0f}–{AUDIBLE_RANGE[1]:.0f})")
         sfx_vals = [levels[k] for k in ("sfx_bed_lufs", "sfx_hits_lufs") if levels.get(k) is not None]
         if sfx_vals:
             levels["voice_minus_sfx_lu"] = round(levels["voice_lufs"] - max(sfx_vals), 1)
@@ -186,5 +215,5 @@ def ensure_mix(ctx: Context) -> Path:
         info = json.loads(ctx.path("music", "music.json").read_text(encoding="utf-8"))
         total = json.loads(ctx.path("clips", "shots.json").read_text(encoding="utf-8"))["total"]
         bed, hits = sfx.tracks_for_mix(ctx, total)
-        mix(ctx, ctx.cfg.music_root / info["track"], total, bed, hits)
+        mix(ctx, ctx.cfg.music_root / info["track"], total, bed, hits, audible=audible_mode(ctx))
     return out
