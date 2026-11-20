@@ -199,5 +199,10 @@
     }
   ],
   "video": "final.mp4",
-  "video_status": "ready"
+  "video_status": "ready",
+  "tts": {
+    "model": "gemini-3.8-flash-tts",
+    "voice": "Charon",
+    "style": "warm"
+  }
 }

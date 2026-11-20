@@ -10,10 +10,10 @@
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_1.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 36571,
-        "url": "https://pixabay.com/videos/id-36571/",
-        "author": "Lolame",
-        "query": "baby chicken",
+        "id": 165148,
+        "url": "https://pixabay.com/videos/id-165148/",
+        "author": "OleksandrPidvalnyi",
+        "query": "chicken farm",
         "license": "https://pixabay.com/service/license-summary/"
       }
     },
@@ -26,8 +26,8 @@
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_2.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 76883,
-        "url": "https://pixabay.com/videos/id-76883/",
+        "id": 76881,
+        "url": "https://pixabay.com/videos/id-76881/",
         "author": "FnBTV",
         "query": "baby chicken farmer",
         "license": "https://pixabay.com/service/license-summary/"
@@ -42,8 +42,8 @@
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_3.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 331459,
-        "url": "https://pixabay.com/videos/id-331459/",
+        "id": 337187,
+        "url": "https://pixabay.com/videos/id-337187/",
         "author": "papynoun",
         "query": "poultry farmer",
         "license": "https://pixabay.com/service/license-summary/"
@@ -58,9 +58,9 @@
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_4.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 165148,
-        "url": "https://pixabay.com/videos/id-165148/",
-        "author": "OleksandrPidvalnyi",
+        "id": 157263,
+        "url": "https://pixabay.com/videos/id-157263/",
+        "author": "Kmeel_com",
         "query": "baby chicken farm",
         "license": "https://pixabay.com/service/license-summary/"
       }
@@ -74,8 +74,8 @@
       "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_5.mp4",
       "stock": {
         "source": "Pixabay",
-        "id": 76884,
-        "url": "https://pixabay.com/videos/id-76884/",
+        "id": 76882,
+        "url": "https://pixabay.com/videos/id-76882/",
         "author": "FnBTV",
         "query": "chicken brooder farmer",
         "license": "https://pixabay.com/service/license-summary/"
@@ -84,9 +84,18 @@
     {
       "n": 6,
       "duration": 11.89,
-      "source": "real",
+      "source": "stock",
       "visual": "Hens and a rooster walking together in a farmyard",
-      "onscreen": "Консультация алуу үчүн группага кошулуңуз же окуу курсуна катталыңыз"
+      "onscreen": "Консультация алуу үчүн группага кошулуңуз же окуу курсуна катталыңыз",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-19-c6f68939-reel-ky/work/stock_6.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 139969,
+        "url": "https://pixabay.com/videos/id-139969/",
+        "author": "Yonnyinn",
+        "query": "hens",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     }
   ],
   "caption": "Балапандарды өстүрүүдө алгачкы жети күн эң жооптуу мезгил болуп саналат. Нымдуу төшөк жана тоокканадагы аммиак жыты балапандардын дем алуу органдарына зыян келтирет. Төшөктү кургак кармап, түз муздак шамал тийгизбей желдетип туруңуз. Пайдалуу кеңештерди өткөрүп жибербөө үчүн бизге катталыңыз! (3/3)\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\n🎞 Айрым кадрлар — стоктук видео (Pixabay/Pexels; иллюстрация, биздин ферма эмес).\n📌 Бул маалымат — автордун балапан багуудагы өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.\n🎙 Диктордун үнү AI менен түзүлгөн.",
@@ -137,17 +146,17 @@
     {
       "shot": 1,
       "source": "Pixabay",
-      "id": 36571,
-      "url": "https://pixabay.com/videos/id-36571/",
-      "author": "Lolame",
-      "query": "baby chicken",
+      "id": 165148,
+      "url": "https://pixabay.com/videos/id-165148/",
+      "author": "OleksandrPidvalnyi",
+      "query": "chicken farm",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
       "shot": 2,
       "source": "Pixabay",
-      "id": 76883,
-      "url": "https://pixabay.com/videos/id-76883/",
+      "id": 76881,
+      "url": "https://pixabay.com/videos/id-76881/",
       "author": "FnBTV",
       "query": "baby chicken farmer",
       "license": "https://pixabay.com/service/license-summary/"
@@ -155,8 +164,8 @@
     {
       "shot": 3,
       "source": "Pixabay",
-      "id": 331459,
-      "url": "https://pixabay.com/videos/id-331459/",
+      "id": 337187,
+      "url": "https://pixabay.com/videos/id-337187/",
       "author": "papynoun",
       "query": "poultry farmer",
       "license": "https://pixabay.com/service/license-summary/"
@@ -164,17 +173,17 @@
     {
       "shot": 4,
       "source": "Pixabay",
-      "id": 165148,
-      "url": "https://pixabay.com/videos/id-165148/",
-      "author": "OleksandrPidvalnyi",
+      "id": 157263,
+      "url": "https://pixabay.com/videos/id-157263/",
+      "author": "Kmeel_com",
       "query": "baby chicken farm",
       "license": "https://pixabay.com/service/license-summary/"
     },
     {
       "shot": 5,
       "source": "Pixabay",
-      "id": 76884,
-      "url": "https://pixabay.com/videos/id-76884/",
+      "id": 76882,
+      "url": "https://pixabay.com/videos/id-76882/",
       "author": "FnBTV",
       "query": "chicken brooder farmer",
       "license": "https://pixabay.com/service/license-summary/"
@@ -182,13 +191,18 @@
     {
       "shot": 6,
       "source": "Pixabay",
-      "id": 238827,
-      "url": "https://pixabay.com/videos/id-238827/",
-      "author": "xBriantcx",
-      "query": "baby chicken farm",
+      "id": 139969,
+      "url": "https://pixabay.com/videos/id-139969/",
+      "author": "Yonnyinn",
+      "query": "hens",
       "license": "https://pixabay.com/service/license-summary/"
     }
   ],
   "video": "final.mp4",
-  "video_status": "ready"
+  "video_status": "ready",
+  "tts": {
+    "model": "gemini-3.8-flash-tts",
+    "voice": "Charon",
+    "style": "warm"
+  }
 }
