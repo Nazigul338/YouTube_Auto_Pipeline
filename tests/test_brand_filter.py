@@ -2,7 +2,7 @@
 
 import unittest
 
-from pipeline.stock import Stock, brand_risk
+from pipeline.stock import Stock, brand_risk, cartoon_risk
 
 
 def hit(i, tags):
@@ -42,6 +42,29 @@ class TestBrandFilter(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestCartoonFilter(unittest.TestCase):
+    """Колдонуучу 2026-11-20: мультфильм кадрлар кошулбасын (Video_001: Halloween арбагы)."""
+
+    def test_words(self):
+        self.assertTrue(cartoon_risk("halloween, ghost, pumpkin"))
+        self.assertTrue(cartoon_risk("Cartoon, character"))
+        self.assertTrue(cartoon_risk("https://www.pexels.com/video/animated-clip-art-of-a-cat-5/"))
+        self.assertFalse(cartoon_risk("woman, mirror, morning"))
+        self.assertFalse(cartoon_risk("cartography, map"))       # «cartoon» эмес
+
+    def test_pixabay_film_only_and_tags(self):
+        s = Stock("k")
+        seen = {}
+
+        def get(url, params, headers=None):
+            seen.update(params)
+            return {"hits": [hit(1, "halloween, ghost"), hit(2, "woman, mirror"), hit(3, "cartoon, cat")]}
+
+        s._get = get
+        self.assertEqual([a.id for a in s._pixabay_videos("mirror", 3.0)], ["pixabay:2"])
+        self.assertEqual(seen.get("video_type"), "film")
 
 
 class TestRefreshUrl(unittest.TestCase):

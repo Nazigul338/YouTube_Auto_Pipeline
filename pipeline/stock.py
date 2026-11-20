@@ -32,6 +32,19 @@ def brand_risk(text: str) -> bool:
     return bool(words & BRAND_WORDS)
 
 
+# Мультфильм/анимация (колдонуучу 2026-11-20: «мультфильм кадрлар кошулбасын»; Video_001'де Halloween арбагы чыккан).
+CARTOON_WORDS = frozenset("""
+cartoon cartoons animated animation anime comic comics clipart illustration illustrations vector drawing
+halloween pumpkin emoji mascot doodle sketch
+""".split())
+
+
+def cartoon_risk(text: str) -> bool:
+    """Тег же шилтеме мультфильмди/анимацияны көрсөтсө True."""
+    w = set(x for x in re.split(r"[^a-z0-9]+", (text or "").lower()) if x)
+    return bool(w & CARTOON_WORDS) or "clip-art" in (text or "").lower()
+
+
 PIXABAY_LICENSE = ("Pixabay Content License", "https://pixabay.com/service/license-summary/")
 PEXELS_LICENSE = ("Pexels License", "https://www.pexels.com/license/")
 
@@ -101,7 +114,7 @@ class Stock:
     def _pixabay_videos(self, query: str, min_duration: float, page: int = 1) -> list[Asset]:
         d = self._get("https://pixabay.com/api/videos/",
                       {"key": self.pixabay_key, "q": query[:100], "per_page": 50,
-                       "page": page, "safesearch": "true"})
+                       "page": page, "safesearch": "true", "video_type": "film"})   # анимация эмес
         out = []
         for h in d.get("hits", []):
             vids = h.get("videos", {})
@@ -113,7 +126,7 @@ class Stock:
                     break
             if not pick or pick["width"] <= pick["height"] or h.get("duration", 0) < min_duration:
                 continue
-            if brand_risk(h.get("tags", "")):
+            if brand_risk(h.get("tags", "")) or cartoon_risk(h.get("tags", "")):
                 continue
             out.append(Asset("pixabay", "video", f"pixabay:{h['id']}", pick["url"], pick["width"],
                              pick["height"], float(h.get("duration", 0)), h.get("pageURL", ""),
@@ -132,7 +145,7 @@ class Stock:
                            key=lambda f: f["width"])
             if not files or v.get("duration", 0) < min_duration:
                 continue
-            if brand_risk(v.get("url", "")):   # Pexels: тег жок, шилтемеде сүрөттөмө бар
+            if brand_risk(v.get("url", "")) or cartoon_risk(v.get("url", "")):   # Pexels: шилтемеде сүрөттөмө
                 continue
             f = files[0]
             out.append(Asset("pexels", "video", f"pexels:{v['id']}", f["link"], f["width"],
@@ -149,7 +162,7 @@ class Stock:
         out = []
         for h in d.get("hits", []):
             url = h.get("largeImageURL")
-            if not url or brand_risk(h.get("tags", "")):
+            if not url or brand_risk(h.get("tags", "")) or cartoon_risk(h.get("tags", "")):
                 continue
             out.append(Asset("pixabay", "image", f"pixabay-img:{h['id']}", url,
                              h.get("imageWidth", 0), h.get("imageHeight", 0), 0.0,

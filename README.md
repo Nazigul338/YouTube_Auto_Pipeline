@@ -60,7 +60,7 @@ pipeline/
   auth_check.py  — OAuth/Drive текшерүү
   gemini.py      — Gemini: текст, TTS, embedding, аудио/сүрөт анализ (запас моделдер, квота, timeout). Veo колдонулбайт
   asr.py         — Whisper (PyAV'сыз)
-  stock.py       — Pixabay / Pexels (беттөө менен; бренд/логотиптүү клиптер чыпкаланат)
+  stock.py       — Pixabay / Pexels (беттөө менен; бренд/логотиптүү жана мультфильм/анимация клиптери чыпкаланат, Pixabay video_type=film)
   ai_images.py   — Gemini AI-сүрөттөр (СЫНАК): prompt, 16:9, бюджет/баа, Drive AI_Images/ кэши
   thumbnail.py   — обложка видеонун кадрынан (1280×720, жазуу, градиент) → Drive Thumbnails/ (`🖼 Обложка` workflow)
   sfx_synth.py   — оригиналдуу үн эффекттерин синтездөө (CC0, жүктөө жок)
