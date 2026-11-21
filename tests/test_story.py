@@ -78,6 +78,47 @@ class TestGenerators(unittest.TestCase):
         self.assertEqual(story.check_text("Анна закрывает ноутбук и смотрит в окно."), [])
 
 
+class TestHookAndDark(unittest.TestCase):
+    def test_tighten_hook_shortens_only_hook(self):
+        long_hook = "Тиканье часов в пустой квартире звучит как отсчет до самого настоящего взрыва. " + "слово " * 70
+        rest = " ".join(f"r{i}" for i in range(900))
+        text = long_hook + rest
+        n_hook = len(long_hook.split())
+
+        def acts_for(t):
+            w = t.split()
+            k = w.index("r0")
+            step = (len(w) - k) // 6
+            starts = [0] + [k + step * j for j in range(6)]
+            return [{"act": a, "w0": s, "w1": (starts[j + 1] if j < 6 else len(w)), "method": "gemini"}
+                    for j, (a, s) in enumerate(zip(story.ACT_KEYS, starts))]
+        g = SimpleNamespace(text=lambda *a, **k: "Часы тикают как бомба. Алексей не спит третью ночь подряд.")
+        with mock.patch.object(story, "map_acts", lambda g_, t: acts_for(t)):
+            self.assertTrue(story.hook_problems(text, acts_for(text)))
+            logs = []
+            new, acts = story.tighten_hook(g, text, acts_for(text), logs.append)
+        self.assertTrue(new.startswith("Часы тикают как бомба."))
+        self.assertTrue(new.endswith(rest))
+        self.assertEqual(story.hook_problems(new, acts), [])
+        self.assertLess(len(new.split()), len(text.split()))
+        self.assertTrue(any("Hook кыскартылды" in l for l in logs), logs)
+        self.assertGreater(n_hook, 50)
+
+    def test_dark_seconds(self):
+        from pipeline.stages.s5_visuals import dark_seconds
+
+        d = Path(tempfile.mkdtemp())
+        try:
+            clip = d / "c.mp4"
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "color=c=black:s=320x180:d=2",
+                            "-f", "lavfi", "-i", "testsrc=s=320x180:d=2", "-filter_complex", "[0][1]concat=n=2[v]",
+                            "-map", "[v]", str(clip)], check=True)
+            self.assertGreaterEqual(dark_seconds(clip, 0, 2), 1.5)
+            self.assertLess(dark_seconds(clip, 2.2, 1.5), 0.4)
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
 class TestContinuity(unittest.TestCase):
     def test_faceless_check_replaces_visible_face_and_wrong_gender(self):
         d = Path(tempfile.mkdtemp())

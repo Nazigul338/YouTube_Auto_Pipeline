@@ -389,3 +389,62 @@ def is_story(cfg) -> bool:
 
 def words_of(text: str) -> int:
     return word_count(text)
+
+
+# --- Hook'тун узундугу ЧЫНЫГЫ үнгө жараша (run #44921404755: s1 болжолу 8 мүн/түз пропорция → hook «≤30»,
+#     даяр үндө 38 сек; биринчи сүйлөм 10 сөз = 5.02 сек, кино-диктор жай окуйт) ---
+REAL_WPS = 2.1              # кино-диктордун чыныгы ылдамдыгы (Video_005: ~1150 сөз / 545 сек)
+HOOK_MAX_EST = 24.0         # s1 болжолу (QA чеги 30 сек — запас)
+FIRST_SENT_WORDS = 9        # биринчи сүйлөм ≤9 сөз → ≤~4.5 сек
+
+HOOK_FIX_PROMPT = """Это HOOK (самое начало) короткого фильма-рассказа на русском. Он слишком длинный для первых секунд видео.
+Перепиши ТОЛЬКО этот фрагмент: не более {max_words} слов; первое предложение не длиннее {first} слов и сразу вызывает
+вопрос «что с этим человеком происходит / чем это закончится?». Сохрани то же событие, героя, детали и смысл; без
+приветствий, без советов, без новых фактов. Реплики — только в «ёлочках». Верни только новый текст фрагмента.
+
+ФРАГМЕНТ:
+{hook}"""
+
+
+def first_sentence_words(text: str) -> int:
+    import re
+
+    s = re.split(r"(?<=[.!?…])\s+", text.strip(), maxsplit=1)[0] if text.strip() else ""
+    return len(s.split())
+
+
+def hook_problems(text: str, acts: list[dict]) -> list[str]:
+    p = []
+    hook = next((a for a in acts if a["act"] == "hook"), None)
+    if hook and (hook["w1"] - hook["w0"]) / REAL_WPS > HOOK_MAX_EST:
+        p.append(f"hook ~{(hook['w1'] - hook['w0']) / REAL_WPS:.0f} сек (> {HOOK_MAX_EST:.0f})")
+    if first_sentence_words(text) > FIRST_SENT_WORDS:
+        p.append(f"биринчи сүйлөм {first_sentence_words(text)} сөз (> {FIRST_SENT_WORDS})")
+    return p
+
+
+def tighten_hook(g, text: str, acts: list[dict], log, tries: int = 2) -> tuple[str, list[dict]]:
+    """Hook акты/биринчи сүйлөм узун болсо — ОШОЛ фрагмент гана кыскартылат (калган окуя тийилбейт)."""
+    for _ in range(tries):
+        why = hook_problems(text, acts)
+        if not why:
+            break
+        hook = next((a for a in acts if a["act"] == "hook"), None)
+        if not hook or hook["w1"] <= 0:
+            break
+        words = text.split()
+        try:
+            new = g.text(HOOK_FIX_PROMPT.format(max_words=int(HOOK_MAX_EST * REAL_WPS) - 4, first=FIRST_SENT_WORDS,
+                                                hook=" ".join(words[:hook["w1"]])),
+                         purpose="story_hook_fix", temperature=0.7).strip().strip('"')
+        except Exception as e:
+            log(f"   ⚠ Hook кыскарган жок ({type(e).__name__})")
+            break
+        if not new or len(new.split()) >= hook["w1"] and first_sentence_words(new) >= first_sentence_words(text):
+            break
+        cand = new + " " + " ".join(words[hook["w1"]:])
+        cand_acts = map_acts(g, cand)
+        if len(hook_problems(cand, cand_acts)) <= len(why):
+            log(f"   ✂ Hook кыскартылды ({'; '.join(why)}): {hook['w1']} → {len(new.split())} сөз")
+            text, acts = cand, cand_acts
+    return text, acts

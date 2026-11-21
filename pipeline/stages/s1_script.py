@@ -334,6 +334,12 @@ class ScriptStage(Stage):
         ctx.path("script", "retention.json").write_text(retention.dump(ret), encoding="utf-8")
         if st:                                  # актылардын чеги + текст текшерүүсү → story.json, реестр
             st_acts = stl.map_acts(g, text)
+            text, st_acts = stl.tighten_hook(g, text, st_acts, ctx.log)
+            if word_count(text) < cfg.words_min:      # hook кыскарып, текст азайса — ортосу толукталат
+                longer = adjust_length(g, text, cfg.words_min, cfg.words_max, ctx.log,
+                                       (stl.EXPAND_HINT, stl.SHRINK_HINT))
+                if not duplicate_sentences(longer):
+                    text, st_acts = longer, stl.map_acts(g, longer)
             st_probs = stl.check_text(text)
             ctx.path("script", "story.json").write_text(stl.dump(
                 {"hero": st["hero"], "outline": st["outline"], "acts": st_acts, "text_problems": st_probs}),

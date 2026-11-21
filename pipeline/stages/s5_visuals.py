@@ -123,6 +123,23 @@ def pick_offset(real_duration: float, shot_dur: float, u: float) -> float:
     return round(min(room, 0.5 + u * max(0.0, room - 0.5)), 2)
 
 
+DARK_FILTER = "blackdetect=d=0.25:pic_th=0.95:pix_th=0.07"   # QA'дан (0.98/0.04) катуураак: grade караңгылатат
+
+
+def dark_seconds(path: Path, offset: float, dur: float) -> float:
+    """Клиптин КОЛДОНУЛА ТУРГАН бөлүгүндөгү кара/өтө караңгы секунддар (run #44921404755: 291–293 сек кара экран)."""
+    import re
+    import subprocess
+
+    try:
+        r = subprocess.run(["ffmpeg", "-v", "info", "-ss", f"{offset:.2f}", "-t", f"{dur:.2f}", "-i", str(path),
+                            "-vf", f"scale=160:-2,fps=8,{DARK_FILTER}", "-an", "-f", "null", "-"],
+                           capture_output=True, text=True, timeout=60)
+    except Exception:
+        return 0.0
+    return round(sum(float(x) for x in re.findall(r"black_duration:([\d.]+)", r.stderr)), 2)
+
+
 def used_history(registry: dict, video_id: str) -> set[str]:
     """(Эски жол) реестрден башка видеолордун клиптери. Азыр ClipMemory колдонулат."""
     used: set[str] = set()
@@ -243,6 +260,7 @@ class VisualsStage(Stage):
         from .. import story as _st
         if _st.is_story(ctx.cfg):        # кино-окуя: окуянын көз ирмемдери так — көбүрөөк кадр алмаштырылат
             self.MAX_REPLACE = 50        # (run #44903598138: 91/167 кадр ≤2/5, 25 гана алмаштырылчу)
+            self.film = True             # кадр режиссёрдун планына (visual_prompt) бааланат; алмаштыруу 2 айлампа
         if quality:
             results, ai_stats = self.ai_relevance(ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u)
             ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
@@ -259,6 +277,12 @@ class VisualsStage(Stage):
                     f"{cont.get('wrong_gender', 0)}), бетсиз кадрга алмаштырылды {cont.get('replaced', 0)}, "
                     f"оңдолбоду {cont.get('kept_unfixed', 0)}, үлүш {cont.get('rate')}"
                     + (f" — ⚠ {cont['skipped']}" if cont.get("skipped") else ""))
+        dark = (self.replace_dark(ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u)
+                if quality else {"found": 0})
+        if dark["found"]:
+            results = dark.pop("results")
+            ctx.log(f"   🌑 Караңгы клиптер: {dark['found']} табылды, {dark['replaced']} алмаштырылды")
+        dark.pop("results", None)
         ai_img: dict = {}
         from .. import ai_images
         if quality and ai_stats and ai_images.enabled(ctx.store):
@@ -323,6 +347,35 @@ class VisualsStage(Stage):
             res["ai_images"] = ai_img["used"]
             res["ai_images_cost_usd"] = ai_img["cost_usd"]
         return res
+
+    def replace_dark(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u) -> dict:
+        """Кара/өтө караңгы клип (колдонулган бөлүгүндө ≥0.4 сек) → ошол сахнанын башка клиби (3 аракет)."""
+        by_i = {r[0]: r for r in results}
+        found = replaced = 0
+        for i in sorted(by_i):
+            for attempt in range(3):
+                _, a, path, real, _, _ = by_i[i]
+                if a.kind != "video":
+                    break
+                off = pick_offset(real, shots[i]["dur"], off_u(i)) if real and off_u else 0.0
+                if dark_seconds(path, off, shots[i]["dur"]) < 0.4:
+                    if attempt:
+                        replaced += 1
+                    break
+                found += attempt == 0
+                q = scenes[shots[i]["scene"]].get("detail_query") or ""
+                nxt = (finder.beat_candidate(q, shots[i]["dur"]) if q and attempt == 0 else None) \
+                    or finder.replacement(pool_of[i], shots[i]["dur"])
+                if nxt is None:
+                    break
+                old = chosen[i]
+                chosen[i] = (nxt, "fresh", 0.0)
+                try:
+                    by_i[i] = fetch(i)
+                except Exception:
+                    chosen[i] = old
+                    break
+        return {"found": found, "replaced": replaced, "results": [by_i[i] for i in sorted(by_i)]}
 
     def add_ai_images(self, ctx, results, shots, scenes, ai_stats):
         """Gemini AI-сүрөттөрү (СЫНАК): сток мааниге туура келбеген кадрларга гана, бюджет чегинде.
@@ -429,7 +482,9 @@ class VisualsStage(Stage):
                 try:
                     from .base import gemini_of
 
-                    scores = gemini_of(ctx).rate_frames([(j, tx) for _, j, tx in part])
+                    pairs = [(j, tx) for _, j, tx in part]
+                    scores = (gemini_of(ctx).rate_frames(pairs, film=True) if getattr(self, "film", False)
+                              else gemini_of(ctx).rate_frames(pairs))
                     failures = 0
                 except Exception as e:
                     failures += 1
@@ -466,7 +521,12 @@ SHOTS:
         return {sh["i"]: " ".join(w["w"] for w in words if w["e"] > sh["start"] - 0.3 and w["s"] < sh["end"] + 0.3)
                 for sh in shots}
 
-    def visual_beats(self, ctx, idx: list[int], stext: dict[int, str]) -> dict[int, tuple[str, list[str]]]:
+    FILM_BEAT_RULES = ("\nTHIS IS A FACELESS SHORT FILM about one protagonist ({hero}). Each shot comes with the PLANNED "
+                       "FILM SHOT. Find stock footage that can play this planned shot: hands, back, silhouette, point of "
+                       "view, objects and the same kind of place and light; never a visible face. If a person is in the "
+                       "query, include the gender word ('man'/'woman').\n")
+
+    def visual_beats(self, ctx, idx: list[int], stext: dict[int, str], film: bool = False) -> dict[int, tuple[str, list[str]]]:
         """Начар кадрлар үчүн маанини көрсөткөн өзүнчө идея + издөө сөздөрү (бир Gemini суроо). Ката болсо — {}."""
         from ..visual_rules import VISUAL_RULES
         from .base import gemini_of
@@ -482,8 +542,14 @@ SHOTS:
                 if b:
                     world = (f"\nTHIS VIDEO'S OWN VISUAL WORLD (stay inside it): {b['world']} "
                              f"Recurring motifs: {', '.join(b['motifs'])}.\n")
+            if film:
+                try:
+                    hero = json.loads(ctx.path("script", "story.json").read_text(encoding="utf-8"))["hero"]
+                    world += self.FILM_BEAT_RULES.format(hero=hero.get("descriptor", ""))
+                except Exception:
+                    world += self.FILM_BEAT_RULES.format(hero="see shots")
             data = gemini_of(ctx).json(self.BEAT_PROMPT.format(
-                rules=VISUAL_RULES + world, shots="\n".join(f"{i}. {stext[i][:300]}" for i in todo)),
+                rules=VISUAL_RULES + world, shots="\n".join(f"{i}. {stext[i][:450 if film else 300]}" for i in todo)),
                 purpose="visual_beats", temperature=0.7)
         except Exception as e:
             ctx.log(f"   ⚠️ Кадр идеялары жазылган жок ({type(e).__name__}) — сахнанын запас клиптери колдонулат")
@@ -510,9 +576,13 @@ SHOTS:
         stext = self.shot_texts(ctx, shots)
 
         def text(i: int) -> str:
-            sc = scenes[shots[i]["scene"]]["text"]
+            scn = scenes[shots[i]["scene"]]
+            sc = scn["text"]
             st = stext.get(i, "")
-            return f"«{st}» (scene context: {sc[:150]})" if st else sc
+            base = f"«{st}» (scene context: {sc[:150]})" if st else sc
+            if getattr(self, "film", False) and scn.get("visual_prompt"):    # кино: режиссёрдун пландаган кадры
+                return f"{base} PLANNED FILM SHOT: {scn['visual_prompt'][:200]}"
+            return base
         items = []
         for i, a, path, real, tier, score in results:
             sh = shots[i]
@@ -521,33 +591,46 @@ SHOTS:
         scores = self._rate(ctx, items)
         low = sorted((i for i, s in scores.items() if s <= self.LOW_SCORE), key=lambda i: scores[i])
         replaced = 0
-        trial: dict[int, tuple] = {}
-        beats = self.visual_beats(ctx, low[: self.MAX_REPLACE], stext)
+        beats: dict = {}
         beat_used: dict[int, str] = {}
-        for i in low[: self.MAX_REPLACE]:
-            nxt = None
-            for q in beats.get(i, ("", []))[1]:
-                nxt = finder.beat_candidate(q, shots[i]["dur"])
-                if nxt is not None:
-                    beat_used[i] = beats[i][0]
-                    break
-            if nxt is None:
-                nxt = finder.replacement(pool_of[i], shots[i]["dur"])
-            if nxt is None:
+        trial: dict[int, tuple] = {}
+        film = getattr(self, "film", False)
+        btext = {i: text(i) for i in low} if film else stext
+        # run #44921404755: бир айлампада 99 начар кадрдын 17'си гана алмашты → кино форматта 2 айлампа
+        for round_ in range(2 if film else 1):
+            todo = sorted((i for i in low if scores.get(i, 5) <= self.LOW_SCORE),
+                          key=lambda i: scores[i])[: self.MAX_REPLACE]
+            if not todo:
+                break
+            rb = self.visual_beats(ctx, todo, btext, film=film)
+            beats.update(rb)
+            cur: dict[int, tuple] = {}
+            for i in todo:
+                nxt = None
+                for q in rb.get(i, ("", []))[1]:
+                    nxt = finder.beat_candidate(q, shots[i]["dur"])
+                    if nxt is not None:
+                        beat_used[i] = rb[i][0]
+                        break
+                if nxt is None:
+                    nxt = finder.replacement(pool_of[i], shots[i]["dur"])
+                if nxt is None:
+                    continue
+                chosen[i] = (nxt, "fresh", 0.0)
+                try:
+                    cur[i] = fetch(i)
+                except Exception:
+                    continue
+            if not cur:
                 continue
-            chosen[i] = (nxt, "fresh", 0.0)
-            try:
-                trial[i] = fetch(i)
-            except Exception:
-                continue
-        if trial:
             new_items = []
-            for i, r in trial.items():
+            for i, r in cur.items():
                 sh = shots[i]
                 off = pick_offset(r[3], sh["dur"], off_u(i)) if r[3] else 0.0
                 new_items.append((i, self._frame(r[2], r[1].kind, off, sh["dur"]), text(i)))
             new_scores = self._rate(ctx, new_items)
-            for i, r in trial.items():
+            for i, r in cur.items():
+                trial[i] = r
                 if new_scores.get(i, 0) > scores.get(i, 5):
                     by_i[i] = r
                     scores[i] = new_scores[i]

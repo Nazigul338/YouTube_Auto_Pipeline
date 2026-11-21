@@ -123,7 +123,7 @@ class FakeGemini:
         return json.dumps({"mood": "emotional_piano", "energy": "low", "vocals": False})
 
 
-    def rate_frames(self, items):
+    def rate_frames(self, items, film=False):
         self.calls.append("frame_check")
         return [4] * len(items)
 

@@ -223,8 +223,15 @@ class Gemini:
 
         return self._call([self.embed_model], fn, "embedding")
 
-    def rate_frames(self, items: list[tuple[bytes, str]]) -> list[int]:
-        """Кадр сценарийдин ошол бөлүгүнө канчалык дал келет: 1–5 упай."""
+    FILM_RULE = (" This is a FACELESS short film: the protagonist is shown only by hands, back, silhouette, point of "
+                 "view, objects and surroundings. Each narration comes with the PLANNED FILM SHOT for that moment. Rate "
+                 "as a film editor: 5 = the frame works as this planned shot (same kind of place, action/object and mood), "
+                 "4 = fits the scene's place and action, 3 = fits only the mood, 2 = weak, 1 = unrelated or contradicts the "
+                 "story (wrong setting, a clearly visible face of the protagonist is NOT a reason to lower the score here).")
+
+    def rate_frames(self, items: list[tuple[bytes, str]], film: bool = False) -> list[int]:
+        """Кадр сценарийдин ошол бөлүгүнө канчалык дал келет: 1–5 упай.
+        film=True (кино-окуя): кадр режиссёрдун ошол көз ирмемге пландаган кадры катары бааланат."""
         from google.genai import types
 
         def fn(model: str) -> list[int]:
@@ -236,10 +243,10 @@ class Gemini:
                 "cartoon/clip-art illustration in the footage itself (ignore subtitles and "
                 "title-card text added by the editor). Rate at most 2 if the frame is a generic stock cliche "
                 "(chess pieces, handshake, light bulb, statue or monument, puzzle, trophy, abstract particles) "
-                "that the narration does not literally mention. "
-                "Return JSON array of integers only."]
+                "that the narration does not literally mention."
+                + (self.FILM_RULE if film else "") + " Return JSON array of integers only."]
             for k, (jpg, text) in enumerate(items, 1):
-                contents += [f"Frame {k}. Narration (Russian): {text[:300]}",
+                contents += [f"Frame {k}. Narration (Russian): {text[:450 if film else 300]}",
                              types.Part.from_bytes(data=jpg, mime_type="image/jpeg")]
             r = self.client.models.generate_content(
                 model=model, contents=contents,
