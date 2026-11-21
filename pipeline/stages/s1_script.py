@@ -133,11 +133,21 @@ def build_prompt(topic: str, niche: dict, style_text: str, prev: list[dict], cfg
   «выйди из зоны комфорта») и общие слова без содержания. Каждый абзац должен добавлять смысл.
 - Пиши так, чтобы текст можно было ПОКАЗАТЬ: конкретные люди, действия, места и предметы, а не абстракции.
 
-HOOK — ПЕРВЫЕ 2 ПРЕДЛОЖЕНИЯ (≈8 секунд) решают, останется ли зритель:
+HOOK — ПЕРВЫЕ 3–5 СЕКУНД решают, останется ли зритель:
 - Тип hook'а этого видео: {HOOK_TYPES.get(hook, HOOK_TYPES["question"])}.
-- Конкретно и про зрителя; не больше 35 слов в двух предложениях; сразу к сути.
+- Первое предложение — не больше 14 слов: сразу интересный вопрос, неожиданная мысль или сильная эмоция.
+  Обращайся к личной боли, страху, желанию или внутреннему противоречию зрителя, прямо по теме видео.
+- Второе-третье предложение честно показывает, что зритель поймёт, если досмотрит, — и это ДОЛЖНО быть
+  раскрыто в тексте. Никаких обещаний, на которые в видео нет ответа.
+- Без приветствий, долгих вступлений и лишних объяснений до сути.
 - Запрещено начинать с: {", ".join("«" + b + "»" for b in HOOK_BANNED)}.
-- Начало должно быть совсем другим, чем у наших предыдущих видео (ниже).
+- Начало должно быть совсем другим, чем у наших предыдущих видео (ниже). Не копируй чужие примеры hook'ов.
+
+УДЕРЖАНИЕ ЗРИТЕЛЯ (до самого конца):
+- Каждая часть даёт новое: мысль, жизненный пример или психологическое объяснение. Без повторов.
+- В середине — 2–3 честных поворота или вопроса, которые возвращают внимание (и на них есть ответ).
+- Темп живой: середина не должна «проседать».
+- Финал ясно и сильно собирает главный урок видео (без штампов).
 
 НАШИ ПРЕДЫДУЩИЕ ВИДЕО (не повторяй их начало, примеры, метафоры и структуру):
 {avoid}
@@ -279,6 +289,16 @@ class ScriptStage(Stage):
         else:
             raise StageError(f"Сценарий мурунку видеого ({sim['closest']}) өтө окшош бойдон калды")
 
+        # Hook + удержание: катаал «көрүүчү» баалайт, жетишсиз болсо башталыш/финал кайра жазылат
+        from .. import retention
+
+        fixed, ret = retention.improve(g, text, title, hook, ctx.log)
+        if fixed != text:
+            fixed = adjust_length(g, fixed, cfg.words_min, cfg.words_max, ctx.log)
+            if not duplicate_sentences(fixed):
+                text = fixed
+        ctx.path("script", "retention.json").write_text(retention.dump(ret), encoding="utf-8")
+
         script = ctx.path("script", "script.txt")
         script.write_text(text + "\n", encoding="utf-8")
         ctx.path("script", "fact_check.txt").write_text(changes + "\n", encoding="utf-8")
@@ -288,6 +308,8 @@ class ScriptStage(Stage):
             ctx.log(f"   ⚠ Hook шаблон менен башталды («{bad_open}») — QA текшерет")
         meta = {"title": title, "style": style, "words": word_count(text), "hook_type": hook,
                 "hook": first[:240], "hook_card": hook_card or " ".join(first.split()[:5]),
+                "hook_score": ret["review"].get("hook_score"), "hook_promise": ret["review"].get("promise", ""),
+                "retention_strategy": ret["review"].get("retention_strategy", ""), "retention_ok": ret["ok"],
                 "similarity": sim, "fact_check_changes": changes.count("\n") + 1
                 if changes and changes.lower() != "нет" else 0}
         meta_file = ctx.path("script", "meta.json")

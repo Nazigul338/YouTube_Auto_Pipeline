@@ -21,6 +21,19 @@
 | 8 пункттук тизме | `s9_qa.originality_checklist` | report.txt башында, report.json |
 | Video_001 өзгөрбөйт | `edit_concept.legacy_brief` | Эски видео болжолдуу концепция катары салыштырылат |
 
+## Эреже 0а — Hook, обложка, retention (2026-11-21)
+
+| Талап | Кайда | Кантип текшерилет |
+|---|---|---|
+| Hook 3–5 сек, саламдашуусуз, жеке көйгөйгө, темага | `s1_script.build_prompt`, `retention.local_checks/review/improve` | биринчи сүйлөм ≤16 сөз, GREETINGS, Gemini hook ≥7/10 + hook_on_topic; жетишсиз → башталыш кайра жазылат жана кайра бааланат |
+| Hook даяр үндө ≤5 сек | `retention.hook_timing`, `s9_qa.check_hook` (милдеттүү) | timings.json: биринчи фраза бүткөн убакыт ≤5.0 сек |
+| Чынчыл убада, жалган интрига жок | `retention.review` (`delivered_quote` текстте бар болушу керек), `s9_qa.check_retention` (милдеттүү) | убада аткарылбаса/жалган убада болсо QA өтпөйт |
+| Кайталоо жок, ортодо бурулуш, күчтүү финал | `retention.local_checks/review`, s1 промпт | ортодогу суроолор, кайталанган абзац башталыштары, финал ≥6/10 |
+| Обложка: ≤6 сөз, контраст, мазмунга чынчыл | `thumbnail.auto_thumbnails`, `quality`, `quote_in_text` | `support` цитатасы сценарийде жок → «clickbait коркунучу» четке кагылат |
+| Обложка мурункулардан башка | `choose_layout`, `choose_accent`, `check_unique`, `image_hash` | layout акыркыдан башка, акцент акыркы 2'ден башка, текст/сүрөт окшош эмес |
+| Обложка көрүүчүнүн көзү менен | `thumbnail.vision_review` (Gemini) | көңүл ≥6, тема ≥6, бөтөн жазуу/логотип/алкоголь/жабылган бет/темадан тышкары жок |
+| 6 суроолуу акыркы текшерүү | `retention.viewer_checklist`, `s9_qa.production_report` §7 | Logs/<ID>_production_report.md |
+
 ## Этаптар (эреже 14)
 
 | Эреже 14 | Система этабы | Абалы |

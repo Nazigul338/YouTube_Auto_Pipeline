@@ -250,6 +250,18 @@ class Gemini:
 
         return self._call(self.text_models, fn, "frame_check")
 
+    def judge_image(self, jpg: bytes, prompt: str, *, purpose: str = "image_check") -> Any:
+        """Бир сүрөт + нускама → JSON (мис. обложканы көрүүчүнүн көзү менен баалоо)."""
+        from google.genai import types
+
+        def fn(model: str) -> Any:
+            r = self.client.models.generate_content(
+                model=model, contents=[prompt, types.Part.from_bytes(data=jpg, mime_type="image/jpeg")],
+                config=types.GenerateContentConfig(response_mime_type="application/json", temperature=0.1))
+            return parse_json(r.text or "{}")
+
+        return self._call(self.text_models, fn, purpose)
+
     def ask_about_file(self, path: Path, prompt: str, *, purpose: str = "file") -> str:
         def fn(model: str) -> str:
             f = self.client.files.upload(file=str(path))

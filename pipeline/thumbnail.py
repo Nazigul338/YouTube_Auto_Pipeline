@@ -93,11 +93,45 @@ def check_unique(specs: list[tuple[float, str, str]], registry: dict, video_id: 
     return out
 
 
-LAYOUTS = ("left", "right", "center")
+LAYOUTS = ("left", "right", "center", "top")
+ACCENTS = ("0xFFD21F", "0xFF5A36", "0x4FD8FF", "0xB7FF3C", "0xFF7AC8", "0xFFFFFF")
+MAX_WORDS = 6                 # обложкадагы жазуу кыска (2 сап, ≤6 сөз)
+MIN_CONTRAST = 0.12           # жарыктын std (0–1): андан аз — бүдөмүк, көзгө урунбайт
+BRIGHT_RANGE = (0.08, 0.85)
+
+
+def choose_layout(registry: dict, video_id: str, seed: str) -> str:
+    """Мурунку видеолордо эң аз колдонулган жана акыркысынан БАШКА жайгашуу (композиция кайталанбасын)."""
+    prev = [(v.get("thumbnail") or {}).get("layout") for k, v in sorted(registry.get("videos", {}).items())
+            if k != video_id]
+    prev = [x for x in prev if x]
+    last = prev[-1] if prev else None
+    return min((l for l in LAYOUTS if l != last), key=lambda l: (prev.count(l), hashlib_md5(seed + l) % 97))
+
+
+def choose_accent(registry: dict, video_id: str, wanted: str) -> str:
+    """Акцент түсү — концепциядан; мурунку видеонукундай болсо, палитрадан башкасы."""
+    prev = [(v.get("thumbnail") or {}).get("accent") for k, v in sorted(registry.get("videos", {}).items())
+            if k != video_id]
+    prev = [x.upper() for x in prev if x]
+    if wanted.upper() not in prev[-2:]:
+        return wanted
+    return next(a for a in ACCENTS if a.upper() not in prev[-2:])
+
+
+def quality(path: Path) -> dict:
+    """Көзгө урунабы: контраст (жарыктын std) жана орточо жарык."""
+    import numpy as np
+
+    r = subprocess.run(["ffmpeg", "-v", "error", "-i", str(path), "-vf", "scale=160:90,format=gray", "-f", "rawvideo",
+                        "-"], capture_output=True, timeout=60)
+    g = np.frombuffer(r.stdout[:160 * 90], np.uint8).astype(float) / 255
+    c, m = round(float(g.std()), 3), round(float(g.mean()), 3)
+    return {"contrast": c, "brightness": m, "ok_image": c >= MIN_CONTRAST and BRIGHT_RANGE[0] <= m <= BRIGHT_RANGE[1]}
 
 
 def make(src: Path, t: float, line1: str, line2: str, out: Path, work: Path, *, accent: str = YELLOW,
-         layout: str = "left", font_pref: str | None = None) -> Path:
+         layout: str = "left", font_pref: str | None = None, boost: float = 1.0) -> Path:
     """Обложка: кадр + градиент (жазуу жакта) + 2 сап (ак + акцент түс). layout: left/right/center (концепцияга жараша)."""
     frame = work / f"f_{int(t * 10)}_{abs(hash(str(src))) % 10000}.png"
     media.run(["ffmpeg", "-y", "-v", "error", "-ss", f"{t:.2f}", "-i", str(src), "-frames:v", "1", str(frame)],
@@ -111,7 +145,12 @@ def make(src: Path, t: float, line1: str, line2: str, out: Path, work: Path, *, 
     s1, s2 = fit_size(line1, 112), fit_size(line2, 158)
     y2 = H - 70 - s2
     y1 = y2 - 18 - s1
-    if layout == "right":
+    if layout == "top":
+        y1 = 52
+        y2 = y1 + s1 + 14
+        x1 = x2 = "(w-tw)/2"
+        alpha = "225*pow(max(0\\,1-Y/(H*0.62))\\,1.2)"
+    elif layout == "right":
         x1, x2 = f"w-tw-58", f"w-tw-56"
         alpha = "215*pow(max(0\\,X/W-0.3)/0.7\\,1.3)"
     elif layout == "center":
@@ -125,9 +164,10 @@ def make(src: Path, t: float, line1: str, line2: str, out: Path, work: Path, *, 
             f"drawtext={ff}textfile='{t2}':fontsize={s2}:fontcolor={accent}:borderw=6:bordercolor=black@0.9:"
             f"shadowx=5:shadowy=5:shadowcolor=black@0.6:x={x2}:y={y2}") if line2 else \
         (f"drawtext={ff}textfile='{t1}':fontsize={s1}:fontcolor=white:borderw=5:bordercolor=black@0.85:"
-         f"x={x1}:y={H - 70 - s1}")
+         f"x={x1}:y={52 if layout == 'top' else H - 70 - s1}")
     graph = (f"[0:v]scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},"
-             "eq=contrast=1.16:saturation=1.22:brightness=-0.02,unsharp=5:5:0.7,vignette=PI/5[b];"
+             f"eq=contrast={1.16 * boost:.2f}:saturation={1.22 * boost:.2f}:brightness={0.06 * (boost - 1) - 0.02:.2f},"
+             "unsharp=5:5:0.7,vignette=PI/5[b];"
              f"color=black:s={W}x{H},format=rgba,geq=r=0:g=0:b=0:a='{alpha}'[g];"
              f"[b][g]overlay=format=auto,{draw},format=yuvj420p[o]")
     media.run(["ffmpeg", "-y", "-v", "error", "-i", str(frame), "-filter_complex", graph, "-map", "[o]",
@@ -147,20 +187,61 @@ def image_hash(path: Path) -> str:
     return f"{dhash(g):016x}"
 
 
-THUMB_PROMPT = """You design YouTube thumbnails for a Russian psychology channel. The thumbnail must make a viewer
-stop scrolling: intrigue, emotion, a question or tension — honest, no clickbait lies, no shouting caps words beyond
-the text itself. It must fit THIS video's own visual world and differ from our previous thumbnails.
+THUMB_PROMPT = """You design YouTube thumbnails for a Russian psychology channel. Goal: a viewer stops scrolling because
+of REAL curiosity, not a trick. Rules:
+- strong emotion and a clear visual story in the frame (a person's face/gesture or a striking motif), high contrast;
+- text: SHORT, big, easy to read — 2 lines, at most {max_words} Russian words total;
+- the words raise a question / inner tension that THIS video really answers (no clickbait, no lies, no promises the
+  script does not keep), they match the topic;
+- different wording, idea and angle from our previous thumbnails; fits this video's own visual world.
 
 Title: {title}
 Hook (first seconds): {hook}
+What the video promises the viewer: {promise}
 Visual world of the video: {world}
 Previous thumbnail texts (do NOT repeat their wording or idea): {previous}
 Candidate frames (index. narration at that moment):
 {shots}
 
+SCRIPT (the thumbnail must be honest to it):
+{script}
+
 Return JSON only: [{{"line1": "<1-3 Russian words, white>", "line2": "<1-3 Russian words, accent, the punch>",
-"shot": <index of the best frame for this text: a person/emotion or a strong motif, no text in frame>}}] — 3 options,
-each with a different angle."""
+"shot": <index of the best frame: a person/emotion or a strong motif, no text in frame>,
+"emotion": "<the emotion this thumbnail triggers>",
+"support": "<VERBATIM 5-15 word quote from the SCRIPT that this thumbnail's question is answered by>"}}] —
+5 options, each with a different angle and a DIFFERENT frame (prefer frames with a person showing emotion)."""
+
+
+VISION_PROMPT = """You are a demanding YouTube viewer scrolling past thumbnails. Judge THIS finished thumbnail
+for a Russian psychology video. Title: «{title}». Thumbnail text: «{text}». Topic promise: {promise}
+
+Return JSON only: {{"attention": <1-10: would you stop scrolling?>, "topic_match": <1-10: the image + text clearly fit
+the topic and the text's emotion>, "emotion": "<what emotion the image itself shows>",
+"problems": [<any of: "foreign_text" (readable names, badges, signs, captions or letters in the photo itself, NOT the
+big thumbnail text), "logo", "alcohol", "face_covered" (the big text covers a face), "no_subject" (no person and no
+clear meaningful motif), "off_topic", "low_quality", "misleading">],
+"note": "<one short sentence>"}}"""
+VISION_MIN = 6
+VISION_HARD = {"foreign_text", "logo", "alcohol", "face_covered", "off_topic", "misleading", "low_quality"}
+
+
+def vision_review(gem, path: Path, title: str, text: str, promise: str) -> dict | None:
+    """Даяр обложканы Gemini көзү менен баалоо. Кызмат жок/ката → None (четке кагылбайт, отчетто «—»)."""
+    if not hasattr(gem, "judge_image"):
+        return None
+    try:
+        r = gem.judge_image(path.read_bytes(), VISION_PROMPT.format(title=title, text=text, promise=promise or "-"),
+                            purpose="thumbnail_review")
+    except Exception:
+        return None
+    if not isinstance(r, dict) or not isinstance(r.get("attention"), (int, float)):
+        return None
+    probs = [str(x) for x in (r.get("problems") or []) if str(x)]
+    out = {"attention": int(r["attention"]), "topic_match": int(r.get("topic_match") or 0), "problems": probs,
+           "emotion": str(r.get("emotion", ""))[:80], "note": str(r.get("note", ""))[:200]}
+    out["ok"] = out["attention"] >= VISION_MIN and out["topic_match"] >= VISION_MIN and not (set(probs) & VISION_HARD)
+    return out
 
 
 def font_file(pref: str | None = None) -> str:
@@ -196,6 +277,10 @@ def auto_thumbnails(ctx, title: str = "") -> dict:
         words = json.loads(ctx.path("subtitles", "timings.json").read_text(encoding="utf-8"))["words"]
     except Exception:
         pass
+    try:
+        script = ctx.path("script", "script.txt").read_text(encoding="utf-8")
+    except Exception:
+        script = ""
     cands = sorted([s for s in shots if s.get("source") != "gemini" and s.get("kind") == "video"],
                    key=lambda s: -(s.get("ai_score") or 0))[:24]
     cands.sort(key=lambda s: s["start"])
@@ -205,44 +290,88 @@ def auto_thumbnails(ctx, title: str = "") -> dict:
     prev_hashes = [h for v, e in ctx.registry.get("videos", {}).items() if v != ctx.video_id
                    for h in (e.get("thumbnail") or {}).get("hashes", [])]
     opts = []
+    gem = None
     try:
-        data = gemini_of(ctx).json(THUMB_PROMPT.format(
+        gem = gemini_of(ctx)
+        data = gem.json(THUMB_PROMPT.format(
             title=title or meta.get("title", ""), hook=meta.get("hook", ""), world=brief.get("world", ""),
-            previous="; ".join(prev[-12:]) or "(none)",
+            promise=meta.get("hook_promise", "") or "-", max_words=MAX_WORDS,
+            previous="; ".join(prev[-12:]) or "(none)", script=script[:9000],
             shots="\n".join(f"{k}. {text_at(s)}" for k, s in enumerate(cands))), purpose="thumbnail", temperature=0.9)
         for o in data if isinstance(data, list) else []:
             k = int(o.get("shot", 0))
             if 0 <= k < len(cands) and str(o.get("line1", "")).strip():
-                opts.append((cands[k], str(o["line1"]).strip()[:22].upper(), str(o.get("line2", "")).strip()[:22].upper()))
+                opts.append((cands[k], str(o["line1"]).strip()[:22].upper(), str(o.get("line2", "")).strip()[:22].upper(),
+                             {"support": str(o.get("support", ""))[:200], "emotion": str(o.get("emotion", ""))[:60]}))
     except Exception as e:
         ctx.log(f"   ⚠️ Обложка тексти Gemini'ден келген жок ({type(e).__name__}) — hook'тон")
-    if not opts and cands:
-        hc = (meta.get("hook_card") or title or "").upper().split()
+    if not opts and cands:                 # hook карточкасы — сценарийдин өзүнөн (чынчыл)
+        hc = (meta.get("hook_card") or title or "").upper().split()[:MAX_WORDS]
         mid = max(1, len(hc) // 2)
-        opts = [(cands[k * len(cands) // 3], " ".join(hc[:mid]), " ".join(hc[mid:])) for k in range(min(3, len(cands)))]
-    layout = LAYOUTS[int(hashlib_md5(ctx.video_id + brief.get("name", "")) % 3)]
-    accent = brief.get("subtitles", {}).get("highlight", "#FFD21F").replace("#", "0x")
+        opts = [(cands[k * len(cands) // 3], " ".join(hc[:mid]), " ".join(hc[mid:]), {"source": "hook_card"})
+                for k in range(min(3, len(cands)))]
+    layout = choose_layout(ctx.registry, ctx.video_id, ctx.video_id + brief.get("name", ""))
+    accent = choose_accent(ctx.registry, ctx.video_id,
+                           brief.get("subtitles", {}).get("highlight", "#FFD21F").replace("#", "0x"))
     font_pref = "Montserrat" if brief.get("subtitles", {}).get("font", "Montserrat").startswith("Montserrat") else "DejaVu Sans"
     out_dir = ctx.path("thumbnails")
     out_dir.mkdir(exist_ok=True)
-    made, rejected = [], []
-    for k, (sh, l1, l2) in enumerate(opts, 1):
+    from .retention import quote_in_text
+
+    made, rejected, qual = [], [], []
+    for k, (sh, l1, l2, info) in enumerate(opts, 1):
+        text = f"{l1} {l2}".strip()
+        n_words = len(text.split())
         if check_unique([(0.0, l1, l2)], ctx.registry, ctx.video_id)[0][1]:
-            rejected.append(f"«{l1} {l2}»: жазуусу мурункуга окшош")
+            rejected.append(f"«{text}»: жазуусу мурункуга окшош")
             continue
+        if n_words > MAX_WORDS:
+            rejected.append(f"«{text}»: жазуу узун ({n_words} сөз > {MAX_WORDS})")
+            continue
+        support_found = None
+        if "support" in info:              # clickbait'ка каршы: обложканын суроосуна видеодо жооп барбы
+            support_found = quote_in_text(info["support"], script)
+            if not support_found:
+                rejected.append(f"«{text}»: видеодо жообу табылган жок (clickbait коркунучу)")
+                continue
+        if len(made) >= 3:
+            break
         clip = ctx.path("clips", sh["file"])
-        if not clip.exists():
-            continue
         at = float(sh.get("offset", 0.0)) + sh["dur"] / 2
-        out = make(clip, at, l1, l2, out_dir / f"{ctx.video_id}_thumb_{k}.jpg", out_dir, accent=accent, layout=layout,
-                   font_pref=font_pref)
+        if not clip.exists():              # кайра жасоодо (thumbnail.yml auto) — булак клип кайра жүктөлөт
+            got = clean_source([sh], sh["start"] + sh["dur"] / 2, out_dir, stock=(ctx.services or {}).get("stock"))
+            if not got:
+                continue
+            clip, at = got
+        out = out_dir / f"{ctx.video_id}_thumb_{k}.jpg"
+        make(clip, at, l1, l2, out, out_dir, accent=accent, layout=layout, font_pref=font_pref)
+        q = quality(out)
+        if not q["ok_image"]:              # бүдөмүк/өтө караңгы — контрастты күчөтүп бир жолу кайра
+            make(clip, at, l1, l2, out, out_dir, accent=accent, layout=layout, font_pref=font_pref, boost=1.25)
+            q = quality(out)
+        qrow = {"text": text, "words": n_words, "contrast": q["contrast"], "brightness": q["brightness"],
+                "ok": q["ok_image"] and n_words <= MAX_WORDS, "emotion": info.get("emotion", ""),
+                "support": info.get("support", "")}
+        if support_found is not None:
+            qrow["support_found"] = support_found
+        if not q["ok_image"]:
+            rejected.append(f"«{text}»: контраст/жарык жетишсиз ({q['contrast']}, {q['brightness']})")
+            continue
+        vis = vision_review(gem, out, title or meta.get("title", ""), text, meta.get("hook_promise", ""))
+        qrow["vision"] = vis
+        if vis is not None and not vis["ok"]:
+            rejected.append(f"«{text}»: көрүүчүнүн көзү менен өтпөдү (көңүл {vis['attention']}/10, тема "
+                            f"{vis['topic_match']}/10, {vis['problems'] or '-'}: {vis['note'][:80]})")
+            qrow["ok"] = False
+            continue
         h = image_hash(out)
         if any(bin(int(h, 16) ^ int(p, 16)).count("1") <= 8 for p in prev_hashes):
-            rejected.append(f"«{l1} {l2}»: сүрөтү мурунку обложкага окшош")
+            rejected.append(f"«{text}»: сүрөтү мурунку обложкага окшош")
             continue
         url = ctx.store.publish("Thumbnails", out, out.name) if ctx.store else None
-        made.append({"file": out.name, "text": f"{l1} {l2}".strip(), "shot": sh["i"], "hash": h, "url": url})
-    entry["thumbnail"] = {"texts": [m["text"] for m in made], "hashes": [m["hash"] for m in made],
+        made.append({"file": out.name, "text": text, "shot": sh["i"], "hash": h, "url": url})
+        qual.append(qrow)
+    entry["thumbnail"] = {"texts": [m["text"] for m in made], "hashes": [m["hash"] for m in made], "quality": qual,
                           "layout": layout, "accent": accent, "files": [m["file"] for m in made],
                           "urls": [m["url"] for m in made], "rejected": rejected}
     (ctx.path("thumbnails", "thumbnails.json")).write_text(json.dumps(entry["thumbnail"], ensure_ascii=False, indent=1),
@@ -277,6 +406,8 @@ def main() -> int:
     root = os.environ.get("YTA_DRIVE_FOLDER", "YouTube_Auto_TEST")
     vid = os.environ.get("VIDEO_ID", "Video_001").strip()
     name = os.environ.get("VIDEO_FILE", f"{vid}.mp4").strip()
+    if os.environ.get("THUMBS", "").strip().lower() == "auto":
+        return main_auto(root, vid)
     specs = parse(os.environ.get("THUMBS", ""))
     if not specs:
         print("❌ THUMBS бош")
@@ -339,6 +470,68 @@ def main() -> int:
             with open(path, "a", encoding="utf-8") as f:
                 f.write(msg + "\n")
     return 0
+
+
+def main_auto(root: str, vid: str) -> int:
+    """Даяр видеого обложканы жаңы эрежелер менен КАЙРА жасоо (видео өзгөрбөйт): Projects/<ID> Drive'дан алынат,
+    сценарийдин hook/убадасы баалоонот (кайра жазылбайт), анан auto_thumbnails (чынчылдык + көрүү баасы)."""
+    import json
+    from types import SimpleNamespace
+
+    from . import retention as rt
+    from .config import load_config
+    from .drive import DriveClient
+    from .gemini import from_config
+    from .stock import Stock
+    from .storage import DriveStore
+
+    drive = DriveClient.from_env()
+    if drive is None:
+        print("❌ GDRIVE_* жок")
+        return 2
+    store = DriveStore(drive, root)
+    registry = store.load_registry()
+    with tempfile.TemporaryDirectory() as d:
+        work = Path(d) / vid
+        if not store.pull_project(vid, work):
+            print(f"❌ Projects/{vid} табылган жок")
+            return 2
+        cfg = load_config("motivation", drive_root=root)
+        gem = from_config(cfg, log=print)
+        script = (work / "script" / "script.txt").read_text(encoding="utf-8")
+        meta_p = work / "script" / "meta.json"
+        meta = json.loads(meta_p.read_text(encoding="utf-8"))
+        if not (work / "script" / "retention.json").exists():
+            rev = rt.review(gem, script, meta.get("title", ""), meta.get("hook_type", ""))
+            loc = rt.local_checks(script)
+            ret = {"local": loc, "review": rev, "problems": rt.problems(loc, rev), "rounds": 1, "post_hoc": True}
+            ret["ok"] = not ret["problems"]
+            (work / "script" / "retention.json").write_text(rt.dump(ret), encoding="utf-8")
+            meta["hook_promise"] = rev.get("promise", "")
+            meta_p.write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
+            print(f"🎯 Hook/retention (даяр сценарий, кайра жазылбайт): hook {rev.get('hook_score')}/10 — "
+                  f"{rev.get('hook_reason', '')[:160]}; финал {rev.get('ending_score')}/10; убада «{rev.get('promise', '')[:120]}» "
+                  f"→ видеодо: {rev.get('promise_delivered')} «{rev.get('delivered_quote', '')[:100]}»; "
+                  f"жалган убада {rev.get('false_promises') or '-'}; кемчилик {ret['problems'] or '-'}")
+        stock = Stock(os.environ.get("PIXABAY_API_KEY", ""), os.environ.get("PEXELS_API_KEY"))
+        ctx = SimpleNamespace(video_id=vid, registry=registry, store=store, cfg=cfg,
+                              services={"gemini": gem, "stock": stock}, path=lambda *p: work.joinpath(*p), log=print)
+        old = (registry.get("videos", {}).get(vid) or {}).get("thumbnail")
+        th = auto_thumbnails(ctx, meta.get("title", ""))
+        th["previous_attempt"] = {k: (old or {}).get(k) for k in ("texts", "layout", "accent")}
+        for q in th.get("quality", []):
+            print(f"   ✓ «{q['text']}»: контраст {q['contrast']}, {q['words']} сөз, видеодо жообу: {q.get('support_found')} "
+                  f"«{q.get('support', '')[:80]}», көрүү: {q.get('vision')}")
+        vc = rt.viewer_checklist(json.loads((work / "script" / "retention.json").read_text(encoding="utf-8")),
+                                 {}, th, None)
+        for x in vc:
+            print(f"   {x['question']} {'✅' if x['ok'] else ('❌' if x['ok'] is False else '—')} {x['note'][:300]}")
+        store.save_registry(registry)
+        files = [work / "thumbnails" / f for f in th.get("files", [])]
+        if files:
+            sh = sheet(files, work / "thumbnails" / f"{vid}_thumbs.jpg")
+            print(f"📋 БААРЫ БИР БАРАКТА: {store.publish('Thumbnails', sh, sh.name)}")
+    return 0 if th.get("files") else 3
 
 
 if __name__ == "__main__":

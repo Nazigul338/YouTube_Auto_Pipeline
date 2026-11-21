@@ -15,7 +15,7 @@ on:
         default: Video_001
         type: string
       thumbs:
-        description: "Варианттар: сек|1-сап|2-сап ; менен бөлүнөт"
+        description: "auto = Gemini жаңы эрежелер менен (чынчылдык + көрүү баасы); же сек|1-сап|2-сап ; менен"
         required: true
         default: "14|ВЫ ЖИВЁТЕ|ДЛЯ НИХ?;329|ТИХАЯ|МЕСТЬ;471|КОМУ ВЫ|ДОКАЗЫВАЕТЕ?"
         type: string
@@ -49,6 +49,7 @@ jobs:
           VIDEO_ID: ${{ inputs.video_id }}
           THUMBS: ${{ inputs.thumbs }}
           YTA_DRIVE_FOLDER: ${{ inputs.test_run && 'YouTube_Auto_TEST' || 'YouTube_Auto' }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
           GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}

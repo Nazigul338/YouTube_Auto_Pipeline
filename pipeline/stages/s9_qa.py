@@ -415,6 +415,20 @@ class QAStage(Stage):
             L.append(f"  - четке кагылды: {th['rejected']}")
         if th.get("error"):
             L.append(f"  - ❌ ката: {th['error']}")
+        # 7. Акыркы текшерүү — көрүүчүнүн көзү менен (6 суроо)
+        from .. import retention as rt
+
+        orig_keys = [by[k]["ok"] for k in ("original", "original_video", "visual_original") if k in by]
+        vc = rt.viewer_checklist(self._json(ctx, "script/retention.json"), self._json(ctx, "hook_timing.json"), th,
+                                 (all(x is not False for x in orig_keys) and any(orig_keys)) if orig_keys else None)
+        entry_w = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
+        entry_w["viewer_check"] = [{"key": x["key"], "ok": x["ok"]} for x in vc]
+        L += ["", "## 7. Акыркы текшерүү (көрүүчүнүн көзү менен)"]
+        for x in vc:
+            L.append(f"- {x['question']} {'✅' if x['ok'] else ('❌' if x['ok'] is False else '—')} {x['note'][:400]}")
+        weak = [x["question"] for x in vc if x["ok"] is False]
+        if weak:
+            L.append(f"- ⚠️ Жакшыртуу керек: {'; '.join(weak)}")
         text = "\n".join(L) + "\n"
         out = ctx.path("production_report.md")
         out.write_text(text, encoding="utf-8")
@@ -465,9 +479,47 @@ class QAStage(Stage):
             problems.append("алгачкы 4 секундда hook карточкасы жок")
         if htype and last and htype == last:
             problems.append(f"hook түрү мурунку видеодогудай ({htype})")
+        # даяр үндө: биринчи фраза алгачкы 5 секундда бүтөбү (саламдашуу/узун кириш жок)
+        from .. import retention as rt
+
+        timing = {}
+        try:
+            words = json.loads(ctx.path("subtitles", "timings.json").read_text(encoding="utf-8"))["words"]
+            text = ctx.path("script", "script.txt").read_text(encoding="utf-8")
+            timing = rt.hook_timing(words, text)
+            if rt.local_checks(text)["greeting"]:
+                problems.append("саламдашуу/шаблон менен башталат")
+        except Exception:
+            pass
+        pe = timing.get("phrase_end_sec")
+        if pe is not None and pe > rt.HOOK_PHRASE_SEC:
+            problems.append(f"биринчи ой {pe} сек'те гана айтылат (> {rt.HOOK_PHRASE_SEC})")
+        ctx.path("hook_timing.json").write_text(rt.dump(timing), encoding="utf-8")
         rep.add("hook", "Hook: алгачкы секунддар көңүл бурат (өз түрү, кыска, экранда)", not problems,
-                (f"түрү {htype}; «{hook[:90]}»; карточка «{(card or {}).get('text', '-')}»" +
-                 (f" — {'; '.join(problems)}" if problems else "")))
+                (f"түрү {htype}; «{hook[:90]}»; биринчи фраза {pe} сек, сүйлөм {timing.get('sentence_end_sec')} сек; "
+                 f"карточка «{(card or {}).get('text', '-')}»" + (f" — {'; '.join(problems)}" if problems else "")))
+        self.check_retention(ctx, rep)
+
+    def check_retention(self, ctx, rep) -> None:
+        """Сценарийдин retention баалоосу (s1 retention.json): жалган убада жок, убада видеодо берилет — МИЛДЕТТҮҮ;
+        hook/финалдын күчү, кайталоолор, ортодогу суроолор — отчетто."""
+        r = self._json(ctx, "script/retention.json") if ctx.path("script", "retention.json").exists() else {}
+        if not r:
+            rep.add("retention", "Көрүүчүнү кармоо: убада аткарылат, жалган интрига жок", None, "s1 баалоосу жок",
+                    required=False)
+            return
+        rev, loc = r.get("review") or {}, r.get("local") or {}
+        hard = []
+        if rev.get("source") == "gemini":
+            if rev.get("false_promises"):
+                hard.append(f"жалган убада: {rev['false_promises'][:2]}")
+            if not rev.get("promise_delivered"):
+                hard.append(f"убада видеодо берилбейт ({rev.get('promise_note', '')})")
+        note = (f"hook {rev.get('hook_score', '-')}/10, финал {rev.get('ending_score', '-')}/10, ортодо суроо "
+                f"{loc.get('mid_questions')}, кайталанган башталыш {loc.get('repeated_paragraph_starts') or '-'}; "
+                f"убада «{rev.get('promise', '-')[:100]}»; калган кемчилик: {r.get('problems') or '-'}")
+        rep.add("retention", "Көрүүчүнү кармоо: убада аткарылат, жалган интрига жок",
+                None if rev.get("source") != "gemini" else not hard, note + (f" — {'; '.join(hard)}" if hard else ""))
 
     def check_shot_meaning(self, ctx, rep) -> None:
         """Кадрлар темага/сөзгө дал келеби: s5 AI баалоосу БАРДЫК кадр боюнча (s9'дагы 10 кадрдык сынак эмес)."""
@@ -492,7 +544,7 @@ class QAStage(Stage):
         ("Кадрлар темага туура келеби?", ["shot_meaning", "relevance", "theme_match"]),
         ("Бир эле монтаж шаблону кайталанган жокпу?", ["original_video", "visual_original", "motion"]),
         ("Оригиналдуу баяндоо жана пайдалуу маалымат барбы?", ["original", "words"]),
-        ("Видеонун башынан аягына чейин кызыгуу сакталабы (hook, ыргак, бирдей сапат)?", ["hook", "pacing", "uniform", "freeze", "silence"]),
+        ("Видеонун башынан аягына чейин кызыгуу сакталабы (hook, ыргак, бирдей сапат)?", ["hook", "retention", "pacing", "uniform", "freeze", "silence"]),
         ("Музыка жана материалдардын лицензиясы текшерилгенби?", ["licenses", "sfx_license", "music_audible"]),
         ("Видео техникалык жактан толук жана сапаттуубу?", ["opens", "sync", "format", "loudness", "black", "duration"]),
     ]
