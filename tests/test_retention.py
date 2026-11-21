@@ -166,6 +166,31 @@ class TestThumbnailRules(unittest.TestCase):
         finally:
             shutil.rmtree(d, ignore_errors=True)
 
+    def test_screen_frames_keeps_only_good_frames_best_first(self):
+        d = Path(tempfile.mkdtemp())
+        try:
+            (d / "clips").mkdir()
+            shots = []
+            for i in range(3):
+                subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", f"testsrc2=s=640x360:d=2",
+                                "-pix_fmt", "yuv420p", str(d / "clips" / f"c{i}.mp4")], check=True)
+                shots.append({"i": i, "start": i * 2, "end": i * 2 + 2, "dur": 2, "file": f"c{i}.mp4", "ai_score": 4})
+            seen = []
+
+            def judge(jpgs, prompt, **k):
+                seen.append(len(jpgs))
+                return [{"i": 0, "score": 9, "person_emotion": False, "see": "лес", "problems": []},
+                        {"i": 1, "score": 9, "person_emotion": False, "see": "бейдж", "problems": ["foreign_text"]},
+                        {"i": 2, "score": 8, "person_emotion": True, "see": "лицо в тревоге", "problems": []}]
+            ctx = SimpleNamespace(path=lambda *p: d.joinpath(*p), services={})
+            got = thumbnail.screen_frames(SimpleNamespace(judge_image=judge), ctx, shots, "t", "", d)
+            self.assertEqual(seen, [3])
+            self.assertEqual([g["i"] for g in got], [2, 0])             # эмоциялуу адам биринчи, бейдж четке
+            self.assertEqual(got[0]["_see"], "лицо в тревоге")
+            self.assertTrue(got[0]["_src"][0].exists())
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
     def test_top_layout_renders(self):
         d = Path(tempfile.mkdtemp())
         try:
