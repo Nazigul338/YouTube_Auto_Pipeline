@@ -234,7 +234,8 @@ def viewer_checklist(ret: dict, timing: dict, thumb: dict, original_ok: bool | N
     g = rev.get("source") == "gemini"
     q = thumb.get("quality") or []
     out = {}
-    out["thumb_attention"] = (all(x.get("ok") for x in q) if q else None,
+    seen = [x for x in q if x.get("vision")]
+    out["thumb_attention"] = ((all(x["vision"].get("ok") for x in seen) if seen else None) if q else False,
                               "; ".join(f"«{x['text']}» контраст {x['contrast']}, {x['words']} сөз" +
                                         (f", көңүл {x['vision']['attention']}/10, тема {x['vision']['topic_match']}/10, "
                                          f"эмоция: {x['vision']['emotion']}" if x.get("vision") else ", көрүү баасы жок")

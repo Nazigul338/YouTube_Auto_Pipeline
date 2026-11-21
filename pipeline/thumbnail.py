@@ -12,6 +12,7 @@ THUMBS: `сек|1-сап|2-сап` вариант, `;` менен бөлүнөт
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -251,7 +252,8 @@ def screen_frames(gem, ctx, cands: list[dict], title: str, promise: str, work: P
     → жакшы кадрлар (баасы боюнча), ар биринде `_src` жана `_see`. Көрүү кызматы жок болсо — тизме өзгөрбөйт."""
     if not hasattr(gem, "judge_image"):
         return cands
-    pool = sorted(cands, key=lambda s: -(s.get("ai_score") or 0))[:SCREEN_MAX]
+    person = re.compile(r"\b(woman|man|girl|boy|person|people|face|portrait|couple|tired|sad|worried|thinking)\b", re.I)
+    pool = sorted(cands, key=lambda s: (-bool(person.search(s.get("query") or "")), -(s.get("ai_score") or 0)))[:SCREEN_MAX]
     items, jpgs = [], []
     for sh in pool:
         src = source_of(ctx, sh, work)
@@ -267,10 +269,16 @@ def screen_frames(gem, ctx, cands: list[dict], title: str, promise: str, work: P
         jpgs.append(jpg.read_bytes())
     if not items:
         return []
-    try:
-        r = gem.judge_image(jpgs, SCREEN_PROMPT.format(title=title, promise=promise or "-"), purpose="thumbnail_frames")
-    except Exception:
-        return items
+    r = None
+    for _ in range(2):                     # 503/убактылуу ката — бир жолу кайра
+        try:
+            r = gem.judge_image(jpgs, SCREEN_PROMPT.format(title=title, promise=promise or "-"), purpose="thumbnail_frames")
+            break
+        except Exception as e:
+            log = getattr(ctx, "log", print)
+            log(f"   ⚠️ Кадрларды көрүү ишке ашкан жок: {type(e).__name__}: {str(e)[:100]}")
+    if r is None:
+        return items                       # көрүлбөгөн — ар бир даяр обложка кийин көрүүдөн өтүшү керек
     good = []
     for x in r if isinstance(r, list) else []:
         try:
@@ -285,16 +293,22 @@ def screen_frames(gem, ctx, cands: list[dict], title: str, promise: str, work: P
 
 
 def vision_review(gem, path: Path, title: str, text: str, promise: str) -> dict | None:
-    """Даяр обложканы Gemini көзү менен баалоо. Кызмат жок/ката → None (четке кагылбайт, отчетто «—»)."""
+    """Даяр обложканы Gemini көзү менен баалоо. Кызмат жок (тест) → None. Кызмат бар, бирок баа алынбаса →
+    {"ok": False, "unavailable": True} — көрүлбөгөн обложка кабыл алынбайт (run #44892369934: 503'тон кийин
+    көрүлбөгөн бүдөмүк обложка өтүп кеткен)."""
     if not hasattr(gem, "judge_image"):
         return None
-    try:
-        r = gem.judge_image(path.read_bytes(), VISION_PROMPT.format(title=title, text=text, promise=promise or "-"),
-                            purpose="thumbnail_review")
-    except Exception:
-        return None
+    r = None
+    for _ in range(2):
+        try:
+            r = gem.judge_image(path.read_bytes(), VISION_PROMPT.format(title=title, text=text, promise=promise or "-"),
+                                purpose="thumbnail_review")
+            break
+        except Exception:
+            continue
     if not isinstance(r, dict) or not isinstance(r.get("attention"), (int, float)):
-        return None
+        return {"ok": False, "unavailable": True, "attention": 0, "topic_match": 0, "problems": ["no_review"],
+                "emotion": "", "note": "көрүү баасы алынган жок"}
     probs = [str(x) for x in (r.get("problems") or []) if str(x)]
     out = {"attention": int(r["attention"]), "topic_match": int(r.get("topic_match") or 0), "problems": probs,
            "emotion": str(r.get("emotion", ""))[:80], "note": str(r.get("note", ""))[:200]}

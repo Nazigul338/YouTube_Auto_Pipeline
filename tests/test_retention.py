@@ -102,7 +102,8 @@ class TestTimingAndChecklist(unittest.TestCase):
     def test_viewer_checklist_six_answers(self):
         ret = {"local": rt.local_checks(GOOD), "review": dict(rt.review(FakeG([rev()]), GOOD, "t", "q"))}
         thumb = {"quality": [{"text": "ЧУЖОЕ МОЛЧАНИЕ", "contrast": 0.2, "words": 2, "ok": True,
-                              "support": "x", "support_found": True}]}
+                              "support": "x", "support_found": True,
+                              "vision": {"ok": True, "attention": 8, "topic_match": 8, "emotion": "тревога"}}]}
         vc = rt.viewer_checklist(ret, {"phrase_end_sec": 2.1, "sentence_end_sec": 2.8}, thumb, True)
         self.assertEqual(len(vc), 6)
         self.assertTrue(all(x["ok"] for x in vc), vc)
@@ -163,6 +164,12 @@ class TestThumbnailRules(unittest.TestCase):
             self.assertFalse(thumbnail.vision_review(bad, img, "t", "x", "")["ok"])
             self.assertTrue(thumbnail.vision_review(good, img, "t", "x", "")["ok"])
             self.assertIsNone(thumbnail.vision_review(SimpleNamespace(), img, "t", "x", ""))
+
+            def boom(*a, **k):
+                raise RuntimeError("503")
+            r = thumbnail.vision_review(SimpleNamespace(judge_image=boom), img, "t", "x", "")
+            self.assertFalse(r["ok"])                     # баа алынбаса — көрүлбөгөн обложка кабыл алынбайт
+            self.assertTrue(r["unavailable"])
         finally:
             shutil.rmtree(d, ignore_errors=True)
 
