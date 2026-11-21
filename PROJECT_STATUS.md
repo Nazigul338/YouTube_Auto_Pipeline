@@ -247,7 +247,7 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
   Текшерүү: Logs/Video_004_production_report.md, логдо «🎬 Монтаж концепциясы», «🖼 Обложка», «🔁», QA.
   ⏸ 13:50 UTC: s1 ✅ (стиль myth, 239 сек), s2 ✅; s3 ❌ Gemini TTS КҮНҮМДҮК квота бүттү (gemini-3.8-flash-tts) — коддун катасы эмес.
   ⏭ 2026-11-21 08:10 UTC'дан кийин ушул branch'тан улантуу: make_video, video_id=Video_004, test_run ✓ (send_later эскертүү
-  trig_01MzSDcH2SDbDiybaDvM9zt2). Эскертүү: пландалган resume_pending (08:30/15:30, default branch) production'ду гана улантат — TEST'ке тийбейт.
+  trig_01MzSDcH2SDbDiybaDvM9zt2). ▶️ 2026-11-21 08:11 UTC улантылды: **run #44883649458**. Эскертүү: пландалган resume_pending (08:30/15:30, default branch) production'ду гана улантат — TEST'ке тийбейт.
 
 ### 8м. 🥇 ОРИГИНАЛДУУЛУК v2 (2026-11-20, колдонуучу: «кемчиликтерди оңдо, 5 даяр вариант жетишсиз»)
 - `edit_concept.py` КАЙРА жазылды: Gemini ар видеого өз концепциясын жазат (визуалдык дүйнө, мотивдер, сахна сайын мотив-кадр,
