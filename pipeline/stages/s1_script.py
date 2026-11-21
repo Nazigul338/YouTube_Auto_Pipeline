@@ -207,7 +207,9 @@ def adjust_length(g, text: str, lo: int, hi: int, log, hints: tuple[str, str] | 
             f"Сейчас в тексте {n} слов. {action}\nСохрани стиль и смысл. "
             f"Не добавляй фактов, статистики и цитат. Верни только полный текст.\n\nТЕКСТ:\n{text}",
             purpose="length", temperature=0.5))
-        if word_count(new) > 200:
+        # run #44928553731: 3-аракетте 1224 → 759 сөз кабыл алынып, s1 кулаган → жаңы вариант максатка
+        # ЖАКЫНЫРААК болсо гана алынат (начарлатуучу жооп таштанат)
+        if word_count(new) > 200 and abs(word_count(new) - target) < abs(n - target):
             text = new
     n = word_count(text)
     if not (lo - 60 <= n <= hi + 60):

@@ -119,6 +119,16 @@ class TestHookAndDark(unittest.TestCase):
             shutil.rmtree(d, ignore_errors=True)
 
 
+class TestAdjustLength(unittest.TestCase):
+    def test_worse_rewrite_is_rejected(self):
+        from pipeline.stages.s1_script import adjust_length
+
+        replies = iter([" ".join(["слово"] * 1224), " ".join(["слово"] * 759), " ".join(["слово"] * 1180)])
+        g = SimpleNamespace(text=lambda *a, **k: next(replies))
+        out = adjust_length(g, " ".join(["слово"] * 1075), 1100, 1200, lambda *_: None)
+        self.assertEqual(len(out.split()), 1180)       # 759 кабыл алынбайт
+
+
 class TestContinuity(unittest.TestCase):
     def test_faceless_check_replaces_visible_face_and_wrong_gender(self):
         d = Path(tempfile.mkdtemp())
