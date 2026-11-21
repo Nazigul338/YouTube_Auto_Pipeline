@@ -253,7 +253,8 @@ def screen_frames(gem, ctx, cands: list[dict], title: str, promise: str, work: P
     if not hasattr(gem, "judge_image"):
         return cands
     person = re.compile(r"\b(woman|man|girl|boy|person|people|face|portrait|couple|tired|sad|worried|thinking)\b", re.I)
-    pool = sorted(cands, key=lambda s: (s.get("hero") != "face", -bool(person.search(s.get("query") or "")),
+    pool = sorted(cands, key=lambda s: (s.get("hero") not in ("silhouette", "back", "hands"),
+                                        -bool(person.search(s.get("query") or "")),
                                         -(s.get("ai_score") or 0)))[:SCREEN_MAX]
     items, jpgs = [], []
     for sh in pool:
@@ -357,13 +358,15 @@ def auto_thumbnails(ctx, title: str = "") -> dict:
     story_txt = ""
     try:                                   # кино-окуя: обложка — каармандын эмоциясы + негизги конфликт
         sd = json.loads(ctx.path("script", "story.json").read_text(encoding="utf-8"))
-        story_txt = ("THIS IS A SHORT CINEMATIC FILM. The thumbnail shows the HERO's emotion and the main conflict of "
+        story_txt = ("THIS IS A SHORT CINEMATIC FILM in a faceless style (the hero's face is never shown). The thumbnail shows the "
+                     "HERO's emotion through body language, hands, silhouette or a key object, and the main conflict of "
                      "the story (" + sd["outline"].get("logline", "") + "). Hero: " + sd["hero"].get("descriptor", "") +
                      ". Director's thumbnail idea: " + (brief.get("director") or {}).get("thumbnail", "-") + "\n")
     except Exception:
         pass
-    face_first = lambda s: (0 if s.get("hero") == "face" and str(s.get("continuity", 10)) not in ("detail",)
-                            and (s.get("continuity") is None or int(s.get("continuity") or 0) >= 5) else 1)
+    # бетсиз кино-стиль: обложкада да каарман (силуэт/артынан/колдор) — бөтөн адамдын бети эмес
+    face_first = lambda s: (0 if s.get("hero") in ("silhouette", "back", "hands") and
+                            s.get("continuity") in (None, "ok") else 1)
     cands = sorted([s for s in shots if s.get("source") != "gemini" and s.get("kind") == "video"],
                    key=lambda s: (face_first(s), -(s.get("ai_score") or 0)))[:24]
     cands.sort(key=lambda s: s["start"])

@@ -28,7 +28,7 @@ Return JSON array only: [{{"i": <index>, "same": <0-10>, "person": <true/false>}
 BATCH = 10
 SAME_MIN = 5
 REF_MIN = 4
-MAX_REPLACE = 45
+MAX_REPLACE = 80
 CHECK_VIS = ("face", "body")
 
 
@@ -79,8 +79,38 @@ def compare_to_reference(gem, ref: bytes, frames: dict[int, bytes], hero: dict) 
     return out
 
 
+FACELESS_PROMPT = """Frames of a short film shot in a FACELESS style: the protagonist ({profile}) must never show
+the face; we see hands, the back, a silhouette or the hero's point of view.
+For EACH image (Image 0..N) answer: is any person's face clearly visible (recognisable eyes/nose/mouth)? Which gender is
+the main visible person (from hands, body, clothes, hair)?
+Return JSON array only: [{{"i": <index>, "face": <true/false>, "gender": "man"|"woman"|"unknown"}}]"""
+FACELESS_CHECK = ("hands", "back", "silhouette", "pov")
+
+
+def judge_faceless(gem, frames: dict[int, bytes], hero: dict) -> dict[int, dict]:
+    out: dict[int, dict] = {}
+    idx = list(frames)
+    for b in range(0, len(idx), BATCH):
+        part = idx[b:b + BATCH]
+        try:
+            r = gem.judge_image([frames[i] for i in part], FACELESS_PROMPT.format(profile=profile_text(hero)),
+                                purpose="continuity_faceless")
+        except Exception:
+            continue
+        for x in r if isinstance(r, list) else []:
+            try:
+                k = int(x.get("i"))
+                if 0 <= k < len(part):
+                    out[part[k]] = {"face": bool(x.get("face")), "gender": str(x.get("gender") or "unknown")}
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
 def enforce(stage, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u, pick_offset) -> tuple[list, dict]:
-    """s5 (кино форматы): каарман кадрларын текшерүү жана дал келбегендерин алмаштыруу."""
+    """s5 (кино форматы, «бетсиз» стиль — колдонуучунун чечими 2026-11-21): каарман кадрларында эч кимдин бети
+    ачык көрүнбөсүн жана көрүнгөн адамдын жынысы каармандыкындай болсун; бузулса — ошол көз ирмемдин бетсиз
+    кадрына (detail_query) алмаштырылат. rate = туура кадрлар / текшерилгендер."""
     try:
         hero = json.loads(ctx.path("script", "story.json").read_text(encoding="utf-8"))["hero"]
     except Exception:
@@ -91,7 +121,7 @@ def enforce(stage, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, 
     if not hasattr(gem, "judge_image"):
         return results, {"skipped": "көрүү кызматы жок"}
     by_i = {r[0]: r for r in results}
-    check = [i for i in by_i if scenes[shots[i]["scene"]].get("hero") in CHECK_VIS]
+    check = [i for i in by_i if scenes[shots[i]["scene"]].get("hero") in FACELESS_CHECK]
     frames = {}
     for i in check:
         _, a, path, real, _, _ = by_i[i]
@@ -100,25 +130,23 @@ def enforce(stage, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, 
             frames[i] = stage._frame(path, a.kind, off, shots[i]["dur"])
         except Exception:
             continue
-    stats = {"hero_shots": len(check), "checked": 0, "consistent": 0, "replaced": 0, "kept_unfixed": 0,
-             "reference_shot": None, "scores": {}}
+    stats = {"style": "faceless", "hero_shots": len(check), "checked": 0, "consistent": 0, "replaced": 0,
+             "kept_unfixed": 0, "faces": 0, "wrong_gender": 0, "scores": {}}
     if not frames:
         return results, stats
-    try:
-        ref_i, ref_scores = choose_reference(gem, frames, hero)
-    except Exception as e:
-        return results, dict(stats, skipped=f"эталон тандалган жок: {type(e).__name__}")
-    if ref_i is None:
-        return results, dict(stats, skipped="профилге дал келген кадр табылган жок")
-    stats["reference_shot"] = ref_i
-    same = compare_to_reference(gem, frames[ref_i], {k: v for k, v in frames.items() if k != ref_i}, hero)
-    same[ref_i] = 10
-    stats["checked"] = len(same)
-    stats["scores"] = {str(k): v for k, v in same.items()}
-    bad = sorted((i for i, v in same.items() if v < SAME_MIN), key=lambda i: same[i])[:MAX_REPLACE]
-    for i in bad:
-        sc = scenes[shots[i]["scene"]]
-        q = sc.get("detail_query") or ""
+    res = judge_faceless(gem, frames, hero)
+    stats["checked"] = len(res)
+    bad = []
+    for i, r in res.items():
+        wrong = r["gender"] in ("man", "woman") and r["gender"] != hero.get("gender")
+        stats["faces"] += r["face"]
+        stats["wrong_gender"] += wrong
+        ok = not r["face"] and not wrong
+        stats["scores"][str(i)] = "ok" if ok else ("face" if r["face"] else "gender")
+        if not ok:
+            bad.append(i)
+    for i in bad[:MAX_REPLACE]:
+        q = scenes[shots[i]["scene"]].get("detail_query") or ""
         nxt = finder.beat_candidate(q, shots[i]["dur"]) if q else None
         if nxt is None:
             stats["kept_unfixed"] += 1
@@ -132,9 +160,9 @@ def enforce(stage, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, 
         except Exception:
             chosen[i] = old
             stats["kept_unfixed"] += 1
-    stats["consistent"] = sum(1 for v in same.values() if v >= SAME_MIN)
-    fixed = stats["consistent"] + stats["replaced"]
-    stats["rate"] = round(fixed / max(1, stats["checked"]), 3)
+    stats["kept_unfixed"] += max(0, len(bad) - MAX_REPLACE)
+    stats["consistent"] = stats["checked"] - len(bad)
+    stats["rate"] = round((stats["consistent"] + stats["replaced"]) / max(1, stats["checked"]), 3)
     ctx.path("clips", "continuity.json").write_text(json.dumps(dict(stats, hero=hero.get("descriptor")),
                                                                ensure_ascii=False, indent=1), encoding="utf-8")
     return [by_i[i] for i in sorted(by_i)], stats

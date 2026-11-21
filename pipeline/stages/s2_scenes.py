@@ -55,7 +55,10 @@ SCENES:
 
 SHOTS = ("wide", "medium", "close_up", "extreme_close_up", "over_shoulder", "pov", "insert")
 CAMERAS = ("static", "slow_push_in", "pull_out", "pan", "tilt", "handheld", "tracking")
-HERO_VIS = ("face", "body", "back", "hands", "none")
+# Колдонуучунун чечими (2026-11-21): «бети көрүнбөгөн кино стили» — сток-видеодо бир актер табылбайт
+# (run #44903598138: 103 бет-кадрдан 2'си гана эталонго дал келди), ошондуктан каармандын БЕТИ көрсөтүлбөйт.
+HERO_VIS = ("hands", "back", "silhouette", "pov", "none")
+HERO_SHOWN = ("back", "silhouette")
 
 STORY_EXTRA = """
 THIS VIDEO IS A SHORT CINEMATIC FILM about one protagonist. Scenes are consecutive moments of ONE story — the
@@ -67,13 +70,15 @@ Act of each scene is given in [brackets]. Plan the camera like a director.
 For EVERY scene ALSO return:
   "shot": one of {shots}, "camera": one of {cameras},
   "lighting": "<english, e.g. cold window light at dusk>", "location": "<english filmable place>",
-  "hero": one of {hero_vis} (how the protagonist appears; vary it: faces only where emotion matters),
+  "hero": one of {hero_vis} — FACELESS film language: the protagonist's FACE IS NEVER SHOWN. Tell the story with
+          hands and actions (hands), the hero seen from behind (back), a silhouette against light (silhouette), the
+          hero's point of view (pov), or objects/places/other details (none). Vary them like a director,
   "visual_prompt": "<english cinematic still description of the shot (subject, action, framing, light, mood);
-                     when the protagonist is visible include the full descriptor>",
-  "detail_query": "<2-4 word english stock query for an alternative shot WITHOUT a visible face that tells the same
-                    moment (hands, silhouette, object, place)>"
-For scenes where the protagonist is visible ("face"/"body"/"back"), the FIRST query must start with the gender and
-age of the descriptor (e.g. "woman 40s ...") plus the action.
+                     the hero's face is never visible>",
+  "detail_query": "<2-4 word english stock query for an alternative shot of the same moment: hands, object or place>"
+Queries must find footage WITHOUT a visible face of the hero: e.g. "{gender} hands phone close up",
+"{gender} from behind window", "{gender} silhouette night", "pov walking corridor", "coffee cup kitchen morning".
+For "hands"/"back"/"silhouette" scenes the FIRST query must contain the word "{gender}".
 """
 
 
@@ -93,7 +98,7 @@ def story_context(ctx, texts: list[str]) -> tuple[str, list[str], dict] | None:
         out.append(story.act_of_word(acts, w))
         w += len(t.split())
     extra = STORY_EXTRA.format(hero=story.hero_text(hero), descriptor=hero["descriptor"], shots=SHOTS,
-                               cameras=CAMERAS, hero_vis=HERO_VIS)
+                               cameras=CAMERAS, hero_vis=HERO_VIS, gender=hero["gender"])
     return extra, out, hero
 
 
@@ -163,9 +168,9 @@ class ScenesStage(Stage):
                            "lighting": str(m.get("lighting") or "")[:120], "location": str(m.get("location") or "")[:120],
                            "hero": vis, "visual_prompt": str(m.get("visual_prompt") or "")[:400],
                            "detail_query": str(m.get("detail_query") or "")[:60]})
-                core = hero_core(hero)
-                if vis in ("face", "body", "back") and sc["queries"] and hero["gender"] not in sc["queries"][0].lower():
-                    sc["queries"][0] = f"{core} {sc['queries'][0]}"[:60]
+                if vis in ("hands", "back", "silhouette") and sc["queries"] and \
+                        not re.search(rf"\b{hero['gender']}\b", sc["queries"][0].lower()):
+                    sc["queries"][0] = f"{hero['gender']} {sc['queries'][0]}"[:60]
                 if sc["detail_query"]:
                     sc["queries"] = sc["queries"][:6] + [sc["detail_query"]]
 

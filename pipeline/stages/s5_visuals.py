@@ -240,6 +240,9 @@ class VisualsStage(Stage):
             return random.Random(f"{ctx.video_id}:{i}").random()
 
         ai_stats: dict = {}
+        from .. import story as _st
+        if _st.is_story(ctx.cfg):        # кино-окуя: окуянын көз ирмемдери так — көбүрөөк кадр алмаштырылат
+            self.MAX_REPLACE = 50        # (run #44903598138: 91/167 кадр ≤2/5, 25 гана алмаштырылчу)
         if quality:
             results, ai_stats = self.ai_relevance(ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u)
             ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
@@ -252,8 +255,9 @@ class VisualsStage(Stage):
             results, cont = continuity.enforce(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch,
                                                off_u, pick_offset)
             ctx.log(f"   🧍 Continuity: каарман кадрлары {cont.get('hero_shots', 0)}, текшерилди {cont.get('checked', 0)}, "
-                    f"дал келди {cont.get('consistent', 0)}, бетсиз кадрга алмаштырылды {cont.get('replaced', 0)}, "
-                    f"оңдолбоду {cont.get('kept_unfixed', 0)}, эталон кадр {cont.get('reference_shot')}"
+                    f"туура {cont.get('consistent', 0)} (бет көрүнгөн {cont.get('faces', 0)}, башка жыныс "
+                    f"{cont.get('wrong_gender', 0)}), бетсиз кадрга алмаштырылды {cont.get('replaced', 0)}, "
+                    f"оңдолбоду {cont.get('kept_unfixed', 0)}, үлүш {cont.get('rate')}"
                     + (f" — ⚠ {cont['skipped']}" if cont.get("skipped") else ""))
         ai_img: dict = {}
         from .. import ai_images

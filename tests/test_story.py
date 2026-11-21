@@ -79,22 +79,20 @@ class TestGenerators(unittest.TestCase):
 
 
 class TestContinuity(unittest.TestCase):
-    def test_inconsistent_face_replaced_by_detail_shot(self):
+    def test_faceless_check_replaces_visible_face_and_wrong_gender(self):
         d = Path(tempfile.mkdtemp())
         try:
             (d / "script").mkdir()
             (d / "clips").mkdir()
-            (d / "script" / "story.json").write_text(json.dumps({"hero": {"descriptor": "woman 30s", "look": {}}}))
-            scenes = {1: {"hero": "face", "detail_query": "hands phone"}, 2: {"hero": "hands"}}
+            (d / "script" / "story.json").write_text(json.dumps({"hero": {"descriptor": "man 30s", "gender": "man",
+                                                                          "look": {}}}))
+            scenes = {1: {"hero": "back", "detail_query": "hands phone"}, 2: {"hero": "none"}}
             shots = [{"scene": 1, "dur": 3}, {"scene": 1, "dur": 3}, {"scene": 1, "dur": 3}, {"scene": 2, "dur": 3}]
             A = SimpleNamespace
             results = [(i, A(kind="video"), d / f"{i}.mp4", 10.0, "fresh", 0.0) for i in range(4)]
-
-            def judge(imgs, prompt, purpose=""):
-                if purpose == "continuity_ref":
-                    return [{"i": 0, "match": 9, "face": True}, {"i": 1, "match": 3}, {"i": 2, "match": 7}]
-                return [{"i": 1, "same": 2, "person": True}, {"i": 2, "same": 8, "person": True}]
-            gem = A(judge_image=judge)
+            gem = A(judge_image=lambda imgs, prompt, purpose="": [
+                {"i": 0, "face": False, "gender": "man"}, {"i": 1, "face": True, "gender": "man"},
+                {"i": 2, "face": False, "gender": "woman"}])
             chosen = {i: ("old", "fresh", 0.0) for i in range(4)}
             finder = A(beat_candidate=lambda q, dur: f"new:{q}")
             fetched = []
@@ -106,10 +104,10 @@ class TestContinuity(unittest.TestCase):
             ctx = A(path=lambda *p: d.joinpath(*p), services={"gemini": gem})
             out, st = continuity.enforce(stage, ctx, results, shots, scenes, chosen, {}, finder, fetch,
                                          lambda i: 0.5, lambda real, dur, u: 0.0)
-            self.assertEqual(st["reference_shot"], 0)
-            self.assertEqual(st["checked"], 3)               # hands-кадр текшерилбейт
-            self.assertEqual(fetched, [(1, "new:hands phone")])
-            self.assertEqual((st["consistent"], st["replaced"], st["rate"]), (2, 1, 1.0))
+            self.assertEqual(st["checked"], 3)               # «none» сахнасы текшерилбейт
+            self.assertEqual((st["faces"], st["wrong_gender"]), (1, 1))
+            self.assertEqual(fetched, [(1, "new:hands phone"), (2, "new:hands phone")])
+            self.assertEqual((st["consistent"], st["replaced"], st["rate"]), (1, 2, 1.0))
             self.assertTrue((d / "clips" / "continuity.json").exists())
         finally:
             shutil.rmtree(d, ignore_errors=True)
@@ -157,10 +155,8 @@ class TestStoryPipeline(unittest.TestCase):
             class G(UniqueScriptGemini):
                 def judge_image(self, imgs, prompt, purpose=""):
                     n = len(imgs) if isinstance(imgs, list) else 1
-                    if purpose == "continuity_ref":
-                        return [{"i": k, "match": 8, "face": True} for k in range(n)]
-                    if purpose == "continuity_same":
-                        return [{"i": k, "same": 7 if k % 3 else 3, "person": True} for k in range(1, n)]
+                    if purpose == "continuity_faceless":
+                        return [{"i": k, "face": k % 4 == 1, "gender": "woman"} for k in range(n)]
                     return {}
             services = {"gemini": G(words=130, seed="s"), "stock": FakeStock(), "asr": fake_whisper_for(proj)}
             env = {"GOOGLE_API_KEY": "t", "PIXABAY_API_KEY": "t", "YTA_CINEMATIC": "1", "YTA_HYPERFRAMES": "",

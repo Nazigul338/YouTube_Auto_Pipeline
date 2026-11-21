@@ -74,7 +74,7 @@ class FakeGemini:
                             "music_mood": "emotional_piano",
                             "shot": ["wide", "close_up", "medium"][i % 3], "camera": "slow_push_in",
                             "lighting": "window light", "location": "apartment",
-                            "hero": ["face", "hands", "body", "none"][i % 4],
+                            "hero": ["back", "hands", "silhouette", "none"][i % 4],
                             "visual_prompt": "woman at a window", "detail_query": "hands holding phone"})
             return out
         if purpose == "music_tags":

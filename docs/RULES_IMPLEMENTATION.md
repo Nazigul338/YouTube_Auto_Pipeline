@@ -12,7 +12,7 @@
 | Сценарий — окуя, үчүнчү жак, диалогдор | `story.script_prompt`, `psych_story.yaml` | retention.improve (hook/убада) |
 | Актылардын убактысы | `story.map_acts/act_times` | hook ≤30 сек, бурулуш 45–85%, ар акт ≥3% |
 | Кино-разбивка | `s2_scenes.STORY_EXTRA` | shot/camera/lighting/location/hero/visual_prompt/detail_query ар сахнада |
-| Каармандын туруктуулугу | `continuity.enforce` (s5) | эталон кадр + Gemini «ошол эле адамбы»; <5/10 → бетсиз кадр; s9 ≥80% |
+| Каармандын туруктуулугу (бетсиз стиль) | `continuity.enforce` (s5), s2 `HERO_VIS` (бет жок) | Gemini: бет көрүндүбү / жынысы туурабы → бузулса бетсиз кадр; s9 ≥80% |
 | Режиссёрдук концепция | `edit_concept` (`director`) | мурункулар менен 7 топто салыштырылат |
 | Музыкалык арка | `s7_music.story_arc/arc_filter` | music.json `arc`; угулуу QA 9–16 LU |
 | Окуяга негизделген обложка | `thumbnail` (story_txt, бет-кадрлар биринчи) | vision_review |
