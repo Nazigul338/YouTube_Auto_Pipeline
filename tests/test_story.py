@@ -1,0 +1,198 @@
+"""Кино-окуя форматы: каарман, сюжет, актылар, кино-разбивка, continuity, музыкалык арка, QA (жалган Gemini)."""
+
+import json
+import os
+import shutil
+import subprocess
+import tempfile
+import unittest
+from pathlib import Path
+from types import SimpleNamespace
+from unittest import mock
+
+from pipeline import continuity, story
+from pipeline.config import load_config
+from tests.fakes import FakeGemini
+
+
+class TestGenerators(unittest.TestCase):
+    def test_profile_and_outline(self):
+        g = FakeGemini()
+        hero = story.character_profile(g, "Почему ты не можешь расслабиться", [], "тревожный, всё контролирует")
+        self.assertEqual(hero["gender"], "woman")
+        self.assertIn("woman", hero["descriptor"])
+        o = story.outline(g, "t", hero, [], lambda *_: None)
+        self.assertEqual([a["act"] for a in o["acts"]], story.ACT_KEYS)
+        self.assertIn(o["logline"], story.outline_text(o))
+
+    def test_previous_hero_name_is_avoided(self):
+        g = FakeGemini()
+        first = story.character_profile(g, "t", [])
+        second = story.character_profile(g, "t", [{"id": "Video_005", "name": first["name"]}])
+        self.assertNotEqual(first["name"], second["name"])
+
+    def test_similar_plot_is_rewritten(self):
+        g = FakeGemini()
+        hero = story.character_profile(g, "t", [])
+        o1 = story.outline(g, "t", hero, [], lambda *_: None)
+        prev = [dict(story.registry_entry(hero, o1, "T"), id="Video_005")]
+        logs = []
+        calls = []
+        real = g.json
+
+        def same_then_new(prompt, purpose="", **kw):        # 1-жолу ошол эле сюжет, 2-жолу башкасы
+            calls.append(purpose)
+            if purpose == "story_outline" and calls.count("story_outline") == 1:
+                return {"logline": o1["logline"], "acts": [dict(a) for a in o1["acts"]],
+                        "turning_point": o1["turning_point"]}
+            if purpose == "story_outline":
+                return {"logline": "Совсем другая история про отца и сына на рыбалке у озера.",
+                        "acts": [{"act": k, "summary": f"Озеро, лодка, молчание {k}"} for k in story.ACT_KEYS],
+                        "turning_point": "сын сам заводит мотор"}
+            return real(prompt, purpose=purpose, **kw)
+        g.json = same_then_new
+        o2 = story.outline(g, "t", hero, prev, logs.append)
+        self.assertTrue(any("окшош" in l for l in logs), logs)
+        self.assertLess(o2["plot_similarity"], story.PLOT_SIMILAR)
+
+    def test_map_acts_exact_and_fallback(self):
+        text = " ".join(f"w{i}" for i in range(700))
+        starts = [0, 50, 150, 330, 470, 580, 660]
+        g = SimpleNamespace(json=lambda *a, **k: [{"act": k, "starts": " ".join(f"w{j}" for j in range(s, s + 6))}
+                                                   for k, s in zip(story.ACT_KEYS, starts)])
+        acts = story.map_acts(g, text)
+        self.assertEqual([a["w0"] for a in acts], starts)
+        self.assertEqual(acts[0]["method"], "gemini")
+        fb = story.map_acts(SimpleNamespace(json=lambda *a, **k: []), text)
+        self.assertEqual((len(fb), fb[0]["method"]), (7, "proportional"))
+
+    def test_structure_and_text_checks(self):
+        words = [{"w": "x", "s": i * 0.7, "e": i * 0.7 + 0.6} for i in range(700)]
+        fb = story.map_acts(SimpleNamespace(json=lambda *a, **k: []), " ".join("x" for _ in range(700)))
+        times = story.act_times(fb, words)
+        self.assertEqual(story.check_structure(times, 490), [])
+        bad = [dict(t) for t in times]
+        bad[0]["end"] = 60
+        self.assertTrue(any("hook" in p for p in story.check_structure(bad, 490)))
+        self.assertTrue(story.check_text("Это реальная история. У неё тревожное расстройство."))
+        self.assertEqual(story.check_text("Анна закрывает ноутбук и смотрит в окно."), [])
+
+
+class TestContinuity(unittest.TestCase):
+    def test_inconsistent_face_replaced_by_detail_shot(self):
+        d = Path(tempfile.mkdtemp())
+        try:
+            (d / "script").mkdir()
+            (d / "clips").mkdir()
+            (d / "script" / "story.json").write_text(json.dumps({"hero": {"descriptor": "woman 30s", "look": {}}}))
+            scenes = {1: {"hero": "face", "detail_query": "hands phone"}, 2: {"hero": "hands"}}
+            shots = [{"scene": 1, "dur": 3}, {"scene": 1, "dur": 3}, {"scene": 1, "dur": 3}, {"scene": 2, "dur": 3}]
+            A = SimpleNamespace
+            results = [(i, A(kind="video"), d / f"{i}.mp4", 10.0, "fresh", 0.0) for i in range(4)]
+
+            def judge(imgs, prompt, purpose=""):
+                if purpose == "continuity_ref":
+                    return [{"i": 0, "match": 9, "face": True}, {"i": 1, "match": 3}, {"i": 2, "match": 7}]
+                return [{"i": 1, "same": 2, "person": True}, {"i": 2, "same": 8, "person": True}]
+            gem = A(judge_image=judge)
+            chosen = {i: ("old", "fresh", 0.0) for i in range(4)}
+            finder = A(beat_candidate=lambda q, dur: f"new:{q}")
+            fetched = []
+
+            def fetch(i):
+                fetched.append((i, chosen[i][0]))
+                return (i, A(kind="video"), d / f"n{i}.mp4", 10.0, "fresh", 0.0)
+            stage = A(_frame=lambda path, kind, off, dur: b"jpg")
+            ctx = A(path=lambda *p: d.joinpath(*p), services={"gemini": gem})
+            out, st = continuity.enforce(stage, ctx, results, shots, scenes, chosen, {}, finder, fetch,
+                                         lambda i: 0.5, lambda real, dur, u: 0.0)
+            self.assertEqual(st["reference_shot"], 0)
+            self.assertEqual(st["checked"], 3)               # hands-кадр текшерилбейт
+            self.assertEqual(fetched, [(1, "new:hands phone")])
+            self.assertEqual((st["consistent"], st["replaced"], st["rate"]), (2, 1, 1.0))
+            self.assertTrue((d / "clips" / "continuity.json").exists())
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
+class TestMusicArcAndConfig(unittest.TestCase):
+    def test_arc_filter_runs_in_ffmpeg(self):
+        from pipeline.stages.s7_music import arc_filter
+
+        f = arc_filter([(0, 5, 1.0), (5, 10, -1.5)])[1:]
+        subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=d=10", "-af", f, "-f", "null", "-"],
+                       check=True)
+        self.assertEqual(arc_filter(None), "")
+
+    def test_niche_and_voice(self):
+        cfg = load_config("psych_story")
+        self.assertTrue(story.is_story(cfg))
+        self.assertFalse(story.is_story(load_config("motivation")))
+        from pipeline import voice_style
+
+        self.assertIn("short cinematic", voice_style.direction([], story=True))
+        self.assertNotIn("short cinematic", voice_style.direction([]))
+
+
+@unittest.skipIf(os.environ.get("YTA_SKIP_SLOW"), "узак тест")
+class TestStoryPipeline(unittest.TestCase):
+    """Толук pipeline кино-окуя форматында (жалган API, ЧЫНЫГЫ FFmpeg)."""
+
+    def test_story_video(self):
+        from pipeline import ci
+        from pipeline.storage import LocalStore
+        from tests.fakes import FakeStock
+        from tests.test_originality_pipeline import UniqueScriptGemini
+        from tests.test_stages_audio import fake_whisper_for
+
+        tmp = Path(tempfile.mkdtemp())
+        try:
+            store = LocalStore(tmp / "drive")
+            music = tmp / "drive" / "YouTube_Auto" / "Music" / "YouTube_Audio_Library_Attribution"
+            music.mkdir(parents=True)
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "lavfi", "-i", "sine=f=330:d=20", "-ac", "2",
+                            str(music / "Calm Piano - Tester.mp3")], check=True)
+            proj = tmp / "w" / "Projects" / "Video_001"
+
+            class G(UniqueScriptGemini):
+                def judge_image(self, imgs, prompt, purpose=""):
+                    n = len(imgs) if isinstance(imgs, list) else 1
+                    if purpose == "continuity_ref":
+                        return [{"i": k, "match": 8, "face": True} for k in range(n)]
+                    if purpose == "continuity_same":
+                        return [{"i": k, "same": 7 if k % 3 else 3, "person": True} for k in range(1, n)]
+                    return {}
+            services = {"gemini": G(words=130, seed="s"), "stock": FakeStock(), "asr": fake_whisper_for(proj)}
+            env = {"GOOGLE_API_KEY": "t", "PIXABAY_API_KEY": "t", "YTA_CINEMATIC": "1", "YTA_HYPERFRAMES": "",
+                   "YTA_SFX": "", "YTA_VOICE_STYLE": "", "VIDEO_HERO": "тревожная, всё контролирует"}
+            with mock.patch.dict(os.environ, env), mock.patch("builtins.print"), \
+                    mock.patch.object(ci, "load_config") as lc:
+                lc.side_effect = lambda n, drive_root=None: load_config(
+                    n, drive_root=drive_root, words_min=110, words_max=150, min_duration_sec=30)
+                code = ci.run_ci("Почему ты не можешь расслабиться", "psych_story", tmp / "w", store=store,
+                                 services=services)
+            state = json.loads((proj / "state.json").read_text(encoding="utf-8"))
+            failed = {k: v.get("error") for k, v in state["stages"].items() if v["status"] != "done"}
+            self.assertEqual(failed, {})
+            self.assertEqual(code, 0)
+            e = store.load_registry()["videos"]["Video_001"]
+            self.assertEqual(e["format"], "story")
+            self.assertEqual(e["story"]["gender"], "woman")
+            sc = json.loads((proj / "scenes.json").read_text(encoding="utf-8"))["scenes"]
+            self.assertTrue(all(s.get("act") in story.ACT_KEYS and s.get("shot") for s in sc))
+            cont = json.loads((proj / "clips" / "continuity.json").read_text(encoding="utf-8"))
+            self.assertGreater(cont["checked"], 0)
+            self.assertGreaterEqual(cont["rate"], 0.8)
+            music_j = json.loads((proj / "music" / "music.json").read_text(encoding="utf-8"))
+            self.assertEqual(len(music_j["arc"]), 7)
+            rep = json.loads((proj / "report.json").read_text(encoding="utf-8")) if (proj / "report.json").exists() else {}
+            desc = (proj / "youtube_description.txt").read_text(encoding="utf-8")
+            self.assertIn("вымышлены", desc)
+            self.assertIn("## 8. Кино-окуя", (proj / "production_report.md").read_text(encoding="utf-8"))
+            self.assertIsNotNone(rep)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
+if __name__ == "__main__":
+    unittest.main()

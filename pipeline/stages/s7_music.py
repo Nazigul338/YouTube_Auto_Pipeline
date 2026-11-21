@@ -90,8 +90,39 @@ def audible_mode(ctx: Context) -> bool:
     return cinematic.enabled(ctx.store)
 
 
+# Кино-окуянын музыкалык аркасы (актыга жараша фон деңгээли, дБ): интрига → тааныштыруу акырын → чыңалуу →
+# бурулушта эмоционалдык чоку → өзгөрүү → үмүт. ±2 дБ — диктор/угулуу QA чегинде калат.
+ARC_DB = {"hook": 1.0, "introduction": -1.5, "conflict": 0.5, "development": 0.0, "turning_point": 2.0,
+          "transformation": 1.0, "final_message": 1.5}
+
+
+def story_arc(ctx: Context) -> list[tuple[float, float, float]] | None:
+    from .. import story
+
+    if not story.is_story(ctx.cfg):
+        return None
+    try:
+        acts = json.loads(ctx.path("script", "story.json").read_text(encoding="utf-8"))["acts"]
+        words = json.loads(ctx.path("subtitles", "timings.json").read_text(encoding="utf-8"))["words"]
+    except Exception:
+        return None
+    return [(a["start"], a["end"], ARC_DB.get(a["act"], 0.0)) for a in story.act_times(acts, words)]
+
+
+def arc_filter(arc: list[tuple[float, float, float]] | None) -> str:
+    """volume=…:eval=frame — актынын убактысында фон деңгээли (кадамдуу, ±2 дБ — ducking астында билинбейт)."""
+    if not arc:
+        return ""
+    expr = "1"
+    for a, b, db in reversed(arc):
+        g = 10 ** (db / 20)
+        expr = f"if(between(t\\,{a:.2f}\\,{b:.2f})\\,{g:.4f}\\,{expr})"
+    return f",volume='{expr}':eval=frame"
+
+
 def mix(ctx: Context, track_path: Path, total: float, sfx_bed: Path | None = None,
-        sfx_hits: Path | None = None, audible: bool = False, level: float = 0.0) -> dict:
+        sfx_hits: Path | None = None, audible: bool = False, level: float = 0.0,
+        arc: list[tuple[float, float, float]] | None = None) -> dict:
     voice = ctx.path("audio", "voice.wav")
     bed = ctx.path("audio", "music_bed.wav")
     out = ctx.path("audio", "mix.wav")
@@ -99,7 +130,7 @@ def mix(ctx: Context, track_path: Path, total: float, sfx_bed: Path | None = Non
     media.run(["ffmpeg", "-y", "-v", "error", "-stream_loop", "-1", "-i", str(track_path),
                "-t", f"{total:.3f}", "-af",
                f"loudnorm=I={(AUDIBLE_BED_LUFS + level) if audible else MUSIC_BED_LUFS}:TP=-6:LRA=11,afade=t=in:d=2.5,"
-               f"afade=t=out:st={max(0.0, total - 3.5):.3f}:d=3.5",
+               f"afade=t=out:st={max(0.0, total - 3.5):.3f}:d=3.5" + arc_filter(arc),
                "-ar", "48000", "-ac", "2", str(bed)], "музыканы даярдоо")
     # 2) диктор сүйлөгөндө басаңдатуу + аралаштыруу + акыркы деңгээл
     duck = AUDIBLE_DUCK if audible else DUCK
@@ -191,7 +222,7 @@ class MusicStage(Stage):
             if stale.exists():
                 stale.unlink()   # мурунку сынактын эффекттери бул жолу колдонулбайт
         levels = mix(ctx, track.path, total, sfx_bed, sfx_hits, audible=audible_mode(ctx),
-                     level=float((brief or {}).get("music_level", 0.0)))
+                     level=float((brief or {}).get("music_level", 0.0)), arc=story_arc(ctx))
         rel = levels["voice_lufs"] - levels["bed_lufs"]
         if levels.get("music_ducked_lufs") is not None:   # СЫНАК: чыныгы угулган деңгээл
             rel = levels["voice_lufs"] - levels["music_ducked_lufs"]
@@ -204,7 +235,10 @@ class MusicStage(Stage):
             ctx.log(f"   🔊 Диктор эффекттерден {levels['voice_minus_sfx_lu']} LU катуу (керек ≥ 10)")
         ctx.log(f"   ✓ Аралаштырылды: диктор {levels['voice_lufs']:.1f} LUFS, музыка "
                 f"{levels['bed_lufs']:.1f} LUFS (айырма {rel:.1f} LU), жыйынтык {levels['mix']['I']} LUFS")
-        info = {"track": track.rel, "title": track.title, "mood": mood, "why": why,
+        arc = story_arc(ctx)
+        if arc:
+            ctx.log("   🎼 Музыкалык арка (актыга жараша): " + ", ".join(f"{a:.0f}–{b:.0f}с {db:+.1f}дБ" for a, b, db in arc))
+        info = {"track": track.rel, "title": track.title, "mood": mood, "why": why, "arc": arc,
                 "tags": tags.get(track.rel), "levels": levels, "voice_minus_music_lu": round(rel, 1),
                 "license": track.license_record(), "attribution": attribution_text(track)}
         out = ctx.path("music", "music.json")

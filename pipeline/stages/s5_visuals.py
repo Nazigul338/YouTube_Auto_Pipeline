@@ -245,6 +245,16 @@ class VisualsStage(Stage):
             ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
                     f"{ai_stats.get('low', 0)}, алмаштырылды {ai_stats.get('replaced', 0)}, "
                     f"орточо {ai_stats.get('avg', 0):.2f}/5")
+        cont: dict = {}
+        from .. import story as _story
+        if quality and _story.is_story(ctx.cfg):    # кино-окуя: каарман бир адам бойдон калсын
+            from .. import continuity
+            results, cont = continuity.enforce(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch,
+                                               off_u, pick_offset)
+            ctx.log(f"   🧍 Continuity: каарман кадрлары {cont.get('hero_shots', 0)}, текшерилди {cont.get('checked', 0)}, "
+                    f"дал келди {cont.get('consistent', 0)}, бетсиз кадрга алмаштырылды {cont.get('replaced', 0)}, "
+                    f"оңдолбоду {cont.get('kept_unfixed', 0)}, эталон кадр {cont.get('reference_shot')}"
+                    + (f" — ⚠ {cont['skipped']}" if cont.get("skipped") else ""))
         ai_img: dict = {}
         from .. import ai_images
         if quality and ai_stats and ai_images.enabled(ctx.store):
@@ -261,6 +271,10 @@ class VisualsStage(Stage):
                        "reused": tier == "reused" or a.id in finder.others})
             if ai_stats:
                 sh["ai_score"] = ai_stats["scores"].get(i)
+            if sc.get("hero"):
+                sh.update({"hero": sc["hero"], "act": sc.get("act"), "shot_type": sc.get("shot")})
+                if cont.get("scores", {}).get(str(i)) is not None:
+                    sh["continuity"] = cont["scores"][str(i)]
             images_used += a.kind == "image"
             if a.kind == "video":
                 sh["real_duration"] = round(real, 2)
@@ -299,6 +313,8 @@ class VisualsStage(Stage):
         if ai_stats:
             res["ai_avg"] = round(ai_stats["avg"], 2)
             res["ai_replaced"] = ai_stats["replaced"]
+        if cont and not cont.get("skipped"):
+            res["continuity_rate"] = cont.get("rate")
         if ai_img:
             res["ai_images"] = ai_img["used"]
             res["ai_images_cost_usd"] = ai_img["cost_usd"]

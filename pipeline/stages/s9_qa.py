@@ -228,6 +228,7 @@ class QAStage(Stage):
             self.check_originality(ctx, rep, music, meta)
             self.check_visual(ctx, rep, final)
             self.check_hook(ctx, rep)
+            self.check_story(ctx, rep, total)
             self.check_shot_meaning(ctx, rep)
             self.check_policy(ctx, rep, clip_lic, music, meta)
             self.check_ai_images(ctx, rep, shots)
@@ -415,6 +416,22 @@ class QAStage(Stage):
             L.append(f"  - четке кагылды: {th['rejected']}")
         if th.get("error"):
             L.append(f"  - ❌ ката: {th['error']}")
+        sd = self._json(ctx, "script/story.json")
+        if sd:                                     # 8. Кино-окуя
+            h, o = sd["hero"], sd["outline"]
+            cont = self._json(ctx, "clips/continuity.json")
+            L += ["", "## 8. Кино-окуя (CINEMATIC PSYCHOLOGICAL STORYTELLING)",
+                  f"- Каарман: **{h['name']}**, {h['age']}, {h['occupation']} — {h['descriptor']}; көйгөй: {h['core_problem']}",
+                  f"- Логлайн: {o['logline']}", f"- Бурулуш: {o['turning_point']}", f"- Өзгөрүү: {o['transformation']}",
+                  f"- Сабак: {o['lesson']}", f"- Психологиялык негиз: {o['psychology']}",
+                  f"- Сюжет мурункулар менен: 3-грамма {o.get('plot_similarity')}, embedding {o.get('plot_cosine')}",
+                  f"- Актылар: " + ", ".join(f"{a['act']} {a['start']:.0f}–{a['end']:.0f}с"
+                                             for a in (self._json(ctx, "story_times.json") or [])),
+                  f"- Continuity: {cont.get('rate', '-')} (текшерилди {cont.get('checked', '-')}, дал келди "
+                  f"{cont.get('consistent', '-')}, алмаштырылды {cont.get('replaced', '-')}, эталон кадр "
+                  f"{cont.get('reference_shot', '-')})",
+                  f"- Режиссёрдук концепция: {b.get('director') or '-'}",
+                  f"- Музыкалык арка: {self._json(ctx, 'music/music.json').get('arc')}"]
         # 7. Акыркы текшерүү — көрүүчүнүн көзү менен (6 суроо)
         from .. import retention as rt
 
@@ -499,6 +516,45 @@ class QAStage(Stage):
                 (f"түрү {htype}; «{hook[:90]}»; биринчи фраза {pe} сек, сүйлөм {timing.get('sentence_end_sec')} сек; "
                  f"карточка «{(card or {}).get('text', '-')}»" + (f" — {'; '.join(problems)}" if problems else "")))
         self.check_retention(ctx, rep)
+
+    CONTINUITY_MIN = 0.80
+
+    def check_story(self, ctx, rep, total: float) -> None:
+        """Кино-окуя форматы (МИЛДЕТТҮҮ): 7 акт ирети менен (hook ≤30 сек, бурулуш 45–85%), документалдык деп
+        көрсөтүлбөйт, диагноз жок, сюжет мурункулардан башка, каарман бир адам бойдон (continuity ≥80%)."""
+        from .. import story as stl
+
+        if not stl.is_story(ctx.cfg):
+            return
+        sd = self._json(ctx, "script/story.json")
+        if not sd:
+            rep.add("story", "Кино-окуя: түзүлүш, каарман, оригиналдуу сюжет", False, "story.json жок")
+            return
+        try:
+            words = json.loads(ctx.path("subtitles", "timings.json").read_text(encoding="utf-8"))["words"]
+        except Exception:
+            words = []
+        times = stl.act_times(sd.get("acts") or [], words)
+        text = ctx.path("script", "script.txt").read_text(encoding="utf-8")
+        probs = stl.check_structure(times, total) + stl.check_text(text)
+        o = sd["outline"]
+        if (o.get("plot_similarity") or 0) >= stl.PLOT_SIMILAR or (o.get("plot_cosine") or 0) >= stl.PLOT_COSINE:
+            probs.append(f"сюжет {o.get('closest')} менен окшош")
+        cont = self._json(ctx, "clips/continuity.json")
+        if cont and cont.get("checked"):
+            if cont.get("rate", 0) < self.CONTINUITY_MIN:
+                probs.append(f"каарман {cont['rate']:.0%} кадрда гана бир адам (керек ≥{self.CONTINUITY_MIN:.0%})")
+            cnote = (f"continuity {cont.get('rate', 0):.0%} ({cont.get('consistent')}/{cont.get('checked')} дал келди, "
+                     f"{cont.get('replaced')} бетсиз кадрга алмаштырылды)")
+        else:
+            cnote = "continuity текшерилген жок"
+            probs.append("каармандын туруктуулугу текшерилген жок")
+        (ctx.path("story_times.json")).write_text(stl.dump(times), encoding="utf-8")
+        h = sd["hero"]
+        rep.add("story", "Кино-окуя: 7 акт, бир каарман, оригиналдуу сюжет, документалдык эмес, диагноз жок", not probs,
+                f"{h['name']} ({h['descriptor']}); " + ", ".join(f"{a['act']} {a['start']:.0f}–{a['end']:.0f}с" for a in times)
+                + f"; сюжет окшоштугу {o.get('plot_similarity')}/{o.get('plot_cosine')}; {cnote}"
+                + (f" — {'; '.join(probs)}" if probs else ""))
 
     def check_retention(self, ctx, rep) -> None:
         """Сценарийдин retention баалоосу (s1 retention.json): жалган убада жок, убада видеодо берилет — МИЛДЕТТҮҮ;
@@ -863,4 +919,7 @@ class QAStage(Stage):
                 lines.append(f"Звук: «{l['title']}» — {l.get('author') or l['source']} ({l['license']})")
         if self.ai_images_info(ctx).get("used"):
             lines.append("Часть изображений создана с помощью ИИ (Google Gemini).")
+        from .. import story as stl
+        if stl.is_story(ctx.cfg):                  # көркөм окуя — чыныгы/документалдык деп көрсөтүлбөйт
+            lines.append("История и герои вымышлены; совпадения случайны. Видео не заменяет консультацию специалиста.")
         ctx.path("youtube_description.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")

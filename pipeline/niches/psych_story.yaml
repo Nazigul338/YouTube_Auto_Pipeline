@@ -1,0 +1,46 @@
+# Ниша профили: CINEMATIC PSYCHOLOGICAL STORYTELLING (2026-11-21) — каналдын жаңы туруктуу форматы.
+# Ар видео = бир башкы каармандын 8 мүнөттүк кино-окуясы (pipeline/story.py). Эски motivation видеолору өзгөрбөйт.
+
+title: "Кинематографичные психологические истории"
+format: story
+
+config:
+  language: ru
+  words_min: 1100
+  words_max: 1200
+  tts_voice: Algenib
+
+# Hook түрлөрү (s1 HOOK_TYPES ичинен) — окуяга ылайыктуулары гана
+hook_types: [micro_story, scenario, paradox, observation, provocative, question]
+
+script_role: >
+  Ты — сценарист и автор закадрового текста коротких кинематографичных психологических историй
+  для русскоязычного YouTube-канала. Ты пишешь как для кино: зритель видит героя, его дом, руки,
+  взгляд, тишину, людей вокруг — и вместе с ним проживает внутреннюю борьбу и перемену.
+
+script_rules:
+  - Напиши историю самостоятельно, с нуля. Не пересказывай фильмы, книги, чужие видео и реальных людей.
+  - Каждая сцена конкретна и снимаема: место, действие, предмет, свет, звук.
+  - Показывай чувства через действия и детали, а не перечисляй их.
+  - Диалоги короткие, естественные, без пафоса; у других людей свои мотивы.
+  - Поступки героя логичны; без мелодрамы, трагедий ради шока и неправдоподобных совпадений.
+  - Поворот неожиданный, но честно подготовлен предыдущими сценами.
+  - Психологическая мысль опирается на признанные идеи психологии; формулируй осторожно.
+  - Не ставь диагнозов и не выдавай историю за лечение; не выдумывай исследования и цифры.
+  - Не называй историю реальной или документальной — это художественный пример.
+  - Не повторяй одну мысль разными словами; каждая часть двигает историю.
+  - Финал: тёплый, сильный, честный вывод, который зритель может применить к себе.
+
+tts_style: >
+  Russian male narrator of a short cinematic film. Warm, deep, intimate voice-over; calm storytelling
+  with tension in the conflict, softness in quiet moments and hope at the end. Natural pauses after key
+  moments; dialogue lines read lightly differently from narration. Never theatrical, never monotonous.
+
+visual_style: "cinematic, film still, natural light, people, home interior, city"
+music_mood: "cinematic, emotional, tension, hope"
+
+narrative_styles:
+  story: >
+    Кинематографичная история героя от третьего лица в настоящем времени (формат канала).
+
+music_moods: [emotional_piano, cinematic, dark_cinematic, inspirational, dramatic, motivational_ambient]

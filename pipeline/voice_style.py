@@ -26,6 +26,14 @@ MOTIVATIONAL_STYLE = (
     "Make a short dramatic pause at every '…' and '—' and after rhetorical questions. "
     "Slightly slower on key ideas, gradually building energy towards the end."
 )
+STORY_STYLE = (   # кино-окуя форматы (2026-11-21): закадровый голос короткометражного фильма
+    "You are the Russian voice-over narrator of a short cinematic psychological film. Deep, warm, intimate "
+    "mature male voice; you TELL a story, you do not lecture or call to action. Quiet, observant tone in "
+    "everyday scenes; restrained tension in the conflict; a soft, slower moment at the turning point; "
+    "gentle hope at the end. Read dialogue lines in quotes slightly lighter and more natural than narration, "
+    "without acting out voices. Clear Russian diction; natural pauses at '…', '—' and between scenes; never "
+    "theatrical, never monotone."
+)
 EMPHASIS_TMPL = " Put clear emphasis on: {words}."
 
 # Абзац коюлуучу жерлер (сөздөр өзгөрбөйт)
@@ -48,9 +56,9 @@ def enabled(store=None) -> bool:
     return cinematic.allowed_root(store)
 
 
-def direction(keywords: list[str] | None = None) -> str:
+def direction(keywords: list[str] | None = None, story: bool = False) -> str:
     kws = [k.strip() for k in (keywords or []) if k and k.strip()][:6]
-    return MOTIVATIONAL_STYLE + (EMPHASIS_TMPL.format(words=", ".join(f"«{k}»" for k in kws)) if kws else "")
+    return (STORY_STYLE if story else MOTIVATIONAL_STYLE) + (EMPHASIS_TMPL.format(words=", ".join(f"«{k}»" for k in kws)) if kws else "")
 
 
 def shape_text(text: str) -> str:

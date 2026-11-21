@@ -75,8 +75,11 @@ class VoiceStage(Stage):
         from .. import voice_style
         motivational = voice_style.enabled(ctx.store)     # СЫНАК гана (TEST папкасы + желек)
         kw_per_chunk = chunk_keywords(scenes) if motivational else []
+        from .. import story as stl
+        is_story = stl.is_story(cfg)
         if motivational:
-            ctx.log("   🎙 МОТИВАЦИЯЛЫК стиль (сынак): режиссура + паузалар + басым")
+            ctx.log("   🎙 " + ("КИНО-ОКУЯ айтуучусу" if is_story else "МОТИВАЦИЯЛЫК стиль") +
+                    ": режиссура + паузалар + басым")
         g = gemini_of(ctx)
         cdir = ctx.path("audio", "chunks")
         cdir.mkdir(parents=True, exist_ok=True)
@@ -97,7 +100,7 @@ class VoiceStage(Stage):
                     report.append(old)
                     continue  # мурунку иштетүүдөн калган — кайра жаратпайбыз
             if motivational:
-                info = self.make_chunk(ctx, g, text, voice_style.direction(kw_per_chunk[i - 1]), wav, i,
+                info = self.make_chunk(ctx, g, text, voice_style.direction(kw_per_chunk[i - 1], story=is_story), wav, i,
                                        len(chunks), tts_text=voice_style.shape_text(text))
                 info["style"] = "motivational"
             else:

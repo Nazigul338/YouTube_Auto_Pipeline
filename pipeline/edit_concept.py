@@ -61,7 +61,7 @@ Emotional path of the scenes: {arc}
 Scenes (id. text):
 {scenes}
 
-Concepts of our PREVIOUS videos (yours must look and feel clearly different from each):
+{story}Concepts of our PREVIOUS videos (yours must look and feel clearly different from each):
 {previous}
 {feedback}
 {rules}
@@ -77,7 +77,11 @@ Return JSON only:
   "subtitles": {{"font": one of {fonts}, "primary": "#RRGGBB", "highlight": "#RRGGBB", "outline": 2.5-6,
                  "box": true|false, "size": 66-76}},
   "cards": {{"every": 3-7, "color": "#RRGGBB"}},
-  "music_mood": one of {moods}, "music_level": -2..2}}"""
+  "music_mood": one of {moods}, "music_level": -2..2,
+  "director": {{"concept": "<director's idea of this film in 1-2 sentences>", "camera_language": "<how the camera
+     behaves and why>", "color_story": "<how colour changes along the story>", "rhythm": "<editing rhythm by act>",
+     "music_arc": "<music decision: intrigue → tension → emotional peak → hope, or your own>",
+     "thumbnail": "<thumbnail concept: which moment/emotion of the hero>"}}}}"""
 
 
 # ---------------------------------------------------------------- нормалдаштыруу
@@ -139,6 +143,9 @@ def normalize(raw: dict, moods: list[str] | None = None, scene_ids: list | None 
         "cards": {"every": int(_clamp(cards.get("every"), "card_every", 4)), "color": _hex(cards.get("color"), "#F2C14E")},
         "music_mood": raw.get("music_mood") if (not moods or raw.get("music_mood") in moods) else (moods or [""])[0],
         "music_level": _clamp(raw.get("music_level"), "music_level", 0.0),
+        "director": {k: str((raw.get("director") or {}).get(k, ""))[:300]
+                     for k in ("concept", "camera_language", "color_story", "rhythm", "music_arc", "thumbnail")}
+        if isinstance(raw.get("director"), dict) else {},
     }
 
 
@@ -320,6 +327,17 @@ def create(ctx, scenes: list[dict], title: str = "") -> dict:
     prev_txt = "\n".join(f"- {vid}: {json.dumps({k: brief_of(v)[k] for k in ('name', 'world', 'motifs', 'grade', 'base_shot', 'music_mood')}, ensure_ascii=False)}"
                          for vid, v in list(prev.items())[-8:]) or "- (none yet)"
     feedback, log = "", []
+    story_txt = ""
+    try:                                   # кино-окуя форматы: режиссёрдук концепция сюжеттен чыгат
+        sd = json.loads(ctx.path("script", "story.json").read_text(encoding="utf-8"))
+        o = sd["outline"]
+        story_txt = ("THIS VIDEO IS A SHORT CINEMATIC FILM. Design it as its director (camera language, colour story, "
+                     "rhythm by act, music arc, thumbnail).\nHero: " + sd["hero"].get("descriptor", "") + "\nLogline: " +
+                     o.get("logline", "") + "\nActs: " + " | ".join(f"{a['act']}: {a.get('emotion', '')} @ "
+                                                                   f"{a.get('location', '')}" for a in o.get("acts", [])) +
+                     "\nTurning point: " + o.get("turning_point", "") + "\n\n")
+    except Exception:
+        pass
     g = None
     try:
         from .stages.base import gemini_of
@@ -333,7 +351,7 @@ def create(ctx, scenes: list[dict], title: str = "") -> dict:
             raw = g.json(BRIEF_PROMPT.format(
                 title=title or ctx.video_id, theme=theme, arc=" → ".join(s.get("emotion", "") for s in scenes),
                 scenes="\n".join(f"{s['id']}. {s.get('text', '')[:140]}" for s in scenes), previous=prev_txt,
-                feedback=feedback, rules=VISUAL_RULES, motions=", ".join(MOTION_TYPES),
+                feedback=feedback, rules=VISUAL_RULES, story=story_txt, motions=", ".join(MOTION_TYPES),
                 transitions=", ".join(TRANSITION_TYPES), fonts=", ".join(FONTS), moods=", ".join(moods)),
                 purpose="edit_brief", temperature=0.95)
         except Exception as e:

@@ -13,12 +13,17 @@ on:
         required: false
         type: string
       niche:
-        description: "Ниша профили"
+        description: "Формат: psych_story = кино-окуя (2026-11-21 туруктуу стандарт); motivation = эски формат"
         required: true
-        default: motivation
+        default: psych_story
         type: choice
         options:
+          - psych_story
           - motivation
+      hero:
+        description: "Кино-окуя: каарман жөнүндө талап (милдеттүү эмес), мис. «тынчсызданган, баарын көзөмөлдөгөн адам»"
+        required: false
+        type: string
       rerun_from:
         description: "Ушул этаптан баштап кайра жасоо (video_id менен)"
         required: false
@@ -100,6 +105,7 @@ jobs:
           VIDEO_TOPIC: ${{ inputs.topic }}
           VIDEO_ID: ${{ inputs.video_id }}
           VIDEO_NICHE: ${{ inputs.niche }}
+          VIDEO_HERO: ${{ inputs.hero }}
           VIDEO_RERUN_FROM: ${{ inputs.rerun_from }}
           VIDEO_STOP_AFTER: ${{ inputs.stop_after }}
           YTA_DRIVE_FOLDER: ${{ inputs.test_run && 'YouTube_Auto_TEST' || 'YouTube_Auto' }}

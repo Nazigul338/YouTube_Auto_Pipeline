@@ -53,6 +53,54 @@ SCENES:
 {scenes}"""
 
 
+SHOTS = ("wide", "medium", "close_up", "extreme_close_up", "over_shoulder", "pov", "insert")
+CAMERAS = ("static", "slow_push_in", "pull_out", "pan", "tilt", "handheld", "tracking")
+HERO_VIS = ("face", "body", "back", "hands", "none")
+
+STORY_EXTRA = """
+THIS VIDEO IS A SHORT CINEMATIC FILM about one protagonist. Scenes are consecutive moments of ONE story — the
+shots must continue each other logically (e.g. comes home tired → opens the door → empty room → looks at the phone →
+waits → sits alone by the window), never random illustrations.
+Protagonist (keep the look IDENTICAL in every scene): {hero}
+Stock search descriptor of the protagonist: "{descriptor}"
+Act of each scene is given in [brackets]. Plan the camera like a director.
+For EVERY scene ALSO return:
+  "shot": one of {shots}, "camera": one of {cameras},
+  "lighting": "<english, e.g. cold window light at dusk>", "location": "<english filmable place>",
+  "hero": one of {hero_vis} (how the protagonist appears; vary it: faces only where emotion matters),
+  "visual_prompt": "<english cinematic still description of the shot (subject, action, framing, light, mood);
+                     when the protagonist is visible include the full descriptor>",
+  "detail_query": "<2-4 word english stock query for an alternative shot WITHOUT a visible face that tells the same
+                    moment (hands, silhouette, object, place)>"
+For scenes where the protagonist is visible ("face"/"body"/"back"), the FIRST query must start with the gender and
+age of the descriptor (e.g. "woman 40s ...") plus the action.
+"""
+
+
+def story_context(ctx, texts: list[str]) -> tuple[str, list[str], dict] | None:
+    """story.json болсо: (кошумча промпт, ар сахнанын акты, каарман)."""
+    from .. import story
+
+    if not story.is_story(ctx.cfg):
+        return None
+    try:
+        data = json.loads(ctx.path("script", "story.json").read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    hero, acts = data["hero"], data.get("acts") or []
+    w, out = 0, []
+    for t in texts:
+        out.append(story.act_of_word(acts, w))
+        w += len(t.split())
+    extra = STORY_EXTRA.format(hero=story.hero_text(hero), descriptor=hero["descriptor"], shots=SHOTS,
+                               cameras=CAMERAS, hero_vis=HERO_VIS)
+    return extra, out, hero
+
+
+def hero_core(hero: dict) -> str:
+    return f"{hero['gender']} {int(hero.get('age', 35)) // 10 * 10}s"
+
+
 class ScenesStage(Stage):
     name = "s2_scenes"
     title = "Сахналарга бөлүү"
@@ -69,10 +117,12 @@ class ScenesStage(Stage):
         avoid = mem.top_queries(40)
         avoid_set = {q.lower() for q in avoid}
         g = gemini_of(ctx)
-        numbered = "\n".join(f"{i + 1}. {t}" for i, t in enumerate(texts))
+        sctx = story_context(ctx, texts)
+        acts = sctx[1] if sctx else [None] * len(texts)
+        numbered = "\n".join(f"{i + 1}. " + (f"[{acts[i]}] " if acts[i] else "") + t for i, t in enumerate(texts))
         meta = g.json(PROMPT.format(n=len(texts), emotions=EMOTIONS, moods=moods, scenes=numbered,
                                   themes=THEME_KEYS, avoid="; ".join(avoid) or "(none)",
-                                  visual_rules=VISUAL_RULES),
+                                  visual_rules=VISUAL_RULES) + (sctx[0] if sctx else ""),
                       purpose="scenes", temperature=0.6)
         if isinstance(meta, dict):
             meta = meta.get("scenes") or next((v for v in meta.values() if isinstance(v, list)), [])
@@ -104,12 +154,33 @@ class ScenesStage(Stage):
                 "on_screen_text": ost if 0 < word_count(ost) <= 6 else "",
                 "music_mood": m.get("music_mood") if m.get("music_mood") in moods else moods[0],
             })
+            if sctx:                           # кино-сахнанын планы (режиссёрдук разбивка)
+                hero = sctx[2]
+                vis = m.get("hero") if m.get("hero") in HERO_VIS else "none"
+                sc = scenes[-1]
+                sc.update({"act": acts[i], "shot": m.get("shot") if m.get("shot") in SHOTS else "medium",
+                           "camera": m.get("camera") if m.get("camera") in CAMERAS else "static",
+                           "lighting": str(m.get("lighting") or "")[:120], "location": str(m.get("location") or "")[:120],
+                           "hero": vis, "visual_prompt": str(m.get("visual_prompt") or "")[:400],
+                           "detail_query": str(m.get("detail_query") or "")[:60]})
+                core = hero_core(hero)
+                if vis in ("face", "body", "back") and sc["queries"] and hero["gender"] not in sc["queries"][0].lower():
+                    sc["queries"][0] = f"{core} {sc['queries'][0]}"[:60]
+                if vis in ("face", "body") and hero["descriptor"].lower() not in {q.lower() for q in sc["queries"]}:
+                    sc["queries"].insert(1, hero["descriptor"][:60])
+                if sc["detail_query"]:
+                    sc["queries"] = sc["queries"][:6] + [sc["detail_query"]]
 
         no_query = sum(1 for s in scenes if len(s["queries"]) < 2)
         if no_query > len(scenes) // 3:
             raise StageError(f"{no_query} сахнада издөө сөздөрү жетишсиз")
         out = ctx.path("scenes.json")
         out.write_text(json.dumps({"scenes": scenes}, ensure_ascii=False, indent=1), encoding="utf-8")
+        if sctx:
+            from collections import Counter
+
+            ctx.log(f"   🎥 Кино-разбивка: планы {dict(Counter(s['shot'] for s in scenes))}; каарман "
+                    f"{dict(Counter(s['hero'] for s in scenes))}; актылар {dict(Counter(s['act'] for s in scenes))}")
         ctx.log(f"   ✓ {len(scenes)} сахна; маанайлар: "
                 + ", ".join(sorted({s['music_mood'] for s in scenes})))
         return {"scenes_file": str(out), "count": len(scenes)}

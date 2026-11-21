@@ -71,10 +71,34 @@ class FakeGemini:
                             "queries": ["man thinking window", "city night", "sunrise"],
                             "keywords": [first, "несуществующее слово"],
                             "on_screen_text": "Первый шаг" if i % 4 == 0 else "",
-                            "music_mood": "emotional_piano"})
+                            "music_mood": "emotional_piano",
+                            "shot": ["wide", "close_up", "medium"][i % 3], "camera": "slow_push_in",
+                            "lighting": "window light", "location": "apartment",
+                            "hero": ["face", "hands", "body", "none"][i % 4],
+                            "visual_prompt": "woman at a window", "detail_query": "hands holding phone"})
             return out
         if purpose == "music_tags":
             return {}
+        if purpose == "story_character":
+            self.n += 1
+            return {"name": f"Марина{self.n}", "age": 38, "gender": "woman",
+                    "look": {"hair": "short dark hair", "build": "slim", "clothes": "grey knit sweater",
+                             "detail": "wristwatch"},
+                    "descriptor": "woman 30s short dark hair grey sweater", "occupation": "бухгалтер",
+                    "home": "квартира в спальном районе", "personality": "собранная, тревожная",
+                    "core_problem": "не может расслабиться", "inner_belief": "если отпущу контроль — всё рухнет",
+                    "relationships": [{"name": "Олег", "role": "муж"}], "signature_objects": ["phone", "notebook"]}
+        if purpose == "story_outline":
+            from pipeline.story import ACT_KEYS
+            tag = self.n
+            return {"logline": f"История {tag}: женщина пытается всё контролировать и теряет вечер с семьёй.",
+                    "acts": [{"act": k, "summary": f"Сцена {k} {tag}", "location": "apartment", "key_moment": "phone",
+                              "emotion": "tense"} for k in ACT_KEYS],
+                    "turning_point": f"Поворот {tag}", "transformation": "отпускает контроль", "lesson": "доверие",
+                    "psychology": {"concept": "intolerance of uncertainty", "basis": "осторожно"},
+                    "viewer_questions": ["что с ней?"]}
+        if purpose == "story_acts":
+            return []
         return {}
 
     def embed(self, texts):

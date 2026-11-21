@@ -59,12 +59,13 @@ HOOK_BANNED = ("сегодня поговорим", "в этом видео", "�
                "задумывались ли вы когда-нибудь")
 
 
-def choose_hook(registry: dict, video_id: str) -> str:
-    """Hook түрү: эң аз колдонулган жана акыркы видеодогудан башка."""
+def choose_hook(registry: dict, video_id: str, allowed: list[str] | None = None) -> str:
+    """Hook түрү: эң аз колдонулган жана акыркы видеодогудан башка (allowed — ниша уруксат берген түрлөр)."""
     hist = [v.get("hook_type") for k, v in sorted(registry.get("videos", {}).items()) if k != video_id]
     last = next((h for h in reversed(hist) if h), None)
     seed = int(hashlib.md5(video_id.encode()).hexdigest(), 16)
-    return min((k for k in HOOK_TYPES if k != last), key=lambda k: (hist.count(k), (hash_str(k) ^ seed) % 97))
+    pool = [k for k in (allowed or HOOK_TYPES) if k in HOOK_TYPES] or list(HOOK_TYPES)
+    return min((k for k in pool if k != last), key=lambda k: (hist.count(k), (hash_str(k) ^ seed) % 97))
 
 
 def hash_str(s: str) -> int:
@@ -257,6 +258,23 @@ class ScriptStage(Stage):
         prev = previous_scripts(ctx)
         ctx.log(f"   Мурунку сценарийлер (салыштыруу үчүн): {len(prev)}")
 
+        from .. import story as stl
+
+        entry0 = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
+        st = None
+        if stl.is_story(cfg):
+            import os
+
+            if os.environ.get("VIDEO_HERO") and not entry0.get("hero_hint"):
+                entry0["hero_hint"] = os.environ["VIDEO_HERO"][:300]
+            prev_st = stl.previous_stories(ctx.registry, ctx.video_id)
+            hero = stl.character_profile(g, topic, prev_st, entry0.get("hero_hint", ""))
+            ctx.log(f"   🎭 Каарман: {hero['name']}, {hero['age']}, {hero['occupation']} — {hero['descriptor']}")
+            plot = stl.outline(g, topic, hero, prev_st, ctx.log)
+            ctx.log(f"   📖 Сюжет: {plot['logline'][:200]} (мурункулар менен: 3-грамма {plot.get('plot_similarity')}, "
+                    f"embedding {plot.get('plot_cosine')})")
+            st = {"hero": hero, "outline": plot, "previous": prev_st}
+
         tried: list[str] = []
         for round_ in range(2):
             pool = {k: v for k, v in styles.items() if k not in tried} or styles
@@ -264,9 +282,11 @@ class ScriptStage(Stage):
             tried.append(style)
             ctx.log(f"   Баяндоо стили: {style}")
 
-            hook = choose_hook(ctx.registry, ctx.video_id)
-            draft = g.text(build_prompt(topic, niche, styles[style], prev, cfg, hook),
-                           purpose="script_draft", temperature=0.95)
+            hook = choose_hook(ctx.registry, ctx.video_id, niche.get("hook_types"))
+            prompt = (stl.script_prompt(topic, niche, st["hero"], st["outline"], st["previous"], cfg,
+                                        HOOK_TYPES[hook]) if st else
+                      build_prompt(topic, niche, styles[style], prev, cfg, hook))
+            draft = g.text(prompt, purpose="script_draft", temperature=0.95)
             hook_card, draft_wo = split_hook_card(draft)
             title, body = split_title(draft_wo)
             ctx.path("script", f"draft_{round_ + 1}.txt").write_text(draft, encoding="utf-8")
@@ -298,6 +318,15 @@ class ScriptStage(Stage):
             if not duplicate_sentences(fixed):
                 text = fixed
         ctx.path("script", "retention.json").write_text(retention.dump(ret), encoding="utf-8")
+        if st:                                  # актылардын чеги + текст текшерүүсү → story.json, реестр
+            st_acts = stl.map_acts(g, text)
+            st_probs = stl.check_text(text)
+            ctx.path("script", "story.json").write_text(stl.dump(
+                {"hero": st["hero"], "outline": st["outline"], "acts": st_acts, "text_problems": st_probs}),
+                encoding="utf-8")
+            ctx.log(f"   🎬 Актылар ({st_acts[0]['method'] if st_acts else '-'}): " +
+                    ", ".join(f"{a['act']}@{a['w0']}" for a in st_acts) +
+                    (f" — ⚠ {'; '.join(st_probs)}" if st_probs else ""))
 
         script = ctx.path("script", "script.txt")
         script.write_text(text + "\n", encoding="utf-8")
@@ -318,6 +347,9 @@ class ScriptStage(Stage):
 
         entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
         entry.update({"title": title, "style": style, "script": True, "hook_type": hook})
+        if st:
+            entry["story"] = stl.registry_entry(st["hero"], st["outline"], title)
+            entry["format"] = "story"
         if ctx.store:
             ctx.store.publish("Scripts", script, f"{ctx.video_id}.txt")
         return {"script_path": str(script), "meta_file": str(meta_file)}
