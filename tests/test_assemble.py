@@ -36,8 +36,10 @@ class TestPlan(unittest.TestCase):
         want = sum(durs) - 0.5 - 0.5 - 0.04
         self.assertAlmostEqual(plan["total_frames"] / 30, want, delta=0.05)
         self.assertEqual(sum(s["frames"] for s in plan["segments"]), plan["total_frames"])
+        # cut (1 кадр) өзүнчө сегмент эмес — body'ге кошулат (run #44898457854: 1 кадрлык mp4 монтажды токтоткон)
         self.assertEqual([s["kind"] for s in plan["segments"]],
-                         ["body", "trans", "body", "trans", "body", "trans", "body"])
+                         ["body", "trans", "body", "trans", "body", "body"])
+        self.assertTrue(all(s["frames"] >= 2 for s in plan["segments"] if s["kind"] == "trans"))
 
     def test_no_drift_over_many_scenes(self):
         durs = [8.37 + (k % 5) * 1.713 for k in range(50)]

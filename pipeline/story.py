@@ -88,14 +88,15 @@ SCRIPT_PROMPT = """{role}
 
 ФОРМАТ: кинематографичная психологическая история (короткометражный фильм, ~8 минут озвучки). Зритель не слушает
 лекцию — он ПРОЖИВАЕТ историю героя. Рассказ от третьего лица, в настоящем времени, как закадровый голос в кино:
-конкретные действия, детали, звуки, свет, паузы. Короткие естественные диалоги в кавычках (не больше 1–3 реплик подряд).
+конкретные действия, детали, звуки, свет, паузы. Короткие естественные диалоги: каждая реплика ТОЛЬКО в кавычках-ёлочках
+«…» (иначе зритель не поймёт, что говорит герой); не больше 1–3 реплик подряд.
 
 ГЕРОЙ (не меняй его внешность и факты): {hero}
 
 СЮЖЕТ (следуй ему, раскрывая каждую часть живыми сценами):
 {outline}
 
-СТРУКТУРА (ориентир по времени, при ~135 словах в минуту):
+СТРУКТУРА И ОБЪЁМ ЧАСТЕЙ (≈135 слов в минуту; держи пропорции — поворот ПОСЛЕ середины):
 {acts}
 
 ПРАВИЛА:
@@ -172,8 +173,26 @@ def hero_text(p: dict) -> str:
             f"Скрытое убеждение: {p['inner_belief']}. Окружение: {rel or '-'}. Предметы: {', '.join(p['signature_objects'])}")
 
 
-def acts_text() -> str:
-    return "\n".join(f"{k + 1}. {name} — {a // 60}:{a % 60:02d}–{b // 60}:{b % 60:02d}" for k, (_, name, a, b) in enumerate(ACTS))
+WPS = 2.25                  # ~135 сөз/мүн
+
+
+def acts_text(words: int = 1150) -> str:
+    return "\n".join(f"{k + 1}. {name} — {a // 60}:{a % 60:02d}–{b // 60}:{b % 60:02d}, ≈{round(words * (b - a) / TOTAL_SEC, -1):.0f} слов"
+                     for k, (_, name, a, b) in enumerate(ACTS))
+
+
+def word_times(acts: list[dict], n_words: int) -> list[dict]:
+    """Үн жок кезде (s1) актылардын болжолдуу убактысы: сөз индекси → сек (түз пропорция 8 мүн)."""
+    k = TOTAL_SEC / max(1, n_words)
+    return [dict(a, start=round(a["w0"] * k, 1), end=round(a["w1"] * k, 1)) for a in acts]
+
+
+STRUCTURE_FIX = ("\nВНИМАНИЕ: предыдущий вариант нарушил структуру ({why}). Соблюдай объём каждой части: HOOK короткий, "
+                 "поворот — во второй половине, финал короткий и без длинных советов.\n")
+EXPAND_HINT = ("Расширь текст до ~{target} слов ВНУТРИ истории: добавь живые детали, действия и короткие реплики в сцены "
+               "конфликта и развития (середина). НЕ добавляй советов, упражнений и рассуждений в конец; финал не удлиняй.")
+SHRINK_HINT = ("Сократи текст до ~{target} слов: убери повторы и рассуждения, особенно в финале; сохрани все сцены, "
+               "поворот и реплики в «ёлочках».")
 
 
 PLOT_COSINE = 0.90          # embedding окшоштугу (сценарийлер 0.79 болгон — run #44745978945)
@@ -261,7 +280,7 @@ def script_prompt(topic: str, niche: dict, hero: dict, o: dict, prev: list[dict]
     rules = "\n".join(f"- {r}" for r in niche.get("script_rules", []))
     prev_txt = "; ".join(f"«{s.get('title', '')}»: {s.get('logline', '')[:120]}" for s in prev[-6:]) or "(пока нет)"
     return SCRIPT_PROMPT.format(role=niche.get("script_role", "").strip(), topic=topic, hero=hero_text(hero),
-                                outline=outline_text(o), acts=acts_text(), rules=rules, words_min=cfg.words_min,
+                                outline=outline_text(o), acts=acts_text((cfg.words_min + cfg.words_max) // 2), rules=rules, words_min=cfg.words_min,
                                 words_max=cfg.words_max, hook_type=hook_type, previous=prev_txt)
 
 

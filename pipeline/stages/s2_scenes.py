@@ -166,8 +166,6 @@ class ScenesStage(Stage):
                 core = hero_core(hero)
                 if vis in ("face", "body", "back") and sc["queries"] and hero["gender"] not in sc["queries"][0].lower():
                     sc["queries"][0] = f"{core} {sc['queries'][0]}"[:60]
-                if vis in ("face", "body") and hero["descriptor"].lower() not in {q.lower() for q in sc["queries"]}:
-                    sc["queries"].insert(1, hero["descriptor"][:60])
                 if sc["detail_query"]:
                     sc["queries"] = sc["queries"][:6] + [sc["detail_query"]]
 

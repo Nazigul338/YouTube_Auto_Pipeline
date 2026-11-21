@@ -190,13 +190,15 @@ def fact_review(g, text: str) -> tuple[str, str]:
     return fixed, m.group(2).strip()
 
 
-def adjust_length(g, text: str, lo: int, hi: int, log) -> str:
+def adjust_length(g, text: str, lo: int, hi: int, log, hints: tuple[str, str] | None = None) -> str:
+    """hints = (кеңейтүү, кыскартуу) нускамасы `{target}` менен (кино-окуяда — окуянын ортосуна, аягына эмес)."""
     for attempt in range(3):
         n = word_count(text)
         if lo <= n <= hi:
             return text
         target = (lo + hi) // 2
-        action = (f"Расширь текст до ~{target} слов: добавь один новый жизненный пример "
+        action = (hints[0 if n < lo else 1].format(target=target) if hints else
+                  f"Расширь текст до ~{target} слов: добавь один новый жизненный пример "
                   f"или практический шаг, а не «воду»." if n < lo else
                   f"Сократи текст до ~{target} слов: убери повторы и второстепенное, "
                   f"сохрани начало, пример и финал.")
@@ -289,14 +291,25 @@ class ScriptStage(Stage):
             draft = g.text(prompt, purpose="script_draft", temperature=0.95)
             hook_card, draft_wo = split_hook_card(draft)
             title, body = split_title(draft_wo)
+            for fix in range(2 if st else 0):  # кино-окуя: структура (hook, бурулуш, финал) ДАРОО текшерилет
+                why = stl.check_structure(stl.word_times(stl.map_acts(g, body), word_count(body)), stl.TOTAL_SEC)
+                why += [] if word_count(body) >= 0.8 * cfg.words_min else [f"мало слов ({word_count(body)})"]
+                if not why:
+                    break
+                ctx.log(f"   ⚠ Окуянын түзүлүшү бузук ({'; '.join(why)}) — кайра жазылат")
+                draft = g.text(prompt + stl.STRUCTURE_FIX.format(why="; ".join(why)), purpose="script_draft",
+                               temperature=0.9)
+                hook_card, draft_wo = split_hook_card(draft)
+                title, body = split_title(draft_wo)
             ctx.path("script", f"draft_{round_ + 1}.txt").write_text(draft, encoding="utf-8")
             if word_count(body) < 0.4 * cfg.words_min:
                 raise StageError(f"Gemini өтө кыска текст берди ({word_count(body)} сөз)")
 
             text, changes = fact_review(g, body)
-            text = adjust_length(g, text, cfg.words_min, cfg.words_max, ctx.log)
+            hints = (stl.EXPAND_HINT, stl.SHRINK_HINT) if st else None
+            text = adjust_length(g, text, cfg.words_min, cfg.words_max, ctx.log, hints)
             text = fix_duplicates(g, text)
-            text = adjust_length(g, text, cfg.words_min, cfg.words_max, ctx.log)
+            text = adjust_length(g, text, cfg.words_min, cfg.words_max, ctx.log, hints)
             dups = duplicate_sentences(text)
             if dups:
                 raise StageError(f"Кайталанган сүйлөмдөр калды: {dups[:2]}")
@@ -314,7 +327,8 @@ class ScriptStage(Stage):
 
         fixed, ret = retention.improve(g, text, title, hook, ctx.log)
         if fixed != text:
-            fixed = adjust_length(g, fixed, cfg.words_min, cfg.words_max, ctx.log)
+            fixed = adjust_length(g, fixed, cfg.words_min, cfg.words_max, ctx.log,
+                                  (stl.EXPAND_HINT, stl.SHRINK_HINT) if st else None)
             if not duplicate_sentences(fixed):
                 text = fixed
         ctx.path("script", "retention.json").write_text(retention.dump(ret), encoding="utf-8")

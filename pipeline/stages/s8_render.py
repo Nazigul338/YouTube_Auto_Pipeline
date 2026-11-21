@@ -185,8 +185,13 @@ def plan_segments(durs: list[float], transitions: list[dict]) -> dict:
         if k < n - 1:
             c = fr(t + durs[k])
             typ, d = _eff_d(transitions[k])
-            segs.append({"kind": "trans", "scene": k, "src_start": fr(durs[k] - dout[k]),
-                         "frames": c - b, "type": typ})
+            if c - b < 2:
+                # 0–1 кадрлык «өтүү» (run #44898457854: seg_091_trans 0.03 сек → 1 кадрлык mp4'тун узактыгы
+                # ffprobe'до жок → монтаж токтоду): ал кадрлар body'ге кошулат, жалпы кадр саны өзгөрбөйт
+                segs[-1]["frames"] += c - b
+            else:
+                segs.append({"kind": "trans", "scene": k, "src_start": fr(durs[k] - dout[k]),
+                             "frames": c - b, "type": typ})
         t += durs[k] - dout[k]
     return {"segments": segs, "total_frames": fr(t)}
 

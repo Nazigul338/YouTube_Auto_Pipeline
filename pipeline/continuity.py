@@ -15,8 +15,9 @@ import json
 
 REF_PROMPT = """These are frames from stock videos for ONE protagonist of a short film.
 Protagonist profile: {profile}
-For EACH image (Image 0..N) rate 0-10 how well the visible main person matches the profile (gender, age range,
-hair, build, clothes colours) and whether the face is clearly visible. 0 = no person / clearly different.
+For EACH image (Image 0..N) rate 0-10 how well the visible main person could play this protagonist: gender and age range
+matter most, then hair and build; clothes may differ. Also say whether the face is clearly visible.
+0 = no person / clearly a different gender or age.
 Return JSON array only: [{{"i": <index>, "match": <0-10>, "face": <true/false>}}]"""
 
 SAME_PROMPT = """Image 0 is the REFERENCE protagonist of a short film ({profile}).
@@ -26,6 +27,7 @@ Return JSON array only: [{{"i": <index>, "same": <0-10>, "person": <true/false>}
 
 BATCH = 10
 SAME_MIN = 5
+REF_MIN = 4
 MAX_REPLACE = 45
 CHECK_VIS = ("face", "body")
 
@@ -52,7 +54,9 @@ def choose_reference(gem, frames: dict[int, bytes], hero: dict) -> tuple[int | N
     if not scores:
         return None, {}
     best = max(scores, key=scores.get)
-    return (best if scores[best] >= 6 else None), scores
+    # run #44898457854: «≥6» өтө катуу болуп эталон табылган жок (сток-видеодо кийим/чач так дал келбейт) —
+    # эталон = эң жакын адам (≥4: жыныс/жаш дал келет), калгандары ушуга салыштырылат
+    return (best if scores[best] >= REF_MIN else None), scores
 
 
 def compare_to_reference(gem, ref: bytes, frames: dict[int, bytes], hero: dict) -> dict[int, int]:
