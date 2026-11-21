@@ -385,7 +385,9 @@ class RenderStage(Stage):
                        "-c", "copy", str(sf)], f"сахна {k}")
             trans = motions[grp[-1]["i"]].get("transition_out") or {"type": "cut", "dur": 0.0}
             scene_files.append(sf)
-            scene_durs.append(sum(sh["dur"] for sh in grp) + trans.get("dur", 0.0))
+            # өтүүнүн ЭФФЕКТИВДҮҮ узактыгы (cut = 0.04 сек) — план ошончо кадрды «жейт». Мурун cut'ка 0 кошулчу →
+            # ар cut видеону 0.04 сек кыскартчу (run #44903598138: ~29 cut → видео 1.15 сек кыска, монтаж токтоду)
+            scene_durs.append(sum(sh["dur"] for sh in grp) + _eff_d(trans)[1])
             scene_trans.append(trans)
             expect_len(sf, scene_durs[-1], SCENE_TOL, f"сахна {k}", debug)
 
@@ -394,7 +396,7 @@ class RenderStage(Stage):
         video = rdir / "video_noaudio.mp4"
         vdur, vframes = stitch(scene_files, scene_durs, scene_trans, rdir, video, debug, workers=workers)
         expect_len(video, vdur, SEG_TOL, "бириктирилген видео (аудиосуз)", debug)
-        last_ext = scene_trans[-1].get("dur", 0.0)
+        last_ext = _eff_d(scene_trans[-1])[1]
         expect_len(video, total + last_ext, FINAL_TOL,
                    "видео ↔ аудионун узактыгы (аудиосуз монтаж)", debug)
 

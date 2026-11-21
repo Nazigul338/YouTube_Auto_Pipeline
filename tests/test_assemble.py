@@ -41,6 +41,14 @@ class TestPlan(unittest.TestCase):
                          ["body", "trans", "body", "trans", "body", "body"])
         self.assertTrue(all(s["frames"] >= 2 for s in plan["segments"] if s["kind"] == "trans"))
 
+    def test_many_cuts_keep_total(self):
+        """run #44903598138: 29 cut → видео 1.15 сек кыска. Сахна узактыгына эффективдүү өтүү кошулса — так."""
+        shots = [3.1 + (k % 3) * 0.4 for k in range(40)]
+        tr = [{"type": "cut", "dur": 0.0} if k % 3 else {"type": "dissolve", "dur": 0.5} for k in range(40)]
+        durs = [d + s8._eff_d(t)[1] for d, t in zip(shots, tr)]
+        plan = s8.plan_segments(durs, tr[:-1])
+        self.assertAlmostEqual(plan["total_frames"] / 30, sum(shots) + s8._eff_d(tr[-1])[1], delta=0.05)
+
     def test_no_drift_over_many_scenes(self):
         durs = [8.37 + (k % 5) * 1.713 for k in range(50)]
         tr = [{"type": "dissolve", "dur": 0.5}] * 49
