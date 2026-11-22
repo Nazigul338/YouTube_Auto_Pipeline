@@ -86,6 +86,28 @@ def loudness(path: Path) -> dict:
     return {"I": float(i.group(1)) if i else None, "TP": float(tp.group(1)) if tp else None}
 
 
+TP_CEILING = -1.5   # dBTP: YouTube/QA чеги −1 dB, AAC кодировкасы ~0.5 дБ кошот — запас менен
+
+
+def limit_true_peak(src: Path, dst: Path, ceiling: float = TP_CEILING, tries: int = 3,
+                    extra: list[str] | None = None) -> dict:
+    """Пик чектен ашса — alimiter (пик гана басылат, LUFS дээрлик өзгөрбөйт). src==dst болушу мүмкүн.
+    extra: чыгаруу параметрлери (мис. mp4'те видеону көчүрүү). Ар аракеттен кийин чыныгы пик кайра өлчөнөт."""
+    loud = loudness(src)
+    k = 0
+    while loud["TP"] is not None and loud["TP"] > ceiling and k < tries:
+        k += 1
+        lim = 10 ** ((ceiling - 1.0 * k) / 20)   # sample-peak чеги true-peak'тен ~1 дБ төмөн
+        tmp = dst.with_name(dst.stem + "_tp" + dst.suffix)
+        run(["ffmpeg", "-y", "-v", "error", "-i", str(src), *(extra or []),
+             "-af", f"alimiter=limit={lim:.4f}:attack=1:release=60:level=0:asc=1",
+             str(tmp)], "пикти чектөө")
+        tmp.replace(dst)
+        src = dst
+        loud = loudness(dst)
+    return dict(loud, limited=k)
+
+
 def decode_float32(path: Path, rate: int = 16000):
     """Аудиону numpy float32 массивге (PyAV'сыз, ffmpeg аркылуу)."""
     import numpy as np

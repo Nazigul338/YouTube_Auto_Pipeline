@@ -260,7 +260,7 @@ class VisualsStage(Stage):
         from .. import story as _st
         if _st.is_story(ctx.cfg):        # кино-окуя: окуянын көз ирмемдери так — көбүрөөк кадр алмаштырылат
             self.MAX_REPLACE = 50        # (run #44903598138: 91/167 кадр ≤2/5, 25 гана алмаштырылчу)
-            self.film = True             # кадр режиссёрдун планына (visual_prompt) бааланат; алмаштыруу 2 айлампа
+            self.film = True             # кадр режиссёрдун планына (visual_prompt) бааланат; алмаштыруу 3 айлампа
         if quality:
             results, ai_stats = self.ai_relevance(ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u)
             ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
@@ -526,6 +526,8 @@ SHOTS:
                        "view, objects and the same kind of place and light; never a visible face. If a person is in the "
                        "query, include the gender word ('man'/'woman').\n")
 
+    BEAT_CHUNK = 20
+
     def visual_beats(self, ctx, idx: list[int], stext: dict[int, str], film: bool = False) -> dict[int, tuple[str, list[str]]]:
         """Начар кадрлар үчүн маанини көрсөткөн өзүнчө идея + издөө сөздөрү (бир Gemini суроо). Ката болсо — {}."""
         from ..visual_rules import VISUAL_RULES
@@ -534,38 +536,47 @@ SHOTS:
         todo = [i for i in idx if stext.get(i)]
         if not todo:
             return {}
+        from .. import edit_concept
+        world = ""
         try:
-            from .. import edit_concept
-            world = ""
             if edit_concept.enabled(ctx):
                 b = (getattr(ctx, "registry", {}) or {}).get("videos", {}).get(getattr(ctx, "video_id", ""), {}).get("edit_brief")
                 if b:
                     world = (f"\nTHIS VIDEO'S OWN VISUAL WORLD (stay inside it): {b['world']} "
                              f"Recurring motifs: {', '.join(b['motifs'])}.\n")
-            if film:
-                try:
-                    hero = json.loads(ctx.path("script", "story.json").read_text(encoding="utf-8"))["hero"]
-                    world += self.FILM_BEAT_RULES.format(hero=hero.get("descriptor", ""))
-                except Exception:
-                    world += self.FILM_BEAT_RULES.format(hero="see shots")
-            data = gemini_of(ctx).json(self.BEAT_PROMPT.format(
-                rules=VISUAL_RULES + world, shots="\n".join(f"{i}. {stext[i][:450 if film else 300]}" for i in todo)),
-                purpose="visual_beats", temperature=0.7)
-        except Exception as e:
-            ctx.log(f"   ⚠️ Кадр идеялары жазылган жок ({type(e).__name__}) — сахнанын запас клиптери колдонулат")
-            return {}
+        except Exception:
+            world = ""
+        if film:
+            try:
+                hero = json.loads(ctx.path("script", "story.json").read_text(encoding="utf-8"))["hero"]
+                world += self.FILM_BEAT_RULES.format(hero=hero.get("descriptor", ""))
+            except Exception:
+                world += self.FILM_BEAT_RULES.format(hero="see shots")
         out: dict[int, tuple[str, list[str]]] = {}
         seen: set[str] = set()
-        for row in data if isinstance(data, list) else []:
+        failed = 0
+        # run #45002414086: 50 кадр бир суроодо → 503/JSONDecodeError → БААРЫ жоголду. Бөлүк-бөлүк (ар бири өзүнчө).
+        for k in range(0, len(todo), self.BEAT_CHUNK):
+            part = todo[k:k + self.BEAT_CHUNK]
             try:
-                i = int(row.get("i"))
-            except (TypeError, ValueError, AttributeError):
+                data = gemini_of(ctx).json(self.BEAT_PROMPT.format(
+                    rules=VISUAL_RULES + world,
+                    shots="\n".join(f"{i}. {stext[i][:450 if film else 300]}" for i in part)),
+                    purpose="visual_beats", temperature=0.7)
+            except Exception as e:
+                failed += 1
+                ctx.log(f"   ⚠️ Кадр идеялары ({len(part)} кадр) жазылган жок ({type(e).__name__}) — запас клиптер")
                 continue
-            qs = [q.strip() for q in row.get("queries", []) if isinstance(q, str) and q.strip()
-                  and q.strip().lower() not in seen][:2]
-            if i in todo and qs:
-                seen.update(q.lower() for q in qs)        # бир видеодо бир идея эки жолу эмес
-                out[i] = (str(row.get("idea", ""))[:160], qs)
+            for row in data if isinstance(data, list) else []:
+                try:
+                    i = int(row.get("i"))
+                except (TypeError, ValueError, AttributeError):
+                    continue
+                qs = [q.strip() for q in row.get("queries", []) if isinstance(q, str) and q.strip()
+                      and q.strip().lower() not in seen][:2]
+                if i in part and qs:
+                    seen.update(q.lower() for q in qs)        # бир видеодо бир идея эки жолу эмес
+                    out[i] = (str(row.get("idea", ""))[:160], qs)
         return out
 
     def ai_relevance(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u):
@@ -597,7 +608,8 @@ SHOTS:
         film = getattr(self, "film", False)
         btext = {i: text(i) for i in low} if film else stext
         # run #44921404755: бир айлампада 99 начар кадрдын 17'си гана алмашты → кино форматта 2 айлампа
-        for round_ in range(2 if film else 1):
+        # run #45002414086: 2 айлампа × 50 = 100 < 139 начар кадр → кино форматта 3 айлампа
+        for round_ in range(3 if film else 1):
             todo = sorted((i for i in low if scores.get(i, 5) <= self.LOW_SCORE),
                           key=lambda i: scores[i])[: self.MAX_REPLACE]
             if not todo:

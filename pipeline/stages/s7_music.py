@@ -162,8 +162,9 @@ def mix(ctx: Context, track_path: Path, total: float, sfx_bed: Path | None = Non
         media.run(["ffmpeg", "-y", "-v", "error", *ins, "-filter_complex", g,
                    "-map", "[m]", "-t", f"{total:.3f}", "-ar", "48000", "-ac", "2", str(out)],
                   "аралаштыруу (+ үн эффекттери)")
+    # loudnorm (бир өтүү) кескин эффекттерде чыныгы пикти ашырып жибериши мүмкүн (Video_005: +1.1 dBTP) → кепилдик
     res = {"bed_lufs": media.loudness(bed)["I"], "voice_lufs": media.loudness(voice)["I"],
-           "mix": media.loudness(out)}
+           "mix": media.limit_true_peak(out, out)}
     if audible:   # угулган деңгээл: диктор сүйлөгөндө басаңдатылган музыка (+фон эффекттери) өзүнчө өлчөнөт
         tmp = ctx.path("audio", "_ducked_check.wav")
         ins = ["-i", str(voice), "-i", str(bed)] + (["-i", str(sfx_bed)] if sfx_bed is not None else [])

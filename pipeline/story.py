@@ -317,7 +317,22 @@ def map_acts(g, text: str) -> list[dict]:
                     last = i
     except Exception:
         pass
-    if len(starts) < 6 or starts.get("hook", 0) != 0:
+    if 5 <= len(starts) < len(ACT_KEYS) and starts.get("hook", 0) == 0:
+        # Gemini бир-эки актыны белгилебей койду (Video_005: final_message жок → QA «актылар толук эмес»):
+        # жетишпегени коңшуларынын ортосуна, үлүшү боюнча + сүйлөмдүн башына жылдырылып толукталат
+        for j, (k, _, a, _) in enumerate(ACTS):
+            if k in starts:
+                continue
+            lo = max([starts[x] for x in ACT_KEYS[:j] if x in starts], default=0)
+            hi = min([starts[x] for x in ACT_KEYS[j + 1:] if x in starts], default=n)
+            want = min(max(int(n * a / TOTAL_SEC), lo + 1), hi - 1)
+            cands = [i for i in range(lo + 1, hi) if i > 0 and words[i - 1][-1:] in ".!?…"]
+            pos = min(cands, key=lambda i: abs(i - want)) if cands else want
+            if lo < pos < hi:
+                starts[k] = pos
+        if len(starts) == len(ACT_KEYS):
+            method = "gemini+fill"
+    if len(starts) < len(ACT_KEYS) or starts.get("hook", 0) != 0:
         method = "proportional"
         starts = {k: int(n * a / TOTAL_SEC) for k, _, a, _ in ACTS}
     starts["hook"] = 0

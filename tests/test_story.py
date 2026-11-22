@@ -78,6 +78,39 @@ class TestGenerators(unittest.TestCase):
         self.assertEqual(story.check_text("Анна закрывает ноутбук и смотрит в окно."), [])
 
 
+class TestActFillAndPeak(unittest.TestCase):
+    def test_missing_final_message_is_filled(self):
+        sents = [f"Предложение номер {i} идет дальше." for i in range(240)]
+        text = " ".join(sents)
+        w = text.split()
+        marks = {"hook": 0, "introduction": 50, "conflict": 150, "development": 450,
+                 "turning_point": 650, "transformation": 760}
+        resp = [{"act": k, "starts": " ".join(w[i:i + 4])} for k, i in marks.items()]
+        g = SimpleNamespace(json=lambda *a, **k: resp)
+        acts = story.map_acts(g, text)
+        self.assertEqual([a["act"] for a in acts], story.ACT_KEYS)
+        self.assertEqual(acts[0]["method"], "gemini+fill")
+        fm = acts[-1]
+        self.assertGreater(fm["w0"], 760)
+        self.assertTrue(w[fm["w0"] - 1].endswith("."))      # сүйлөмдүн башынан
+        self.assertEqual(acts[1]["w0"], 50)                  # Gemini белгилегендер өзгөргөн жок
+
+    def test_true_peak_limited(self):
+        from pipeline import media
+        d = Path(tempfile.mkdtemp())
+        try:
+            p = d / "hot.wav"
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i",
+                            "aevalsrc='0.32*sin(2*PI*220*t)+if(lt(mod(t\\,3)\\,0.02)\\,1.2*sin(2*PI*5000*t)\\,0)':d=8",
+                            "-ar", "48000", "-ac", "2", "-c:a", "pcm_f32le", str(p)], check=True)
+            self.assertGreater(media.loudness(p)["TP"], -1.0)
+            r = media.limit_true_peak(p, p)
+            self.assertLessEqual(r["TP"], media.TP_CEILING)
+            self.assertGreaterEqual(r["limited"], 1)
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
 class TestHookAndDark(unittest.TestCase):
     def test_tighten_hook_shortens_only_hook(self):
         long_hook = "Тиканье часов в пустой квартире звучит как отсчет до самого настоящего взрыва. " + "слово " * 70

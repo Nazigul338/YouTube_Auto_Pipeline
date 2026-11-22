@@ -437,6 +437,13 @@ class RenderStage(Stage):
         if abs(v_len - a_len) > 1.0 or abs(v_len - total) > FINAL_TOL:
             raise StageError(f"Видео менен аудионун узактыгы дал келбейт: видео {v_len:.1f} сек, "
                              f"аудио {a_len:.1f} сек, күтүлгөнү {total:.1f} сек")
+        # AAC кодировкасы пикти көтөрүшү мүмкүн: акыркы файлдын чыныгы пиги текшерилет (видео кайра кодировкаланбайт)
+        loud = media.limit_true_peak(final, final, ceiling=-1.2,
+                                     extra=["-map", "0:v", "-map", "0:a", "-c:v", "copy", "-c:a", "aac",
+                                            "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart"])
+        debug.append({"label": "final_audio", **loud})
+        if loud.get("limited"):
+            ctx.log(f"   🔊 Чыныгы пик чектелди: {loud['TP']} dBTP, {loud['I']} LUFS")
         dur = min(v_len, a_len)
         res = {"final_path": str(final), "duration": round(dur, 2), "size_mb": round(size, 1),
                "video_sec": round(v_len, 2), "audio_sec": round(a_len, 2)}
