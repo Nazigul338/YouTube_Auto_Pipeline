@@ -74,6 +74,7 @@ class Gemini:
                 api_version="v1beta", timeout=timeout_s * 1000))
         self.client = client
         self.usage: list[dict] = []   # кайсы модель эмне үчүн колдонулду (AI отчету үчүн)
+        self.requests = 0             # бардык жиберилген суроолор (ийгиликсиздери да) — квотаны өлчөө үчүн
         self.skip_until: dict[str, float] = {}   # иштебеген моделдер: убактылуу четке кагылат
 
     # ------------------------------------------------------------ жалпы
@@ -87,6 +88,7 @@ class Gemini:
         for model in candidates:
             for attempt in range(1, max(attempts, rate_attempts) + 1):
                 try:
+                    self.requests += 1
                     result = fn(model)
                     self.usage.append({"purpose": purpose, "model": model})
                     return result

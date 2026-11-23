@@ -25,7 +25,7 @@ For EACH other image (Image 1..N) answer: could the main person be the SAME char
 similar age, hair, build and clothing style)? Different lighting/angle is fine. If there is no person, same=false.
 Return JSON array only: [{{"i": <index>, "same": <0-10>, "person": <true/false>}}]"""
 
-BATCH = 10
+BATCH = 20   # квота үнөмү (мурун 10)
 SAME_MIN = 5
 REF_MIN = 4
 MAX_REPLACE = 80

@@ -119,6 +119,7 @@ def execute(ctx: Context, *, rerun_from: str | None = None, stop_after: str | No
 
         log(f"\n🔄 {header} ...")
         t0 = time.time()
+        g0 = _gemini_counts(ctx)
         attempts = 1 + max(0, getattr(stage, "retries", 1))
         stop = False
         for attempt in range(1, attempts + 1):
@@ -161,6 +162,7 @@ def execute(ctx: Context, *, rerun_from: str | None = None, stop_after: str | No
                     log(f"\n⏹ «{stage.title}» этабынан кийин токтотулду (stop_after).")
                     stop = True
             break
+        _log_gemini(log, ctx, g0)
         save_point()
         if stop:
             break
@@ -168,6 +170,29 @@ def execute(ctx: Context, *, rerun_from: str | None = None, stop_after: str | No
     log(f"\n⏱ Жалпы убакыт: {(time.time() - t_all) / 60:.1f} мүн")
     print_status(state)
     return state
+
+
+def _gemini_counts(ctx) -> tuple[int, int, dict]:
+    g = (getattr(ctx, "services", None) or {}).get("gemini")
+    use = list(getattr(g, "usage", []) or [])
+    by: dict[str, int] = {}
+    for u in use:
+        by[u.get("purpose", "?")] = by.get(u.get("purpose", "?"), 0) + 1
+    return int(getattr(g, "requests", 0) or 0), len(use), by
+
+
+def _log_gemini(log, ctx, before) -> None:
+    """Ар этаптан кийин: Gemini'ге канча суроо кетти (бекер күнүмдүк квотаны пландоо үчүн)."""
+    try:
+        req, ok, by = _gemini_counts(ctx)
+        dreq, dok = req - before[0], ok - before[1]
+        if dreq <= 0 and dok <= 0:
+            return
+        diff = {k: v - before[2].get(k, 0) for k, v in by.items() if v - before[2].get(k, 0) > 0}
+        top = ", ".join(f"{k} {v}" for k, v in sorted(diff.items(), key=lambda x: -x[1])[:6])
+        log(f"   📊 Gemini суроолору: {dreq} жиберилди, {dok} ийгиликтүү ({top}); бардыгы {req}")
+    except Exception:
+        pass
 
 
 def _report_failure(log, i, stage, message, detail) -> None:

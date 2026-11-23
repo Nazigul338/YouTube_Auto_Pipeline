@@ -446,7 +446,7 @@ class VisualsStage(Stage):
 
     LOW_SCORE = 2          # ≤2/5 — клип сахнанын текстине дал келбейт
     MAX_REPLACE = 25
-    RATE_BATCH = 8
+    RATE_BATCH = 20     # квота: 180 кадр = 9 суроо (мурун 8 → 23 суроо); бир суроодо 20 сүрөт — Gemini көтөрөт
 
     @staticmethod
     def _frame(path: Path, kind: str, offset: float, dur: float) -> bytes:

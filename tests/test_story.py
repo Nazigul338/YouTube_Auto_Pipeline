@@ -230,6 +230,21 @@ class TestMusicArcAndConfig(unittest.TestCase):
         self.assertNotIn("short cinematic", voice_style.direction([]))
 
 
+class TestGeminiUsageLog(unittest.TestCase):
+    def test_stage_usage_line(self):
+        from pipeline import runner
+        g = SimpleNamespace(usage=[{"purpose": "frame_check"}], requests=1)
+        ctx = SimpleNamespace(services={"gemini": g})
+        before = runner._gemini_counts(ctx)
+        g.usage += [{"purpose": "frame_check"}] * 9 + [{"purpose": "visual_beats"}] * 3
+        g.requests += 14
+        logs = []
+        runner._log_gemini(logs.append, ctx, before)
+        self.assertIn("14 жиберилди, 12 ийгиликтүү (frame_check 9, visual_beats 3); бардыгы 15", logs[0])
+        runner._log_gemini(logs.append, SimpleNamespace(services={}), (0, 0, {}))
+        self.assertEqual(len(logs), 1)
+
+
 @unittest.skipIf(os.environ.get("YTA_SKIP_SLOW"), "узак тест")
 class TestStoryPipeline(unittest.TestCase):
     """Толук pipeline кино-окуя форматында (жалган API, ЧЫНЫГЫ FFmpeg)."""
