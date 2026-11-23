@@ -783,7 +783,8 @@ class QAStage(Stage):
             items = [(frame_jpg(final, (s["start"] + s["end"]) / 2), scenes[s["scene"]]["text"])
                      for s in sample]
             items = [(j, t) for j, t in items if j]
-            scores = gemini_of(ctx).rate_frames(items)
+            from .. import story as _st
+            scores = gemini_of(ctx).rate_frames(items, film=_st.is_story(ctx.cfg))
             avg = sum(scores) / len(scores)
             rep.add("relevance", "Кадрлар сценарийге дал келет (AI баалоосу)", avg >= 2.8,
                     f"орточо {avg:.1f}/5, {len(scores)} кадр", required=False)

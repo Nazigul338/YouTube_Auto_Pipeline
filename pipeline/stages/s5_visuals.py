@@ -521,10 +521,13 @@ SHOTS:
         return {sh["i"]: " ".join(w["w"] for w in words if w["e"] > sh["start"] - 0.3 and w["s"] < sh["end"] + 0.3)
                 for sh in shots}
 
-    FILM_BEAT_RULES = ("\nTHIS IS A FACELESS SHORT FILM about one protagonist ({hero}). Each shot comes with the PLANNED "
-                       "FILM SHOT. Find stock footage that can play this planned shot: hands, back, silhouette, point of "
-                       "view, objects and the same kind of place and light; never a visible face. If a person is in the "
-                       "query, include the gender word ('man'/'woman').\n")
+    FILM_BEAT_RULES = ("\nTHIS IS A FACELESS, ATMOSPHERIC SHORT FILM about one protagonist ({hero}); the narrator tells "
+                       "the story, the picture carries its PLACE, LIGHT, OBJECTS and MOOD. Each shot comes with the "
+                       "PLANNED FILM SHOT as a hint. Find stock footage that is easy to find and true to this moment: "
+                       "the same kind of place or a key object, hands, back, silhouette, point of view, a fitting visual "
+                       "metaphor, matching light and emotion; never a visible face, no text on screen. Prefer short, "
+                       "common search phrases (2-4 words). If a person is in the query, include the gender word "
+                       "('man'/'woman').\n")
 
     BEAT_CHUNK = 20
 

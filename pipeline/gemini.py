@@ -223,11 +223,16 @@ class Gemini:
 
         return self._call([self.embed_model], fn, "embedding")
 
-    FILM_RULE = (" This is a FACELESS short film: the protagonist is shown only by hands, back, silhouette, point of "
-                 "view, objects and surroundings. Each narration comes with the PLANNED FILM SHOT for that moment. Rate "
-                 "as a film editor: 5 = the frame works as this planned shot (same kind of place, action/object and mood), "
-                 "4 = fits the scene's place and action, 3 = fits only the mood, 2 = weak, 1 = unrelated or contradicts the "
-                 "story (wrong setting, a clearly visible face of the protagonist is NOT a reason to lower the score here).")
+    # Колдонуучунун чечими 2026-11-23 (run #45002414086, #45137988688: так кадр-кадр баалоодо ~2.0/5 — бекер сток
+    # ойдон чыгарылган окуяны так көрсөтө албайт): АТМОСФЕРАЛЫК кино-тил — кадр окуянын ЖАЙЫН жана МААНАЙЫН берет.
+    FILM_RULE = (" This is a FACELESS, ATMOSPHERIC short film: the story is told by the narrator, the picture shows the "
+                 "PLACE, LIGHT, OBJECTS and MOOD of each moment (rooms, city, hands, back, silhouette, point of view, "
+                 "details, visual metaphors) - not a literal re-enactment. Each narration comes with the PLANNED FILM "
+                 "SHOT as a hint. Rate as a film editor: 5 = matches the planned shot's place, action/object and mood, "
+                 "4 = matches the place or a key object AND the mood, 3 = the atmosphere/emotion of this moment is "
+                 "right (a fitting visual metaphor or setting counts), 2 = neutral, generic or emotionally off, "
+                 "1 = contradicts the story (opposite mood, clearly wrong setting, cartoon, on-screen text/logos, "
+                 "the protagonist shown with the wrong gender). A visible face is NOT a reason to lower the score here.")
 
     def rate_frames(self, items: list[tuple[bytes, str]], film: bool = False) -> list[int]:
         """Кадр сценарийдин ошол бөлүгүнө канчалык дал келет: 1–5 упай.
