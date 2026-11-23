@@ -95,6 +95,20 @@ class TestActFillAndPeak(unittest.TestCase):
         self.assertTrue(w[fm["w0"] - 1].endswith("."))      # сүйлөмдүн башынан
         self.assertEqual(acts[1]["w0"], 50)                  # Gemini белгилегендер өзгөргөн жок
 
+    def test_filled_act_not_too_short_with_quotes(self):
+        sents = [f"Он{i} сказал{i}: «Пойдем{i} дальше{i} {i}.»" for i in range(200)]
+        text = " ".join(sents)
+        w = text.split()
+        marks = {"hook": 0, "introduction": 40, "conflict": 150, "development": 400,
+                 "turning_point": 560, "transformation": 700}
+        resp = [{"act": k, "starts": " ".join(w[i:i + 4])} for k, i in marks.items()]
+        acts = story.map_acts(SimpleNamespace(json=lambda *a, **k: resp), text)
+        fm = acts[-1]
+        self.assertEqual(fm["act"], "final_message")
+        self.assertGreaterEqual(fm["w1"] - fm["w0"], int(0.05 * len(w)))
+        self.assertGreaterEqual(fm["w0"] - acts[-2]["w0"], int(0.05 * len(w)))
+        self.assertTrue(w[fm["w0"] - 1].endswith(".»"))
+
     def test_true_peak_limited(self):
         from pipeline import media
         d = Path(tempfile.mkdtemp())

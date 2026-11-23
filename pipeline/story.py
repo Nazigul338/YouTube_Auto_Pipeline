@@ -326,7 +326,11 @@ def map_acts(g, text: str) -> list[dict]:
             lo = max([starts[x] for x in ACT_KEYS[:j] if x in starts], default=0)
             hi = min([starts[x] for x in ACT_KEYS[j + 1:] if x in starts], default=n)
             want = min(max(int(n * a / TOTAL_SEC), lo + 1), hi - 1)
-            cands = [i for i in range(lo + 1, hi) if i > 0 and words[i - 1][-1:] in ".!?…"]
+            if hi - lo > 2 * max(1, int(0.05 * n)):
+                want = min(max(want, lo + max(1, int(0.05 * n))), hi - max(1, int(0.05 * n)))
+            gap = max(1, int(0.05 * n))      # ар эки акт ≥5% сөз (QA: ар акт ≥3% убакыт)
+            # сүйлөмдүн аягы: «…сказал.»/"…" сыяктуу тырмакча/кашаа менен бүткөндөр да (run #45137988688)
+            cands = [i for i in range(lo + gap, hi - gap + 1) if words[i - 1].rstrip("»\"')”—-")[-1:] in ".!?…"]
             pos = min(cands, key=lambda i: abs(i - want)) if cands else want
             if lo < pos < hi:
                 starts[k] = pos
