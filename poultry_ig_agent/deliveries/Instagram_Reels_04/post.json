@@ -167,24 +167,27 @@
       "duration": 3.96
     },
     {
-      "source": "photo",
+      "source": "real",
       "visual": "veterinarian",
       "stock_query": [
         "veterinarian",
         "veterinary",
-        "vet clinic animal"
+        "holding a chicken",
+        "chicken in hands",
+        "farmer holding hen"
       ],
       "stock_require": [
         "veterinarian",
         "vet",
-        "veterinary"
+        "veterinary",
+        "holding",
+        "hands",
+        "hand"
       ],
       "onscreen": "Жара болсо — ветеринарга!",
       "n": 14,
       "duration": 3.96,
-      "fallback_photo": "assets/reels04/p10.png",
-      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p10.png",
-      "motion": "card"
+      "fallback_photo": "assets/reels04/p01.png"
     },
     {
       "source": "photo",
