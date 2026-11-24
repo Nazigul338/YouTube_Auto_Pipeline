@@ -484,6 +484,15 @@ class QAStage(Stage):
             rep.add("format", "Формат: мотивация+психология (7 бөлүк, бир окуя, бурулуштар)", False,
                     "format.json жок — 1-этаптан кайра иштетиңиз")
             return
+        try:      # бурулуштарды Gemini'сиз эреже менен кайра эсептейт (эски format.json үчүн да)
+            try:
+                wpm = float(json.loads(ctx.path("audio", "voice_report.json").read_text(encoding="utf-8"))["wpm"])
+            except Exception:
+                wpm = 0.0
+            fmt = sec.refresh_gaps(fmt, ctx.path("script", "script.txt").read_text(encoding="utf-8"),
+                                   wps=wpm / 60 if wpm > 60 else None)
+        except FileNotFoundError:
+            pass
         so = fmt.get("story") or {}
         info = fmt.get("info") or {}
         rep.add("format", "Формат: мотивация+психология (7 бөлүк, бир окуя ортосунда, ар 20–40 сек бурулуш)",

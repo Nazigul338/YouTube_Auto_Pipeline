@@ -172,13 +172,58 @@ def check(info: dict, text: str, prev: list[dict] | None = None, g=None) -> dict
     claims = [c for c in REAL_CLAIMS if c in _low(text)]
     if claims:
         p.append(f"ойдон чыгарылган мисал чыныгы катары көрсөтүлгөн: «{claims[0]}»")
-    gaps = [b - a for a, b in zip([0] + info["turns"], info["turns"] + [n])]
-    max_gap = round(max(gaps) / REAL_WPS, 1) if gaps else None
-    if not info["turns"]:
-        p.append("көңүлдү жандандыруучу бурулуштар белгиленген жок")
-    elif max_gap and max_gap > TURN_GAP_SEC:
-        p.append(f"{max_gap:.0f} сек жаңы ой/суроо/бурулушсуз (керек ≤{TURN_GAP_SEC:.0f} сек)")
-    return {"problems": p, "story": st, "max_gap_sec": max_gap}
+    gp, max_gap = _gap_problems(info, text, n)
+    return {"problems": p + gp, "story": st, "max_gap_sec": max_gap}
+
+
+# Сүйлөмдүн башындагы ачык бурулуш белгилери: кадам/жол номери, мисал, көнүгүү, кайрылуу.
+# run #45370647815: Gemini «Второй/Третий/Четвертый шаг» абзацтарын turns'ка кошкон эмес → практика бөлүгү
+# 119 сек «бурулушсуз» деп жалган бааланган. Суроо белгиси менен бүткөн сүйлөм да жаңы бурулуш.
+TURN_STARTS = ("первый", "первая", "первое", "второй", "вторая", "второе", "третий", "третья", "третье",
+               "четвертый", "четвертая", "четвертое", "пятый", "пятая", "шаг", "упражнение", "вот простое",
+               "вот упражнение", "задумайся", "представь", "например", "возьмем", "допустим", "почему",
+               "а теперь", "но вот", "и вот", "что, если", "что если")
+
+
+def rule_turns(text: str) -> list[int]:
+    """Gemini'ден көз карандысыз бурулуштар: суроо-сүйлөмдөр жана TURN_STARTS менен башталган сүйлөмдөр."""
+    words = text.split()
+    out, start = [], 0
+    for i, w in enumerate(words):
+        if i == start:
+            head = " ".join(x.lower().replace("ё", "е").strip("«»\"'—-:,") for x in words[i:i + 2])
+            if any(head == t or head.startswith(t + " ") or head.split(" ")[0] == t for t in TURN_STARTS):
+                out.append(i)
+        if w.rstrip("»\"')”")[-1:] in ".!?…":
+            if w.rstrip("»\"')”").endswith("?"):
+                out.append(start)
+            start = i + 1
+    return sorted(set(out))
+
+
+def _gap_problems(info: dict, text: str, n: int, wps: float | None = None) -> tuple[list[str], float | None]:
+    turns = sorted(set(info.get("turns") or []) | set(rule_turns(text)))
+    gaps = [b - a for a, b in zip([0] + turns, turns + [n])]
+    max_gap = round(max(gaps) / (wps or REAL_WPS), 1) if gaps else None
+    if not turns:
+        return ["көңүлдү жандандыруучу бурулуштар белгиленген жок"], max_gap
+    if max_gap and max_gap > TURN_GAP_SEC:
+        a = ([0] + turns)[gaps.index(max(gaps))]
+        where = " ".join(text.split()[a:a + 6])
+        return [f"{max_gap:.0f} сек жаңы ой/суроо/бурулушсуз (керек ≤{TURN_GAP_SEC:.0f} сек) — "
+                f"после слов «{where}…» добавь вопрос к зрителю или новый поворот"], max_gap
+    return [], max_gap
+
+
+def refresh_gaps(fmt: dict, text: str, wps: float | None = None) -> dict:
+    """Сакталган format.json'дун бурулуш текшерүүсүн жаңы эреже менен кайра эсептейт (Gemini'сиз).
+    wps — даяр үндүн чыныгы темпи (сөз/сек, s3 voice_report); жок болсо REAL_WPS."""
+    info = fmt.get("info") or {}
+    if not info.get("ok"):
+        return fmt
+    keep = [x for x in fmt.get("problems") or [] if "бурулуш" not in x]
+    gp, max_gap = _gap_problems(info, text, max(1, info.get("n") or len(text.split())), wps)
+    return {**fmt, "problems": keep + gp, "max_gap_sec": max_gap}
 
 
 def story_similarity(summary: str, prev: list[dict], g=None) -> dict:

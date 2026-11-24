@@ -147,3 +147,23 @@ class TestFirstShot(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRuleTurns(unittest.TestCase):
+    def test_steps_and_questions_are_turns(self):
+        """run #45370647815: «Второй/Третий/Четвертый шаг» бурулуш катары эсептелген эмес (119 сек)."""
+        para = " ".join(["слово"] * 60) + "."
+        t = " ".join([f"{x} шаг — сделай это. {para}" for x in ("Первый", "Второй", "Третий", "Четвертый")])
+        t += " Почему так происходит? " + para
+        w = t.split()
+        heads = [w[i] for i in sections.rule_turns(t)]
+        self.assertEqual(heads, ["Первый", "Второй", "Третий", "Четвертый", "Почему"])
+        fmt = {"info": {"ok": True, "n": len(w), "turns": [0]},
+               "problems": ["окуя ортосунда эмес", "149 сек жаңы ой/суроо/бурулушсуз (керек ≤40 сек)"]}
+        out = sections.refresh_gaps(fmt, t, wps=2.25)
+        self.assertEqual(out["problems"], ["окуя ортосунда эмес"])
+        self.assertLessEqual(out["max_gap_sec"], sections.TURN_GAP_SEC)
+        # бурулушсуз узун текст мурункудай кармалат
+        long = " ".join(["слово"] * 300) + "."
+        bad = sections.refresh_gaps({"info": {"ok": True, "n": 300, "turns": [0]}, "problems": []}, long)
+        self.assertTrue(any("бурулуш" in p for p in bad["problems"]))
