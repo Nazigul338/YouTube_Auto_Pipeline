@@ -13,15 +13,15 @@ on:
         required: false
         type: string
       niche:
-        description: "Формат: psych_story = кино-окуя (2026-11-21 туруктуу стандарт); motivation = эски формат"
+        description: "Формат: motivation = негизги (колдонуучунун чечими 2026-11-24); psych_story = кино-окуя (токтотулган)"
         required: true
-        default: psych_story
+        default: motivation
         type: choice
         options:
-          - psych_story
           - motivation
+          - psych_story
       hero:
-        description: "Кино-окуя: каарман жөнүндө талап (милдеттүү эмес), мис. «тынчсызданган, баарын көзөмөлдөгөн адам»"
+        description: "(psych_story гана) Кино-окуя: каарман жөнүндө талап (милдеттүү эмес), мис. «тынчсызданган, баарын көзөмөлдөгөн адам»"
         required: false
         type: string
       rerun_from:
