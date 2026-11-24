@@ -104,6 +104,13 @@ Run'дар: 44732111083 (кой, жарык/суу кадрлары тиешес
 Жаңы: кадрга өз stock_query/stock_require, мал чыпкасы, эмодзи тазалоо, БАС тамга 18 белгиден бөлүнөт.
 Файлдар: deliveries/Instagram_Reels_02_{1,2}of2/Instagram_Reels_02_{1,2}of2.mp4.
 
+
+## ✅ Instagram Reels №3 (2026-11-24) — «Тоок эмне үчүн өз жумурткасын жейт?»
+Колдонуучунун 13 сүрөтү (коллаж 10 кадрга бөлүндү), текст сөзмө-сөз, 21 кадр 2.2–3.1с, 52.5с (үн 1.1x).
+Концепция (оригиналдуулук): сүрөт-баян, Ken Burns, караңгы аркылуу өтүү, ачык фондогу жазуу — 1/2-видеодон айырмаланат
+(post.json → originality). Run 45370297752; Charon 3.8, үн айырмасы 6.4%; blackdetect таза. Сүрөттөр: assets/reels03/ (ачык репо).
+Жаңы код: kenburns/fade/text_style, photo булагы, voice_tempo, fit_durations кыскартуу.
+
 ## 7 API абалы
 Gemini текст ✅ (2026-11-19, run 44533063140) · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (❓ = чыныгы чакыруу менен али текшерилген эмес). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
 

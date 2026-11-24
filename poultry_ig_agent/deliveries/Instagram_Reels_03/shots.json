@@ -1,0 +1,191 @@
+[
+  {
+    "n": 1,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img12.png",
+    "motion": "in",
+    "onscreen": "Тоок жумуртканы жейби?",
+    "duration": 2.18,
+    "visual": "photo img12.png"
+  },
+  {
+    "n": 2,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/panel01.png",
+    "motion": "right",
+    "onscreen": "Бул жөн гана адат эмес",
+    "duration": 2.18,
+    "visual": "photo panel01.png"
+  },
+  {
+    "n": 3,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img11.png",
+    "motion": "out",
+    "onscreen": "Анын 4 себеби бар",
+    "duration": 2.18,
+    "visual": "photo img11.png"
+  },
+  {
+    "n": 4,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/panel07.png",
+    "motion": "in",
+    "onscreen": "Себеп 1: Кальций жетишсиз",
+    "duration": 2.65,
+    "visual": "photo panel07.png"
+  },
+  {
+    "n": 5,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/panel02.png",
+    "motion": "left",
+    "onscreen": "Кабык жука жана морт",
+    "duration": 2.65,
+    "visual": "photo panel02.png"
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/panel10.png",
+    "motion": "in",
+    "onscreen": "Организмге кальций керек",
+    "visual": "photo panel10.png",
+    "duration": 2.65,
+    "n": 6
+  },
+  {
+    "n": 7,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img13.png",
+    "motion": "in",
+    "onscreen": "Себеп 2: Жумуртка сынат",
+    "duration": 3.07,
+    "visual": "photo img13.png"
+  },
+  {
+    "n": 8,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img01.png",
+    "motion": "down",
+    "onscreen": "Ичиндегисин татып көрөт…",
+    "duration": 3.07,
+    "visual": "photo img01.png"
+  },
+  {
+    "n": 9,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img04.png",
+    "motion": "out",
+    "onscreen": "…анан адатка айланат",
+    "duration": 3.07,
+    "visual": "photo img04.png"
+  },
+  {
+    "n": 10,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/panel05.png",
+    "motion": "right",
+    "onscreen": "Себеп 3: Уя туура эмес",
+    "duration": 2.45,
+    "visual": "photo panel05.png"
+  },
+  {
+    "n": 11,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img03.png",
+    "motion": "in",
+    "onscreen": "Тар · ыңгайсыз · жарык",
+    "duration": 2.45,
+    "visual": "photo img03.png"
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img09.png",
+    "motion": "out",
+    "onscreen": "Уя ыңгайлуу болсун",
+    "visual": "photo img09.png",
+    "duration": 2.45,
+    "n": 12
+  },
+  {
+    "n": 13,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img07.png",
+    "motion": "in",
+    "onscreen": "Себеп 4: Уяда көп калат",
+    "duration": 3.12,
+    "visual": "photo img07.png"
+  },
+  {
+    "n": 14,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/panel06.png",
+    "motion": "left",
+    "onscreen": "Күнүнө бир нече жолу чогултуңуз",
+    "duration": 3.12,
+    "visual": "photo panel06.png"
+  },
+  {
+    "n": 15,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img10.png",
+    "motion": "out",
+    "onscreen": "Кантип алдын алабыз?",
+    "duration": 2.15,
+    "visual": "photo img10.png"
+  },
+  {
+    "n": 16,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img02.png",
+    "motion": "in",
+    "onscreen": "✓ Тең салмактуу жем",
+    "duration": 2.15,
+    "visual": "photo img02.png"
+  },
+  {
+    "n": 17,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/panel03.png",
+    "motion": "up",
+    "onscreen": "✓ Кальций жетиштүү",
+    "duration": 2.15,
+    "visual": "photo panel03.png"
+  },
+  {
+    "n": 18,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img06.png",
+    "motion": "right",
+    "onscreen": "✓ Ыңгайлуу уя",
+    "duration": 2.15,
+    "visual": "photo img06.png"
+  },
+  {
+    "n": 19,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img08.png",
+    "motion": "in",
+    "onscreen": "✓ Убагында чогултуу",
+    "duration": 2.15,
+    "visual": "photo img08.png"
+  },
+  {
+    "n": 20,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/img05.png",
+    "motion": "in",
+    "onscreen": "Пайдалуу кеңештер үчүн",
+    "visual": "photo img05.png (коллаж)",
+    "duration": 2.14
+  },
+  {
+    "n": 21,
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels03/panel09.png",
+    "motion": "left",
+    "onscreen": "баракчабызга катталыңыз",
+    "duration": 2.14,
+    "visual": "photo panel09.png"
+  }
+]
