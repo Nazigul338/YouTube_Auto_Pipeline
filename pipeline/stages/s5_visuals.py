@@ -444,6 +444,7 @@ class VisualsStage(Stage):
                 f"(чек ${budget.max_usd:.2f}){'; ' + budget.stopped if budget.stopped else ''}")
         return [by_i[i] for i in sorted(by_i)], info
 
+    FIRST_MIN = 4          # биринчи кадр (hook'тун алгачкы 3 сек) — ≥4/5 болмоюнча алмаштырылат
     LOW_SCORE = 2          # ≤2/5 — клип сахнанын текстине дал келбейт
     MAX_REPLACE = 25
     RATE_BATCH = 20     # квота: 180 кадр = 9 суроо (мурун 8 → 23 суроо); бир суроодо 20 сүрөт — Gemini көтөрөт
@@ -603,7 +604,11 @@ SHOTS:
             off = pick_offset(real, sh["dur"], off_u(i)) if real else 0.0
             items.append((i, self._frame(path, a.kind, off, sh["dur"]), text(i)))
         scores = self._rate(ctx, items)
-        low = sorted((i for i, s in scores.items() if s <= self.LOW_SCORE), key=lambda i: scores[i])
+        first = min(scores) if scores else None
+
+        def is_low(i: int) -> bool:   # 2026-11-24: алгачкы 3 сек — биринчи кадр да күчтүү болушу керек (≥4/5)
+            return scores.get(i, 5) <= self.LOW_SCORE or (i == first and scores.get(i, 5) < self.FIRST_MIN)
+        low = sorted((i for i in scores if is_low(i)), key=lambda i: (i != first, scores[i]))
         replaced = 0
         beats: dict = {}
         beat_used: dict[int, str] = {}
@@ -613,8 +618,8 @@ SHOTS:
         # run #44921404755: бир айлампада 99 начар кадрдын 17'си гана алмашты → кино форматта 2 айлампа
         # run #45002414086: 2 айлампа × 50 = 100 < 139 начар кадр → кино форматта 3 айлампа
         for round_ in range(3 if film else 1):
-            todo = sorted((i for i in low if scores.get(i, 5) <= self.LOW_SCORE),
-                          key=lambda i: scores[i])[: self.MAX_REPLACE]
+            todo = sorted((i for i in low if is_low(i)),
+                          key=lambda i: (i != first, scores[i]))[: self.MAX_REPLACE]
             if not todo:
                 break
             rb = self.visual_beats(ctx, todo, btext, film=film)

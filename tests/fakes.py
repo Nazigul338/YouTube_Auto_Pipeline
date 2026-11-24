@@ -16,7 +16,8 @@ def make_script(n_words: int = 1150, seed: str = "") -> str:
     sents, total, i = [], 0, 0
     while total < n_words:
         t = TOPICS[(i + len(seed)) % len(TOPICS)]
-        s = (f"Иногда {t} становится тихим собеседником номер {i + 1}{seed}, "
+        lead = "Например," if i % 9 == sum(map(ord, seed)) % 9 else "Иногда"   # mp7: мисал белгиси (seed боюнча)
+        s = (f"{lead} {t} становится тихим собеседником номер {i + 1}{seed}, "
              f"и мы замечаем это только вечером, когда день уже прошёл.")
         sents.append(s)
         from pipeline.textutil import word_count
@@ -24,6 +25,25 @@ def make_script(n_words: int = 1150, seed: str = "") -> str:
         i += 1
     paras = [" ".join(sents[k:k + 4]) for k in range(0, len(sents), 4)]
     return "\n\n".join(paras)
+
+
+def fake_format_map(text: str) -> dict:
+    """mp7 белгилөөсүнүн жалган жообу: бөлүктөр сүйлөм башында (үлүш боюнча), окуя «Например» менен ~35%да,
+    бурулуш — ар сүйлөм (make_script'те ар сүйлөмдө уникалдуу номер бар — дословно табылат)."""
+    w = text.split()
+    n = len(w)
+    six = lambda i: " ".join(w[i:i + 6])                       # noqa: E731
+    sent = [i + 1 for i, x in enumerate(w) if x in ("Иногда", "Например,")] or [0]   # +1: 6 сөздө номер бар
+    near = lambda f: min(sent, key=lambda i: abs(i - f * n))  # noqa: E731
+    marks = [i for i in sent if w[i - 1] == "Например,"]
+    a = min(marks, key=lambda i: abs(i - 0.35 * n)) if marks else near(0.35)
+    b = near(a / n + 0.15)
+    secs = {"hook": 0, "problem": near(0.04), "causes": near(0.15), "story": a, "meaning": b,
+            "practice": near(0.65), "finale": near(0.88)}
+    end = max(i for i in sent if i < b) if any(i < b for i in sent) else a
+    return {"sections": [{"section": k, "starts": six(i)} for k, i in secs.items()],
+            "stories": [{"starts": six(a), "ends": six(end), "summary": f"Пример: {six(a)} — {six(end)}"}],
+            "turns": [six(i) for i in sent]}
 
 
 def fake_source(asset_id: str) -> str:
@@ -99,6 +119,8 @@ class FakeGemini:
                     "viewer_questions": ["что с ней?"]}
         if purpose == "story_acts":
             return []
+        if purpose == "format_map":
+            return fake_format_map(prompt.split("СЦЕНАРИЙ:\n", 1)[-1])
         return {}
 
     def embed(self, texts):

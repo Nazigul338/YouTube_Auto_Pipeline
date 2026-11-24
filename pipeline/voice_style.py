@@ -24,7 +24,10 @@ MOTIVATIONAL_STYLE = (
     "looking them in the eyes. Clear, precise Russian diction. Vary the intonation: calm and low "
     "for reflection, firmer and stronger for calls to action; never monotone or robotic. "
     "Make a short dramatic pause at every '…' and '—' and after rhetorical questions. "
-    "Slightly slower on key ideas, gradually building energy towards the end."
+    "Slightly slower on key ideas, gradually building energy towards the end. "
+    "Hit the very first sentence immediately, with no warm-up: it is the hook of the first 3 seconds. "
+    "When the one example story in the middle is told, become a little softer and more intimate; return to a "
+    "firm, strong delivery for the practical advice and the final call."
 )
 STORY_STYLE = (   # кино-окуя форматы (2026-11-21): закадровый голос короткометражного фильма
     "You are the Russian voice-over narrator of a short cinematic psychological film. Deep, warm, intimate "

@@ -229,6 +229,7 @@ class QAStage(Stage):
             self.check_visual(ctx, rep, final)
             self.check_hook(ctx, rep)
             self.check_story(ctx, rep, total)
+            self.check_format(ctx, rep)
             self.check_shot_meaning(ctx, rep)
             self.check_policy(ctx, rep, clip_lic, music, meta)
             self.check_ai_images(ctx, rep, shots)
@@ -468,8 +469,32 @@ class QAStage(Stage):
         except Exception:
             return {}
 
+    HOOK_CARD_SEC = 1.0
+
+    def check_format(self, ctx, rep) -> None:
+        """МИЛДЕТТҮҮ (2026-11-24, мотивация+психология): 7 бөлүк, БИР окуя ортосунда (10–25%), мисал катары
+        белгиленген, андан кийин мааниси, мурункулардан башка, ар 20–40 сек бурулуш. Маалымат: script/format.json."""
+        from .. import sections as sec
+
+        if not sec.enabled(ctx.cfg):
+            return
+        try:
+            fmt = json.loads(ctx.path("script", "format.json").read_text(encoding="utf-8"))
+        except Exception:
+            rep.add("format", "Формат: мотивация+психология (7 бөлүк, бир окуя, бурулуштар)", False,
+                    "format.json жок — 1-этаптан кайра иштетиңиз")
+            return
+        so = fmt.get("story") or {}
+        info = fmt.get("info") or {}
+        rep.add("format", "Формат: мотивация+психология (7 бөлүк, бир окуя ортосунда, ар 20–40 сек бурулуш)",
+                not fmt.get("problems"),
+                f"бөлүктөр {[x['section'] for x in info.get('sections', [])]}; окуя {len(info.get('stories', []))}, "
+                f"башталышы {so.get('start')}, үлүшү {so.get('share')}, мисал белгиси {so.get('marked_example')}; "
+                f"эң узун бурулушсуз жер {fmt.get('max_gap_sec')} сек"
+                + (f" — {'; '.join(fmt['problems'])}" if fmt.get("problems") else ""))
+
     def check_hook(self, ctx, rep) -> None:
-        """Hook: алгачкы 2 сүйлөм кыска жана шаблонсуз, экранда hook карточкасы ≤4 сек, түрү мурунку видеодон башка."""
+        """Hook (МИЛДЕТТҮҮ, 2026-11-24): негизги ою үндө ≤3 сек, экранда hook карточкасы ≤1 сек, шаблонсуз, түрү башка."""
         from .. import edit_concept as ecm
         from .s1_script import HOOK_BANNED
 
@@ -492,11 +517,11 @@ class QAStage(Stage):
             problems.append(f"hook узун ({len(hook.split())} сөз)")
         if any(hook.lower().startswith(b) for b in HOOK_BANNED):
             problems.append("шаблон башталыш")
-        if not card or card["start"] > 4.0:
-            problems.append("алгачкы 4 секундда hook карточкасы жок")
+        if not card or card["start"] > self.HOOK_CARD_SEC:
+            problems.append(f"hook карточкасы {self.HOOK_CARD_SEC:.0f} сек ичинде экранда жок")
         if htype and last and htype == last:
             problems.append(f"hook түрү мурунку видеодогудай ({htype})")
-        # даяр үндө: биринчи фраза алгачкы 5 секундда бүтөбү (саламдашуу/узун кириш жок)
+        # даяр үндө: биринчи фраза алгачкы 3 секундда бүтөбү (саламдашуу/узун кириш жок)
         from .. import retention as rt
 
         timing = {}
@@ -512,7 +537,7 @@ class QAStage(Stage):
         if pe is not None and pe > rt.HOOK_PHRASE_SEC:
             problems.append(f"биринчи ой {pe} сек'те гана айтылат (> {rt.HOOK_PHRASE_SEC})")
         ctx.path("hook_timing.json").write_text(rt.dump(timing), encoding="utf-8")
-        rep.add("hook", "Hook: алгачкы секунддар көңүл бурат (өз түрү, кыска, экранда)", not problems,
+        rep.add("hook", "Hook: алгачкы 3 секунд көңүл бурат (өз түрү, кыска, экранда)", not problems,
                 (f"түрү {htype}; «{hook[:90]}»; биринчи фраза {pe} сек, сүйлөм {timing.get('sentence_end_sec')} сек; "
                  f"карточка «{(card or {}).get('text', '-')}»" + (f" — {'; '.join(problems)}" if problems else "")))
         self.check_retention(ctx, rep)
@@ -588,6 +613,10 @@ class QAStage(Stage):
             rep.add("shot_meaning", "Кадрлар баяндалган ойго дал келет (бардык кадр, AI)", None,
                     f"бааланган кадр аз ({len(sc)}/{len(shots)}) — Gemini жеткиликсиз болгон", required=False)
             return
+        first = min(shots, key=lambda s: s.get("start", 0)) if shots else {}
+        if isinstance(first.get("ai_score"), int):    # 2026-11-24: Hook'тун биринчи кадры да күчтүү болушу керек
+            rep.add("first_shot", "Биринчи кадр (алгачкы 3 сек) күчтүү жана темага дал келет (AI ≥4/5)",
+                    first["ai_score"] >= 4, f"{first['ai_score']}/5")
         avg = sum(sc) / len(sc)
         bad = sum(1 for x in sc if x <= 1)
         rep.add("shot_meaning", "Кадрлар баяндалган ойго дал келет (бардык кадр, AI)",
@@ -600,7 +629,7 @@ class QAStage(Stage):
         ("Кадрлар темага туура келеби?", ["shot_meaning", "relevance", "theme_match"]),
         ("Бир эле монтаж шаблону кайталанган жокпу?", ["original_video", "visual_original", "motion"]),
         ("Оригиналдуу баяндоо жана пайдалуу маалымат барбы?", ["original", "words"]),
-        ("Видеонун башынан аягына чейин кызыгуу сакталабы (hook, ыргак, бирдей сапат)?", ["hook", "retention", "pacing", "uniform", "freeze", "silence"]),
+        ("Видеонун башынан аягына чейин кызыгуу сакталабы (hook, ыргак, бирдей сапат)?", ["hook", "first_shot", "format", "retention", "pacing", "uniform", "freeze", "silence"]),
         ("Музыка жана материалдардын лицензиясы текшерилгенби?", ["licenses", "sfx_license", "music_audible"]),
         ("Видео техникалык жактан толук жана сапаттуубу?", ["opens", "sync", "format", "loudness", "black", "duration"]),
     ]
@@ -921,6 +950,8 @@ class QAStage(Stage):
         if self.ai_images_info(ctx).get("used"):
             lines.append("Часть изображений создана с помощью ИИ (Google Gemini).")
         from .. import story as stl
+        if ctx.path("script", "format.json").exists():   # mp7: бир окуя-мисал — чыныгы окуя катары көрсөтүлбөйт
+            lines.append("Пример в видео — собирательный, совпадения случайны. Видео не заменяет консультацию специалиста.")
         if stl.is_story(ctx.cfg):                  # көркөм окуя — чыныгы/документалдык деп көрсөтүлбөйт
             lines.append("История и герои вымышлены; совпадения случайны. Видео не заменяет консультацию специалиста.")
         ctx.path("youtube_description.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")

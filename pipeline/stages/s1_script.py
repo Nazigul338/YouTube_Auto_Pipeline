@@ -136,7 +136,7 @@ def build_prompt(topic: str, niche: dict, style_text: str, prev: list[dict], cfg
 
 HOOK — ПЕРВЫЕ 3–5 СЕКУНД решают, останется ли зритель:
 - Тип hook'а этого видео: {HOOK_TYPES.get(hook, HOOK_TYPES["question"])}.
-- Первое предложение — не больше 14 слов: сразу интересный вопрос, неожиданная мысль или сильная эмоция.
+- Первое предложение — не больше 8 слов (первые 3 секунды): сразу интересный вопрос, неожиданная мысль или сильная эмоция.
   Обращайся к личной боли, страху, желанию или внутреннему противоречию зрителя, прямо по теме видео.
 - Второе-третье предложение честно показывает, что зритель поймёт, если досмотрит, — и это ДОЛЖНО быть
   раскрыто в тексте. Никаких обещаний, на которые в видео нет ответа.
@@ -324,6 +324,18 @@ class ScriptStage(Stage):
         else:
             raise StageError(f"Сценарий мурунку видеого ({sim['closest']}) өтө окшош бойдон калды")
 
+        # МОТИВАЦИЯ + ПСИХОЛОГИЯ (2026-11-24): 7 бөлүк, БИР окуя ортосунда, ар 20–40 сек бурулуш — бузулса оңдотулат
+        from .. import sections as sec
+
+        fmt_on = (not st) and sec.enabled(cfg)
+        prev_sto = sec.previous_stories(ctx.registry, ctx.video_id) if fmt_on else []
+        if fmt_on:
+            fixed, _, frep = sec.enforce(g, text, topic, prev_sto, ctx.log)
+            if fixed != text:
+                fixed = adjust_length(g, fixed, cfg.words_min, cfg.words_max, ctx.log)
+                if not duplicate_sentences(fixed):
+                    text = fixed
+
         # Hook + удержание: катаал «көрүүчү» баалайт, жетишсиз болсо башталыш/финал кайра жазылат
         from .. import retention
 
@@ -350,6 +362,17 @@ class ScriptStage(Stage):
                     ", ".join(f"{a['act']}@{a['w0']}" for a in st_acts) +
                     (f" — ⚠ {'; '.join(st_probs)}" if st_probs else ""))
 
+        fmt = None
+        if fmt_on:                              # акыркы текст боюнча: format.json (s2/s9 колдонот)
+            info = sec.map_sections(g, text)
+            fmt = dict(sec.check(info, text, prev_sto, g), info=info)
+            ctx.path("script", "format.json").write_text(sec.dump(fmt), encoding="utf-8")
+            so = fmt.get("story") or {}
+            ctx.log(f"   🧩 Формат: бөлүктөр {[x['section'] for x in info.get('sections', [])]}; окуя "
+                    f"{len(info.get('stories', []))} ({so.get('start', '-')}–үлүш {so.get('share', '-')}); эң узун "
+                    f"бурулушсуз жер {fmt.get('max_gap_sec')} сек" +
+                    (f" — ⚠ {'; '.join(fmt['problems'])}" if fmt["problems"] else " ✓"))
+
         script = ctx.path("script", "script.txt")
         script.write_text(text + "\n", encoding="utf-8")
         ctx.path("script", "fact_check.txt").write_text(changes + "\n", encoding="utf-8")
@@ -369,6 +392,9 @@ class ScriptStage(Stage):
 
         entry = ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})
         entry.update({"title": title, "style": style, "script": True, "hook_type": hook})
+        if fmt and (fmt.get("story") or {}).get("summary"):
+            entry["story_example"] = fmt["story"]["summary"][:400]   # кийинки видеолордо окуя кайталанбашы үчүн
+            entry["format"] = "mp7"
         if st:
             entry["story"] = stl.registry_entry(st["hero"], st["outline"], title)
             entry["format"] = "story"

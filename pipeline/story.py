@@ -287,7 +287,9 @@ def script_prompt(topic: str, niche: dict, hero: dict, o: dict, prev: list[dict]
 # ---------------------------------------------------------------- актылар
 
 def _find(words: list[str], starts: str, after: int) -> int | None:
-    key = [w for w in re.findall(r"\w+", starts.lower().replace("ё", "е"))][:6]
+    # сөз-сөз нормалдаштыруу (текст менен бирдей): «что-то»/«23-1» бир сөз бойдон калат (мурун \w+ аны экиге бөлчү
+    # → дал келбей, жумшак 3 сөз биринчи окшош жерди таап алчу)
+    key = [k for k in (re.sub(r"[^\w]", "", w.lower().replace("ё", "е")) for w in starts.split()) if k][:6]
     if len(key) < 3:
         return None
     low = [re.sub(r"[^\w]", "", w.lower().replace("ё", "е")) for w in words]

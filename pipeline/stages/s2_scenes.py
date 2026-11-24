@@ -124,10 +124,19 @@ class ScenesStage(Stage):
         g = gemini_of(ctx)
         sctx = story_context(ctx, texts)
         acts = sctx[1] if sctx else [None] * len(texts)
+        extra = sctx[0] if sctx else ""
+        if not sctx:                              # мотивация+психология (mp7): сахнанын бөлүгү + кадр эрежеси
+            from .. import sections as sec
+            try:
+                fmt = json.loads(ctx.path("script", "format.json").read_text(encoding="utf-8"))
+                acts = sec.scene_labels(fmt.get("info") or {}, texts)
+                extra = sec.SCENE_RULE if any(acts) else ""
+            except Exception:
+                pass
         numbered = "\n".join(f"{i + 1}. " + (f"[{acts[i]}] " if acts[i] else "") + t for i, t in enumerate(texts))
         meta = g.json(PROMPT.format(n=len(texts), emotions=EMOTIONS, moods=moods, scenes=numbered,
                                   themes=THEME_KEYS, avoid="; ".join(avoid) or "(none)",
-                                  visual_rules=VISUAL_RULES) + (sctx[0] if sctx else ""),
+                                  visual_rules=VISUAL_RULES) + extra,
                       purpose="scenes", temperature=0.6)
         if isinstance(meta, dict):
             meta = meta.get("scenes") or next((v for v in meta.values() if isinstance(v, list)), [])

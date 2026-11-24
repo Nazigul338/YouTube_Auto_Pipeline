@@ -407,7 +407,7 @@ class RenderStage(Stage):
         cards = cards_ass
         look = cinematic.look_chain(c["grade"]) if cine else c["grade"]
         tail = (f"subtitles='{_esc(subs)}',subtitles='{_esc(cards)}',"
-                f"fade=t=in:st=0:d=0.5,fade=t=out:st={max(0.0, total - 0.8):.3f}:d=0.8,format=yuv420p")
+                f"fade=t=in:st=0:d=0.15,fade=t=out:st={max(0.0, total - 0.8):.3f}:d=0.8,format=yuv420p")
         band_in: list[str] = []
         if cine:   # СЫНАК: субтитр астында жумшак күңүрт градиент (ак фондо да окулат)
             band = cinematic.subtitle_band(rdir / "sub_band.png")
