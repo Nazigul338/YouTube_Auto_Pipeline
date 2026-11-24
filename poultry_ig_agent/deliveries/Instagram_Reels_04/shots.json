@@ -47,20 +47,27 @@
   {
     "source": "stock",
     "visual": "hens eating",
-    "stock_query": "hens eating",
+    "stock_query": [
+      "hens eating",
+      "chickens pecking",
+      "chicken feeding",
+      "hens grain"
+    ],
     "stock_require": [
       "chicken",
       "hen",
-      "hens"
+      "hens",
+      "chickens"
     ],
     "onscreen": "Жүн — белоктон турат",
     "n": 6,
     "duration": 3.83,
+    "fallback_photo": "assets/reels04/p08.png",
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-24-9e5f235d-reel-ky/work/stock_6.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 112428,
-      "url": "https://pixabay.com/videos/id-112428/",
+      "id": 57957,
+      "url": "https://pixabay.com/videos/id-57957/",
       "author": "NickyPe",
       "query": "hens eating",
       "license": "https://pixabay.com/service/license-summary/"
@@ -77,24 +84,29 @@
   },
   {
     "source": "stock",
-    "visual": "chicken feathers",
-    "stock_query": "chicken feathers",
+    "visual": "hen preening feathers",
+    "stock_query": [
+      "hen preening",
+      "chicken preening",
+      "chicken feathers"
+    ],
     "stock_require": [
-      "chicken",
       "hen",
-      "feather",
+      "chicken",
+      "preening",
       "feathers"
     ],
     "onscreen": "Тери кычышат → жүн түшөт",
     "duration": 2.85,
     "n": 8,
+    "fallback_photo": "assets/reels04/p04.png",
     "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-24-9e5f235d-reel-ky/work/stock_8.mp4",
     "stock": {
       "source": "Pixabay",
-      "id": 105229,
-      "url": "https://pixabay.com/videos/id-105229/",
-      "author": "Eaktas06",
-      "query": "chicken feathers",
+      "id": 67070,
+      "url": "https://pixabay.com/videos/id-67070/",
+      "author": "BenjaminNelan",
+      "query": "hen preening",
       "license": "https://pixabay.com/service/license-summary/"
     }
   },
@@ -144,27 +156,24 @@
     "duration": 3.96
   },
   {
-    "source": "stock",
-    "visual": "chicken farmer",
-    "stock_query": "chicken farmer",
+    "source": "photo",
+    "visual": "veterinarian",
+    "stock_query": [
+      "veterinarian",
+      "veterinary",
+      "vet clinic animal"
+    ],
     "stock_require": [
-      "chicken",
-      "hen",
-      "hens",
-      "poultry"
+      "veterinarian",
+      "vet",
+      "veterinary"
     ],
     "onscreen": "Жара болсо — ветеринарга!",
     "n": 14,
     "duration": 3.96,
-    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-24-9e5f235d-reel-ky/work/stock_14.mp4",
-    "stock": {
-      "source": "Pixabay",
-      "id": 76881,
-      "url": "https://pixabay.com/videos/id-76881/",
-      "author": "FnBTV",
-      "query": "chicken farmer",
-      "license": "https://pixabay.com/service/license-summary/"
-    }
+    "fallback_photo": "assets/reels04/p10.png",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p10.png",
+    "motion": "card"
   },
   {
     "source": "photo",
