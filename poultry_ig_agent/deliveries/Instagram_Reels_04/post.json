@@ -1,0 +1,244 @@
+{
+  "format": "reel",
+  "lang": "ky",
+  "content_type": "education",
+  "purpose": "education",
+  "pillar": "education",
+  "topic_key": "prevention",
+  "topic": "Тооктор эмне үчүн жүнүн түшүрөт?",
+  "hook": "Тоогуңуздун жүнү түшүп, жылаңачтанып калдыбы?",
+  "hook_onscreen": "Жүнү түшүп калдыбы?",
+  "voiceover": "Тоогуңуздун жүнү түшүп, жылаңачтанып калдыбы? Бул ар дайым эле оору эмес. Себептерин карап көрөлү!\n\nБиринчиси — мезгилдик түлөө. Күзүндө тооктор эски жүнүн таштап, жаңысын чыгарат. Бул табигый процесс, ушул убакта жумуртка азаят.\n\nЭкинчиси — азыктын жетишсиздиги. Жүн негизинен белоктон турат. Жемде белок аз болсо, жаңы жүн начар өсөт.\n\nҮчүнчүсү — мите курттар: бит жана кене. Алар терини кычыштырып, жүндү түшүрөт.\n\nТөртүнчүсү — стресс: тыгыздык, ызы-чуу, бири-бирин чокулоо.\n\nБешинчиси — начар шарт: тар, нымдуу же кир тооккана. Витамин жетишсиздиги да жүндү начарлатат.\n\nЭмне кылуу керек? Белокко бай жем жана жашыл чөп бериңиз, тооккананы таза кармап, дезинфекция жасаңыз. Жара же оорунун белгилери байкалса — ветеринарга кайрылыңыз.\n\nТоок чарбасы боюнча дагы пайдалуу кеңештер үчүн баракчабызга катталыңыз!",
+  "shots": [
+    {
+      "source": "photo",
+      "file": "assets/reels04/p01.png",
+      "motion": "card",
+      "onscreen": "Жүнү түшүп калдыбы?",
+      "visual": "photo p01.png",
+      "n": 1,
+      "duration": 3.45
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/header_hen.png",
+      "motion": "card",
+      "onscreen": "Ар дайым эле оору эмес",
+      "visual": "photo header_hen.png",
+      "n": 2,
+      "duration": 3.45
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/p02.png",
+      "motion": "card",
+      "onscreen": "1. Мезгилдик түлөө",
+      "visual": "photo p02.png",
+      "n": 3,
+      "duration": 4.54
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/header_eggs.png",
+      "motion": "card",
+      "onscreen": "Бул учурда жумуртка азаят",
+      "visual": "photo header_eggs.png",
+      "n": 4,
+      "duration": 4.54
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/p03.png",
+      "motion": "card",
+      "onscreen": "2. Азык жетишсиз",
+      "visual": "photo p03.png",
+      "n": 5,
+      "duration": 3.7
+    },
+    {
+      "source": "real",
+      "visual": "hens eating",
+      "stock_query": "hens eating",
+      "stock_require": [
+        "chicken",
+        "hen",
+        "hens"
+      ],
+      "onscreen": "Жүн — белоктон турат",
+      "n": 6,
+      "duration": 3.7
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/p04.png",
+      "motion": "card",
+      "onscreen": "3. Мите курттар: бит жана кене",
+      "visual": "photo p04.png",
+      "n": 7,
+      "duration": 2.75
+    },
+    {
+      "source": "real",
+      "visual": "chicken feathers",
+      "stock_query": "chicken feathers",
+      "stock_require": [
+        "chicken",
+        "hen",
+        "feather",
+        "feathers"
+      ],
+      "onscreen": "Тери кычышат → жүн түшөт",
+      "duration": 2.75,
+      "n": 8
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/p05.png",
+      "motion": "card",
+      "onscreen": "4. Стресс: тыгыздык, ызы-чуу",
+      "visual": "photo p05.png",
+      "n": 9,
+      "duration": 4.15
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/p06.png",
+      "motion": "card",
+      "onscreen": "5. Начар шарт",
+      "visual": "photo p06.png",
+      "n": 10,
+      "duration": 3.31
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/p07.png",
+      "motion": "card",
+      "onscreen": "Витамин да жетишсиз",
+      "visual": "photo p07.png",
+      "n": 11,
+      "duration": 3.31
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/p08.png",
+      "motion": "card",
+      "onscreen": "✓ Белокко бай жем, жашыл чөп",
+      "visual": "photo p08.png",
+      "n": 12,
+      "duration": 3.83
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/p09.png",
+      "motion": "card",
+      "onscreen": "✓ Тазалык жана дезинфекция",
+      "visual": "photo p09.png",
+      "n": 13,
+      "duration": 3.83
+    },
+    {
+      "source": "real",
+      "visual": "chicken farmer",
+      "stock_query": "chicken farmer",
+      "stock_require": [
+        "chicken",
+        "hen",
+        "hens",
+        "poultry"
+      ],
+      "onscreen": "Жара болсо — ветеринарга!",
+      "n": 14,
+      "duration": 3.83
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/p10.png",
+      "motion": "card",
+      "onscreen": "Дени сак, жүнү тыгыз тооктор",
+      "visual": "photo p10.png",
+      "n": 15,
+      "duration": 2.54
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels04/infographic.png",
+      "motion": "card",
+      "onscreen": "Катталыңыз!",
+      "visual": "photo infographic.png",
+      "n": 16,
+      "duration": 2.54
+    }
+  ],
+  "fade": 0.0,
+  "text_style": "yellow",
+  "music_mood": "calm",
+  "concept": "Инфографика-түшүндүрмө: панелдер ортодо «карта» болуп акырын чоңоёт, артында бүдөмүк фон; кескин кесүү; сары фондогу номерленген жазуулар; тынч обон",
+  "originality": {
+    "vs_1": "сток видео, кара фон, кескин кесүү → карта композициясы, сары жазуу",
+    "vs_2": "'СЕБЕП №N' бас тамга, толук экран видео → номерленген кадимки жазуу, ортодо карта",
+    "vs_3": "толук экран сүрөт + Ken Burns + караңгы аркылуу өтүү, крем жазуу → карта + бүдөмүк фон, өтүүсүз кесүү, сары жазуу, башка обон (calm)"
+  },
+  "exclude_stock_ids": [
+    113,
+    7129,
+    10685,
+    22562,
+    29874,
+    36571,
+    44626,
+    45789,
+    66634,
+    66635,
+    67069,
+    69729,
+    76879,
+    76883,
+    76884,
+    79872,
+    105226,
+    105228,
+    113228,
+    118648,
+    123849,
+    130412,
+    130614,
+    137608,
+    139969,
+    144679,
+    147982,
+    154675,
+    157263,
+    165148,
+    188986,
+    190144,
+    201308,
+    213146,
+    328726,
+    331459,
+    378976
+  ],
+  "caption": "Тооктор эмне үчүн жүнүн түшүрөт? 5 себеп жана эмне кылуу керек. Видеону сактап коюңуз 👇\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n🖼 Видеодогу сүрөттөр — иллюстрация.\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\n📌 Бул маалымат — автордун балапан багуудагы өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.",
+  "hashtags": [
+    "#тоокферма",
+    "#тоокчарбасы",
+    "#түлөө",
+    "#кыргызстан",
+    "#фермер",
+    "#тоок"
+  ],
+  "cta": {
+    "type": "direct",
+    "text": "Direct'ке «КУРС» деп жазыңыз"
+  },
+  "sources": [
+    {
+      "type": "author_experience",
+      "note": "Сценарийди агент жазды, колдонуучунун инфографикасына негизделген (2026-11-24); жалпы маалымат, доза жок"
+    }
+  ],
+  "output_name": "Instagram_Reels_04.mp4",
+  "id": "2026-11-24-9e5f235d-reel-ky",
+  "needs_vet_review": true,
+  "lint_issues": [],
+  "status": "pending_review"
+}

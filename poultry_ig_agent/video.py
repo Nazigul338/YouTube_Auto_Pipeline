@@ -387,12 +387,16 @@ def kenburns(motion, seconds, fps=30):
 TEXT_STYLES = {   # (тамга түсү, фон) — ар видео өз стилин тандай алат
     "dark": ("white", "black@0.55"),
     "cream": ("0x3b2a14", "0xfff4dc@0.88"),
+    "yellow": ("0x8b1a1a", "0xffe27a@0.95"),
 }
 
 
 def normalize(src, seconds, out, onscreen="", label="", tmp=".", motion=None, fade=0.0, text_style="dark"):
     is_img = src.lower().endswith(IMG_EXT)
-    if is_img and motion in MOTIONS:
+    card = is_img and motion == "card"
+    if card:
+        vf = []          # негизи filter_complex'те (төмөндө), бул жерге fade/жазуулар гана кошулат
+    elif is_img and motion in MOTIONS:
         vf = kenburns(motion, seconds) + ["setsar=1"]
     else:
         vf = ["scale=1080:1920:force_original_aspect_ratio=increase", "crop=1080:1920", "fps=30", "setsar=1"]
@@ -414,6 +418,25 @@ def normalize(src, seconds, out, onscreen="", label="", tmp=".", motion=None, fa
     if fade and seconds > 2 * fade + 0.2:      # жылмакай өтүү: ар кадр караңгыдан чыгып, караңгыга кирет
         vf += [f"fade=t=in:st=0:d={fade}", f"fade=t=out:st={seconds - fade:.2f}:d={fade}"]
     pre = ["-loop", "1"] if is_img else ["-stream_loop", "-1"]
+    if card:
+        # «карта»: сүрөт ортодо акырын чоңоёт, артында ошол сүрөттүн бүдөмүк/караңгы фону (кичине сүрөттөр үчүн)
+        fc = (f"[0:v]fps=30,split=2[a][b];"
+              f"[a]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,boxblur=40:3,"
+              f"eq=brightness=-0.18:saturation=0.85[bg];"
+              f"[b]scale=w='980*(1+0.06*t/{seconds:.2f})':h=-2:eval=frame:flags=lanczos[fg];"
+              # unsharp туруктуу өлчөмдө гана (өлчөмү өзгөргөн fg'де ffmpeg segfault берет)
+              f"[bg][fg]overlay=x=(W-w)/2:y=(H-h)/2-60:eval=frame,unsharp=5:5:0.4,setsar=1[v]")
+        # 2 кадам: ffmpeg 6.1 'overlay eval=frame' + drawtext бир графта segfault берет (код −11)
+        base = out + ".card.mp4"
+        _run(["ffmpeg", "-y", "-v", "error", *pre, "-i", src, "-t", f"{seconds:.2f}", "-an", "-filter_complex", fc,
+              "-map", "[v]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "18", "-pix_fmt", "yuv420p", base])
+        if vf:
+            _run(["ffmpeg", "-y", "-v", "error", "-i", base, "-an", "-vf", ",".join(vf),
+                  "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", out])
+            os.remove(base)
+        else:
+            os.replace(base, out)
+        return out
     _run(["ffmpeg", "-y", "-v", "error", *pre, "-i", src, "-t", f"{seconds:.2f}", "-an", "-vf", ",".join(vf),
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", out])
     return out

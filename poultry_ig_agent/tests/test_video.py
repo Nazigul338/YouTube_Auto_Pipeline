@@ -195,3 +195,16 @@ class Music(unittest.TestCase):
         r = video.build({"lang": "ky", "content_type": "education", "voiceover": "x", "shots": shots(3), "music": "none"},
                         tempfile.mkdtemp(), FakeVeo(), FakeTTS(), assets)
         self.assertIsNone(r["music"])
+
+
+@unittest.skipUnless(HAVE, "ffmpeg жок")
+class CardLayout(unittest.TestCase):
+    def test_card_small_image_with_text_and_fade(self):
+        from PIL import Image
+        d = tempfile.mkdtemp(); img = os.path.join(d, "p.png"); Image.new("RGB", (330, 225), (150, 90, 40)).save(img)
+        out = video.normalize(img, 2.0, os.path.join(d, "o.mp4"), "3. Мите курттар: бит жана кене", "", d,
+                              motion="card", fade=0.2, text_style="yellow")
+        v = [s for s in probe(out) if s["codec_type"] == "video"][0]
+        self.assertEqual((v["width"], v["height"]), (1080, 1920))
+        self.assertAlmostEqual(video.duration(out), 2.0, delta=0.15)
+        self.assertFalse([f for f in os.listdir(d) if f.endswith(".card.mp4")])
