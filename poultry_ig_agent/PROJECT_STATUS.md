@@ -125,3 +125,12 @@ Gemini текст ✅ (2026-11-19, run 44533063140) · Veo ❓ · Gemini TTS ✅
 1. Secrets кош → START (`carousel`, видеосуз) → чыныгы Gemini текшерүү. 2. `course.json` толтур. 3. Бир Reel `--video` (Veo/TTS текшерүү). 4. Meta app + токен → `publish` dry-run → `--live`. 5. 5 кол менен жарыялоодон кийин автопилот. 6. Drive аркылуу реалдуу видео, комментарий/DM мониторинг workflow.
 
 ## 9 Commit — төмөндө git log; 10 Иштетүү — README.md
+
+## ✅ Reels №4 «Тооктор эмне үчүн жүнүн түшүрөт?» (2026-11-24 ~16:40 UTC, run 45433994390)
+- `deliveries/Instagram_Reels_04/Instagram_Reels_04.mp4` — 58.3 сек, колдонуучунун инфографикасынан 13 сүрөт
+  (card кыймылы, сары текст) + Pixabay 57957 / 67070 / 32662; Charon warm (аралык 5.2%); өз музыка (A, 84 bpm, calm).
+- Оңдоо: run 45431149755 `needs_footage` — мурунку клиптер кайталанбоо тизмесинде болчу. Эми `stock_query` тизме
+  болушу мүмкүн жана `fallback_photo` (сток табылбаса колдонуучунун сүрөтү, AI эмес). Тест: `test_stock.FallbackPhotoTest`.
+- Белгилүү: негизги YouTube тесттеринин 10у бул контейнерде өтпөйт (`googleapiclient` жок, `test_ai_images`) —
+  poultry өзгөртүүлөрүнө тиешеси жок (бир да негизги файл өзгөргөн жок).
+- Кийинки: колдонуучунун пикири (музыка, Reels 03/04), WhatsApp шилтемеси, Meta API (кийин).
