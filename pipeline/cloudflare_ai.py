@@ -97,13 +97,12 @@ class CloudflareAI:
         return {"ok": True, "name": found.get("name"), "task": (found.get("task") or {}).get("name"),
                 "description": (found.get("description") or "")[:200]}
 
-    def generate_image(self, prompt: str, steps: int = 4, seed: int | None = None) -> bytes:
-        """FLUX.1 schnell → JPEG байттары. Бир гана суроо, кайра аракетсиз."""
+    def generate_image(self, prompt: str, steps: int = 4) -> bytes:
+        """FLUX.1 schnell → JPEG байттары. Бир гана суроо, кайра аракетсиз.
+        Модель схемасы prompt жана steps гана кабыл алат (run #45426693536: `seed` → 400 «unevaluated properties»)."""
         if self.images_made >= self.max_images:
             raise CloudflareError(f"чек: бир иштетүүдө {self.max_images} сүрөттөн ашык жаратылбайт")
         body = {"prompt": prompt[:2048], "steps": max(1, min(FLUX_MAX_STEPS, int(steps)))}
-        if seed is not None:
-            body["seed"] = int(seed)
         self.images_made += 1               # суроо жиберилгенге чейин эсептелет (ката болсо да)
         code, p = self._request("POST", f"/accounts/{{account}}/ai/run/{FLUX_MODEL}", body)
         if code == 429 or any(str(e.get("code")) in ("3036", "3040") for e in p.get("errors") or []

@@ -58,7 +58,7 @@ def run(out_dir: Path, log=print) -> dict:
     log(f"✅ Модель бар: {m['name']} ({m.get('task')})")
 
     try:
-        data = cf.generate_image(TEST_PROMPT, steps=4, seed=20261124)
+        data = cf.generate_image(TEST_PROMPT, steps=4)
     except QuotaError as e:
         res["error"] = str(e)
         log(f"⛔ Акысыз лимит: {e} — акы төлөнүүчү режимге өтүлбөйт")

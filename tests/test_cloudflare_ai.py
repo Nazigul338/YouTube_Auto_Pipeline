@@ -68,6 +68,7 @@ class TestCloudflareAI(unittest.TestCase):
             self.assertTrue((Path(d) / "flux_test.jpg").exists())
         runs = [c for c in fake.calls if "/ai/run/" in c[1]]
         self.assertEqual(len(runs), 1)                       # бир гана сүрөт
+        self.assertEqual(set(json.loads(runs[0][2])), {"prompt", "steps"})   # схемада seed жок
         self.assertEqual(json.loads(runs[0][2])["steps"], 4)
         blob = json.dumps(res) + "\n".join(logs)
         self.assertNotIn(TOKEN, blob)
