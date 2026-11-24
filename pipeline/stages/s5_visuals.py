@@ -261,6 +261,10 @@ class VisualsStage(Stage):
         if _st.is_story(ctx.cfg):        # кино-окуя: окуянын көз ирмемдери так — көбүрөөк кадр алмаштырылат
             self.MAX_REPLACE = 50        # (run #44903598138: 91/167 кадр ≤2/5, 25 гана алмаштырылчу)
             self.film = True             # кадр режиссёрдун планына (visual_prompt) бааланат; алмаштыруу 3 айлампа
+        from .. import sections as _sec
+        if _sec.enabled(ctx.cfg) and not _st.is_story(ctx.cfg):
+            # run #45354695418 (mp7): 56 начар кадрдын 25'и гана сыналып, орточо 2.90 (<3.0) калды → 2 айлампа
+            self.rounds = 2
         if quality:
             results, ai_stats = self.ai_relevance(ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u)
             ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
@@ -617,7 +621,7 @@ SHOTS:
         btext = {i: text(i) for i in low} if film else stext
         # run #44921404755: бир айлампада 99 начар кадрдын 17'си гана алмашты → кино форматта 2 айлампа
         # run #45002414086: 2 айлампа × 50 = 100 < 139 начар кадр → кино форматта 3 айлампа
-        for round_ in range(3 if film else 1):
+        for round_ in range(3 if film else getattr(self, "rounds", 1)):
             todo = sorted((i for i in low if is_low(i)),
                           key=lambda i: (i != first, scores[i]))[: self.MAX_REPLACE]
             if not todo:

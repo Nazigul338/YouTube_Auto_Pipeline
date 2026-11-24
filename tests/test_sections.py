@@ -80,6 +80,29 @@ class TestFormatCheck(unittest.TestCase):
         self.assertEqual(rep["problems"], [])
         self.assertIn("format_fix", G.calls)
 
+    def test_enforce_accepts_shorter_fix(self):
+        """run #45354695418: оңдолгон текст ~25% кыска болгондуктан ташталып, формат бузук калган."""
+        good = make_script(870, "-x")
+        bad = self.text.replace("Например,", "Однажды,")
+
+        class G:
+            prompts = []
+
+            def json(self, prompt, **k):
+                return fake_format_map(prompt.split("СЦЕНАРИЙ:\n", 1)[-1])
+
+            def text(self, prompt, **k):
+                self.prompts.append(prompt)
+                return good
+        new, _, rep = sections.enforce(G(), bad, "тема", [], [].append)
+        self.assertEqual(new, good)
+        self.assertEqual(rep["problems"], [])
+        self.assertIn("НЕ МЕНЬШЕ", G.prompts[0])
+        # өтө кыска (<55%) вариант мурункудай ташталат
+        G.text = lambda self, p, **k: make_script(500, "-x")
+        new2, _, _ = sections.enforce(G(), bad, "тема", [], [].append)
+        self.assertEqual(new2, bad)
+
     def test_scene_labels(self):
         info, _ = mapped(self.text)
         w = self.text.split()
