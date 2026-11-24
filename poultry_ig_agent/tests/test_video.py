@@ -171,3 +171,27 @@ class PhotoStory(unittest.TestCase):
         r = video.build(post, os.path.join(d, "out"), FakeVeo(), FakeTTS(), assets)
         self.assertEqual(r["status"], "ready", r)
         self.assertAlmostEqual(video.duration(r["path"]), 12 / 1.1 + 0.5, delta=0.6)   # 12с үн 1.1x тезирээк
+
+
+@unittest.skipUnless(HAVE, "ffmpeg жок")
+class Music(unittest.TestCase):
+    def test_generated_music_unique_per_video_and_licensed(self):
+        from poultry_ig_agent import music_gen
+        a, b = music_gen.plan("Instagram_Reels_03"), music_gen.plan("Instagram_Reels_04")
+        self.assertNotEqual((a["key"], a["bpm"], a["progression"]), (b["key"], b["bpm"], b["progression"]))
+        d = tempfile.mkdtemp(); info = music_gen.generate(os.path.join(d, "m.wav"), 3, "x")
+        self.assertEqual(info["source"], "generated"); self.assertIn("own composition", info["license"])
+        self.assertAlmostEqual(video.duration(os.path.join(d, "m.wav")), 3, delta=0.1)
+
+    def test_build_records_music(self):
+        assets = tempfile.mkdtemp(); os.makedirs(os.path.join(assets, "real"))
+        r = video.build({"id": "t1", "lang": "ky", "content_type": "education", "voiceover": "x", "shots": shots(3)},
+                        tempfile.mkdtemp(), FakeVeo(), FakeTTS(), assets)
+        self.assertEqual(r["status"], "ready", r)
+        self.assertEqual(r["music"]["source"], "generated")
+
+    def test_music_off(self):
+        assets = tempfile.mkdtemp(); os.makedirs(os.path.join(assets, "real"))
+        r = video.build({"lang": "ky", "content_type": "education", "voiceover": "x", "shots": shots(3), "music": "none"},
+                        tempfile.mkdtemp(), FakeVeo(), FakeTTS(), assets)
+        self.assertIsNone(r["music"])

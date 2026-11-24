@@ -432,7 +432,9 @@ def assemble(clips, voice, srt_path, out, music=None):
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", joined, "-i", voice]
     if music:
         cmd += ["-stream_loop", "-1", "-i", music]
-        fc = ("[1:a]aresample=44100[v];[2:a]volume=0.10,aresample=44100[m];"
+        # музыка диктор сүйлөгөндө автоматтык акырындайт (sidechain ducking)
+        fc = ("[1:a]aresample=44100,asplit=2[v][vs];[2:a]aresample=44100,volume=0.30[m0];"
+              "[m0][vs]sidechaincompress=threshold=0.02:ratio=6:attack=30:release=500[m];"
               "[v][m]amix=inputs=2:duration=first:normalize=0,loudnorm=I=-16:TP=-1.5[a]")
     else:
         fc = "[1:a]aresample=44100,loudnorm=I=-16:TP=-1.5[a]"
@@ -520,6 +522,12 @@ def build(post, post_dir, veo, tts, assets_dir, allow_ai_fallback=False, niche=N
         with open(sp, "w", encoding="utf-8") as f:
             f.write(srt(post["voiceover"], total))
         music = next(iter(sorted(glob.glob(os.path.join(assets_dir, "music", "*.mp3")) + glob.glob(os.path.join(assets_dir, "music", "*.wav")))), None)
+        music_info = {"source": "file", "path": os.path.basename(music)} if music else None
+        mode = post.get("music", settings.load_settings()["video"].get("music", "generated"))
+        if not music and mode == "generated":       # өз обонубуз: лицензия таза, ар видеого башка
+            from . import music_gen
+            music = os.path.join(work, "music.wav")
+            music_info = music_gen.generate(music, total + 1, post.get("id") or post.get("voiceover", ""), post.get("music_mood", "warm"))
         out = assemble(clips, voice, sp, os.path.join(post_dir, "final.mp4"), music)
     except Exception as e:
         L.error("Видео жасоо ката: %s", e)
@@ -529,6 +537,7 @@ def build(post, post_dir, veo, tts, assets_dir, allow_ai_fallback=False, niche=N
     if licenses:
         with open(os.path.join(post_dir, "licenses.json"), "w", encoding="utf-8") as f:
             json.dump(licenses, f, ensure_ascii=False, indent=2)
-    return {"status": "ready", "path": out, "tts_model": getattr(tts, "last_model", None),
+    post["music_info"] = music_info
+    return {"status": "ready", "path": out, "tts_model": getattr(tts, "last_model", None), "music": music_info,
             "ai_shots": sum(s["source"] == "ai" for s in shots),
             "stock_shots": sum(s["source"] == "stock" for s in shots), "shots": shots, "licenses": licenses}

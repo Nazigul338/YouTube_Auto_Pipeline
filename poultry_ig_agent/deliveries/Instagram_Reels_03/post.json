@@ -248,5 +248,20 @@
     ]
   },
   "video": "final.mp4",
-  "video_status": "ready"
+  "video_status": "ready",
+  "music_info": {
+    "source": "generated",
+    "license": "own composition (poultry_ig_agent/music_gen.py)",
+    "key": "F",
+    "bpm": 92,
+    "progression": [
+      0,
+      5,
+      3,
+      4
+    ],
+    "mood": "warm",
+    "seed_text": "2026-11-24-reels03",
+    "note": "Instagram_Reels_03.mp4 = музыкалуу; final.mp4 = музыкасыз нуска"
+  }
 }

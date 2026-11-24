@@ -255,6 +255,8 @@ def attach_video(pid, veo=None, tts=None, allow_ai_fallback=False, voice_file=No
         post["shots"] = res["shots"]
         if res.get("licenses"):
             post["licenses"] = res["licenses"]
+        if res.get("music"):
+            post["music_info"] = res["music"]
         if res.get("tts_model"):
             post["tts"] = {"model": res["tts_model"], "voice": getattr(tts, "voice", None), "style": getattr(tts, "style", None),
                            "consistency": getattr(tts, "report", None)}

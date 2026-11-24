@@ -111,6 +111,13 @@ Run'дар: 44732111083 (кой, жарык/суу кадрлары тиешес
 (post.json → originality). Run 45370297752; Charon 3.8, үн айырмасы 6.4%; blackdetect таза. Сүрөттөр: assets/reels03/ (ачык репо).
 Жаңы код: kenburns/fade/text_style, photo булагы, voice_tempo, fit_durations кыскартуу.
 
+
+## Фондук музыка (2026-11-24)
+Колдонуучу: Reels'ке фондук музыка, кийинки видеолорго да. music_gen.py — Karplus-Strong гитара + pad + reverb,
+seed = пост ID (ар видеого башка тон/темп/аккорд), лицензия: өз чыгарма. Ducking (sidechaincompress), музыка ≈ −18…−20 дБ.
+Демейки: settings video.music = "generated". Reels №3'кө кошулду (Instagram_Reels_03.mp4; final.mp4 — музыкасыз).
+Колдонуучунун угуп ырастоосу күтүлүүдө.
+
 ## 7 API абалы
 Gemini текст ✅ (2026-11-19, run 44533063140) · Veo ❓ · Gemini TTS ✅ (2026-11-19, run 44509150003) · Meta Graph ❓ (❓ = чыныгы чакыруу менен али текшерилген эмес). Secrets: `POULTRY_GEMINI_API_KEY`, `POULTRY_IG_ACCESS_TOKEN`, `POULTRY_IG_USER_ID`.
 
