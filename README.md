@@ -187,12 +187,19 @@ API ачкычтары **GitHub Secrets'те гана**; логдо email жаш
 - **Текшерүү:** Actions → `🔬 Мүмкүнчүлүктөрдү сыноо` → `only=image` (1 сүрөт ≈ $0.04).
 
 
-## ☁️ Cloudflare Workers AI — FLUX.1 schnell (СЫНАК, 2026-11-24)
-Видео системасына КОШУЛГАН ЭМЕС: өзүнчө сыноо. Actions → «☁️ Cloudflare AI сыноо» → Run workflow.
-Ал токенди жана `@cf/black-forest-labs/flux-1-schnell` моделинин жеткиликтүүлүгүн текшерет, анан **бир гана**
-тесттик сүрөт жаратат (Artifacts → `cloudflare-flux-test`). Код: `pipeline/cloudflare_ai.py` (токен/account ID
-логго чыкпайт, суроо кайталанбайт, бир иштетүүдө ≤1 сүрөт, акысыз лимит бүтсө токтойт), `pipeline/cf_probe.py`.
-Акысыз Workers AI лимити — күнүнө 10 000 neuron; Workers Paid планга өтүлбөйт.
+## ☁️ Cloudflare Workers AI — FLUX.1 schnell + акысыз лимит көзөмөлү (СЫНАК, 2026-11-24)
+Видео системасына (make_video) КОШУЛГАН ЭМЕС — өзүнчө модуль. Actions → «☁️ Cloudflare AI сыноо»:
+- `status` — сүрөт жаратпайт: бүгүнкү лимит, колдонулган/калган neuron, дагы канча сүрөт болот (dashboard);
+- `test` — 1–5 сүрөт; ар биринен МУРУН бюджет текшерилет, кийин Cloudflare аналитикасынан чыныгы чыгымы өлчөнөт.
+
+Коргоо (`pipeline/cf_budget.py`): лимит 10 000 neuron/күн (UTC 00:00'дө жаңырат), 10% резерв → 9 000'ден ашпайт;
+8 100'дө эрте эскертүү; колдонулганы = max(жергиликтүү журнал, Cloudflare аналитикасы); ката болсо кайра аракет жок;
+бир иштетүүдө ≤5 сүрөт; акы төлөнүүчү API чакырылбайт. Формула: `available = 10000 − used − 1000`,
+`max_images = floor(available / avg_neurons_per_image)`. Тарых күндөр боюнча Drive `YouTube_Auto/Logs/cloudflare_ai_usage.json`
+файлында (эч качан өчүрүлбөйт), dashboard — `Logs/cloudflare_ai_dashboard.md` жана run'дун Summary бети.
+Чыныгы колдонууну окуу үчүн токенге «Account Analytics: Read» уруксаты керек; жок болсо жарыяланган баа боюнча
+баалоо колдонулат (1024×1024, 4 кадам ≈ 57.6 neuron) жана бул отчетто ачык жазылат.
+Код: `pipeline/cloudflare_ai.py`, `pipeline/cf_budget.py`, `pipeline/cf_probe.py`.
 
 ## 🔊 Үн эффекттери (Sound Effects Library) — PRODUCTION'до күйүк (2026-11-20)
 

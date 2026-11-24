@@ -97,14 +97,25 @@ class CloudflareAI:
         return {"ok": True, "name": found.get("name"), "task": (found.get("task") or {}).get("name"),
                 "description": (found.get("description") or "")[:200]}
 
-    def generate_image(self, prompt: str, steps: int = 4) -> bytes:
+    def generate_image(self, prompt: str, steps: int = 4, budget=None) -> bytes:
         """FLUX.1 schnell → JPEG байттары. Бир гана суроо, кайра аракетсиз.
-        Модель схемасы prompt жана steps гана кабыл алат (run #45426693536: `seed` → 400 «unevaluated properties»)."""
+        Модель схемасы prompt жана steps гана кабыл алат (run #45426693536: `seed` → 400 «unevaluated properties»).
+        budget (cf_budget.Budget) берилсе: суроодон МУРУН акысыз лимит текшерилет (ашса BudgetExceeded),
+        кийин чыгым журналга жазылат (ийгиликсиз суроо да)."""
         if self.images_made >= self.max_images:
             raise CloudflareError(f"чек: бир иштетүүдө {self.max_images} сүрөттөн ашык жаратылбайт")
-        body = {"prompt": prompt[:2048], "steps": max(1, min(FLUX_MAX_STEPS, int(steps)))}
+        steps = max(1, min(FLUX_MAX_STEPS, int(steps)))
+        est = None
+        if budget is not None:
+            from .cf_budget import estimate_neurons
+            est = estimate_neurons(1024, 1024, steps)
+            budget.check(est)                       # BudgetExceeded → суроо жиберилбейт
+        body = {"prompt": prompt[:2048], "steps": steps}
         self.images_made += 1               # суроо жиберилгенге чейин эсептелет (ката болсо да)
         code, p = self._request("POST", f"/accounts/{{account}}/ai/run/{FLUX_MODEL}", body)
+        ok = code == 200 and p.get("success") and (p.get("result") or {}).get("image")
+        if budget is not None:
+            budget.record(bool(ok), est, note="" if ok else f"HTTP {code}: {self._errors(p)}")
         if code == 429 or any(str(e.get("code")) in ("3036", "3040") for e in p.get("errors") or []
                               if isinstance(e, dict)):
             raise QuotaError(f"акысыз лимит/чек: {self._errors(p)}")
@@ -114,3 +125,36 @@ class CloudflareAI:
         if not img:
             raise CloudflareError("жоопто сүрөт жок")
         return base64.b64decode(img)
+
+    # ── колдонуу аналитикасы (акысыз GraphQL; сүрөт жаратпайт) ─────────────
+    USAGE_QUERY = """query Usage($acc: string!, $start: Time!, $end: Time!) {
+  viewer { accounts(filter: {accountTag: $acc}) {
+    aiInferenceAdaptiveGroups(limit: 100, filter: {datetime_geq: $start, datetime_leq: $end}) {
+      count
+      sum { totalNeurons }
+      dimensions { modelId }
+    }
+  } }
+}"""
+
+    def neuron_usage(self, start: str, end: str) -> dict:
+        """Cloudflare GraphQL Analytics: [start, end] аралыгындагы neuron жана суроо саны (моделдер боюнча).
+        Токенде «Account Analytics: Read» уруксаты жок болсо → {"ok": False, "error": ...}."""
+        code, p = self._request("POST", "/graphql", {"query": self.USAGE_QUERY,
+                                                     "variables": {"acc": self._account, "start": start, "end": end}})
+        if code != 200 or p.get("errors") or not p.get("data"):
+            errs = p.get("errors") or []
+            msg = "; ".join(str(e.get("message")) for e in errs if isinstance(e, dict)) or f"HTTP {code}"
+            return {"ok": False, "error": self._safe(msg)[:300]}
+        try:
+            groups = p["data"]["viewer"]["accounts"][0]["aiInferenceAdaptiveGroups"] or []
+        except (KeyError, IndexError, TypeError):
+            return {"ok": False, "error": "аналитика жообу күтүлгөн түрдө эмес"}
+        by = {}
+        for g in groups:
+            m = (g.get("dimensions") or {}).get("modelId") or "?"
+            by.setdefault(m, {"requests": 0, "neurons": 0.0})
+            by[m]["requests"] += int(g.get("count") or 0)
+            by[m]["neurons"] += float((g.get("sum") or {}).get("totalNeurons") or 0.0)
+        return {"ok": True, "total": round(sum(v["neurons"] for v in by.values()), 3),
+                "requests": sum(v["requests"] for v in by.values()), "by_model": by}

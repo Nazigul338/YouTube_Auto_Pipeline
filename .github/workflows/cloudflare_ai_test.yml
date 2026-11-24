@@ -1,9 +1,21 @@
-name: ☁️ Cloudflare AI сыноо (FLUX.1 schnell)
+name: ☁️ Cloudflare AI сыноо (FLUX.1 schnell, акысыз лимит)
 
-# Cloudflare Workers AI: токенди, FLUX.1 schnell жеткиликтүүлүгүн текшерет жана БИР тесттик сүрөт жаратат.
-# Видео системасына (make_video) тийбейт. Акысыз күнүмдүк лимит ичинде гана (бир сүрөт).
+# Cloudflare Workers AI акысыз лимитин көзөмөлдөйт (10 000 neuron/күн, 10% резерв) жана FLUX.1 schnell тести.
+#   status — сүрөт жаратпайт, dashboard гана (бекер);  test — ≤5 сүрөт, ар биринин чыныгы чыгымы өлчөнөт.
+# Видео системасына (make_video) тийбейт. Акы төлөнүүчү режимге өтпөйт.
 on:
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "status — лимитти гана көрүү; test — сүрөт жаратуу"
+        default: status
+        type: choice
+        options: [status, test]
+      images:
+        description: "test режиминде сүрөт саны (1–5)"
+        default: "5"
+        type: choice
+        options: ["1", "2", "3", "4", "5"]
 
 permissions:
   contents: read
@@ -15,20 +27,28 @@ concurrency:
 jobs:
   flux:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Сыноо (токен → модель → 1 сүрөт)
+          cache: pip
+      - name: Китепканалар (Drive журналы үчүн)
+        run: pip install -q google-api-python-client google-auth
+      - name: Лимит мониторинги / тест
         env:
-          # Секреттер env аркылуу гана өтөт; GitHub аларды логдо автоматтык *** менен жашырат.
+          # Секреттер env аркылуу гана өтөт; GitHub аларды логдо *** менен жашырат, код да чыгарбайт.
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          CF_MODE: ${{ inputs.mode }}
+          CF_IMAGES: ${{ inputs.images }}
           CF_OUT: cf_test
         run: python -m pipeline.cf_probe
-      - name: Тесттик сүрөт (артефакт)
+      - name: Натыйжа (артефакт)
         if: always()
         uses: actions/upload-artifact@v4
         with:
