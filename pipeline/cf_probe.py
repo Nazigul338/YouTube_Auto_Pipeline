@@ -70,6 +70,24 @@ def flux_usage(cf: CloudflareAI, now=None) -> dict:
     return u
 
 
+def reconcile(cf, budget, log, days: int = 7) -> int:
+    """Журналдагы акыркы күндөрдүн чыныгы чыгымын аналитикадан кайра окуйт (уруксат кийин кошулса да
+    мурунку сүрөттөрдүн чыныгы баасы табылат). → канча күн жаңыланды."""
+    n = 0
+    for d in sorted(budget.data["days"])[-days:]:
+        start = datetime.strptime(d, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        end = min(datetime.now(timezone.utc), start.replace(hour=23, minute=59, second=59))
+        u = cf.neuron_usage(_iso(start), _iso(end))
+        if not u.get("ok"):
+            return n
+        f = u["by_model"].get(FLUX_MODEL, {"requests": 0, "neurons": 0.0})
+        budget.set_api(u["total"], d, flux=f)
+        n += 1
+    if n:
+        log(f"   ↻ аналитикадан {n} күндүн чыныгы чыгымы жаңыланды")
+    return n
+
+
 def wait_measure(cf, before: dict, wait: float, poll: float, log, sleep=time.sleep) -> tuple[float | None, dict]:
     """Аналитикада FLUX суроолорунун саны өскөнчө күтөт → (бул суроонун neuron'у, жаңы абал)."""
     t0 = time.monotonic()
@@ -112,7 +130,8 @@ def run(out_dir: Path, log=print, mode: str = "status", images: int = 0, store=N
     u = flux_usage(cf)
     res["analytics"] = {"ok": u.get("ok"), "error": u.get("error")}
     if u.get("ok"):
-        budget.set_api(u["total"])
+        reconcile(cf, budget, log)
+        budget.set_api(u["total"], flux={"requests": u["flux_requests"], "neurons": u["flux_neurons"]})
         log(f"✅ Cloudflare аналитикасы: бүгүн {u['total']} neuron, {u['requests']} суроо "
             f"(FLUX: {u['flux_requests']} суроо, {u['flux_neurons']:.2f} neuron)")
     else:
@@ -143,7 +162,7 @@ def run(out_dir: Path, log=print, mode: str = "status", images: int = 0, store=N
                 budget.set_measured(rec, meas)
                 info["measured"] = meas
             if u.get("ok"):
-                budget.set_api(u["total"])
+                budget.set_api(u["total"], flux={"requests": u["flux_requests"], "neurons": u["flux_neurons"]})
         res["images"].append(info)
         warn = budget.check(0) if budget.used() < cb.DAILY_LIMIT * (1 - cb.SAFETY_RESERVE) else None
         log(f"✅ Сүрөт {i + 1}: {info['size']}, {len(data) // 1024} КБ; чыгым "
@@ -159,6 +178,9 @@ def run(out_dir: Path, log=print, mode: str = "status", images: int = 0, store=N
     dash = cb.dashboard_md(rep, video, hist)
     res.update(report=rep, video_plan=video)
     res["dashboard_link"] = store.save(budget.to_json(), dash)
+    if getattr(store, "error", None):
+        res["storage_error"] = store.error
+        log(f"⚠️ Журнал Drive'га сакталган жок: {store.error} — артефактта гана (cf_test/{cb.LEDGER_NAME})")
     (out_dir / "dashboard.md").write_text(dash, encoding="utf-8")
     good = [x for x in res["images"] if x["size"]]
     res["ok"] = (mode == "status") or (len(good) == images and not stop)

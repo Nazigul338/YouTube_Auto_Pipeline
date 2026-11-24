@@ -223,3 +223,27 @@ class TestBudget(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestStorageAndReconcile(unittest.TestCase):
+    def test_drive_full_does_not_break(self):
+        class Drive:
+            def find_path(self, *a):
+                return "logs"
+
+            def find_file(self, *a):
+                return None
+
+            def write_json(self, *a, **k):
+                raise RuntimeError("HttpError 403 storageQuotaExceeded")
+        with tempfile.TemporaryDirectory() as d:
+            st = cb.LedgerStore(Drive(), local=Path(d) / "l.json")
+            self.assertIsNone(st.save({"days": {}}, "# dash"))
+            self.assertIn("толуп", st.error)
+            self.assertTrue((Path(d) / "l.json").exists())
+
+    def test_avg_from_daily_flux_totals(self):
+        b = cb.Budget({}, now=lambda: datetime(2026, 11, 25, 9, tzinfo=timezone.utc))
+        b.set_api(300.0, "2026-11-24", flux={"requests": 5, "neurons": 290.0})
+        self.assertEqual(b.avg_per_image()[0], 58.0)
+        self.assertIn("чыныгы", b.avg_per_image()[1])

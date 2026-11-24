@@ -83,6 +83,10 @@ class Budget:
         real = [r["measured"] for r in reqs if r.get("measured")]
         if real:
             return round(sum(real) / len(real), 2), "чыныгы (Cloudflare аналитикасы)"
+        fx = [x["api_flux"] for x in self.data["days"].values() if (x.get("api_flux") or {}).get("requests")]
+        if fx:   # аналитика кийин окулган: FLUX'тун бардык суроолорунун орточосу
+            return (round(sum(f["neurons"] for f in fx) / sum(f["requests"] for f in fx), 2),
+                    "чыныгы (Cloudflare аналитикасы, күндүк жыйынтык)")
         return estimate_neurons(), "баалоо (жарыяланган баа)"
 
     def capacity(self, d: str | None = None) -> dict:
@@ -123,10 +127,13 @@ class Budget:
         rec["measured"] = round(measured, 3)
         x["local_neurons"] = round(x["local_neurons"] - old + measured, 3)
 
-    def set_api(self, neurons: float | None) -> None:
-        x = self.day()
+    def set_api(self, neurons: float | None, d: str | None = None, flux: dict | None = None) -> None:
+        """Cloudflare аналитикасынын чыныгы саны (күн боюнча). flux = {"requests", "neurons"} — FLUX өзүнчө."""
+        x = self.day(d)
         x["api_neurons"] = None if neurons is None else round(float(neurons), 3)
         x["api_checked_at"] = self._now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        if flux is not None:
+            x["api_flux"] = {"requests": int(flux["requests"]), "neurons": round(float(flux["neurons"]), 3)}
 
     # ── отчет ──────────────────────────────────────────────────────────────
     def report(self, d: str | None = None) -> dict:
@@ -240,14 +247,22 @@ class LedgerStore:
         return json.loads(self.local.read_text(encoding="utf-8")) if self.local.exists() else {}
 
     def save(self, data: dict, dashboard: str | None = None) -> str | None:
+        """Жергиликтүү (артефакт) + Drive. Drive катасы (мис. run #45429210443: storageQuotaExceeded)
+        генерацияны бузбайт — журнал артефактта калат, себеби self.error'го жазылат."""
         self.local.parent.mkdir(parents=True, exist_ok=True)
         self.local.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-        link = None
-        if self._logs_id():
+        if dashboard:
+            self.local.with_name(DASHBOARD_NAME).write_text(dashboard, encoding="utf-8")
+        self.error = None
+        try:
+            if not self._logs_id():
+                return None
             self.drive.write_json(LEDGER_NAME, self._logs, data)
-            if dashboard:
-                p = self.local.with_name(DASHBOARD_NAME)
-                p.write_text(dashboard, encoding="utf-8")
-                fid = self.drive.put_file(p, self._logs, DASHBOARD_NAME)
-                link = f"https://drive.google.com/file/d/{fid}/view" if fid else None
-        return link
+            fid = self.drive.put_file(self.local.with_name(DASHBOARD_NAME), self._logs, DASHBOARD_NAME) \
+                if dashboard else None
+            return f"https://drive.google.com/file/d/{fid}/view" if fid else None
+        except Exception as e:
+            msg = str(e)
+            self.error = ("Drive толуп калган (storageQuotaExceeded)" if "storageQuotaExceeded" in msg
+                          else f"Drive'га жазылган жок ({type(e).__name__})")
+            return None
