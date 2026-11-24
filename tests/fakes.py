@@ -130,7 +130,7 @@ class FakeGemini:
             out.append([b / 255 for b in h])
         return out
 
-    def tts(self, text: str, *, voice: str, style: str, variant: int = 0, models=None):
+    def tts(self, text: str, *, voice: str, style: str, variant: int = 0, models=None, lang: str = "Russian"):
         """Сөз санына жараша узактыктагы синус (24 кГц PCM)."""
         self.calls.append("tts")
         self.usage.append({"purpose": "tts", "model": (models or ["fake-tts"])[0]})

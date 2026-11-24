@@ -26,6 +26,11 @@ from pathlib import Path
 
 TEST_ROOT = "YouTube_Auto_TEST"
 PROD_ROOT = "YouTube_Auto"
+# Англисче «Tech History» каналы (2026-11-24): өз Drive тамыры, өз реестри; монтаж эрежелери ошол эле.
+EN_TEST_ROOT = "YouTube_Auto_EN_TEST"
+EN_PROD_ROOT = "YouTube_Auto_EN"
+TEST_ROOTS = (TEST_ROOT, EN_TEST_ROOT)
+PROD_ROOTS = (PROD_ROOT, EN_PROD_ROOT)
 # Колдонуучунун уруксаты (2026-11-20, «Өткөрө бер»): cinematic монтаж, угулуучу музыка, үн эффекттери жана
 # мотивациялык диктор production'до да иштейт. AI-сүрөттөр — СЫНАК гана (billing жок, колдонуучунун чечими).
 PRODUCTION_APPROVED = True
@@ -38,13 +43,13 @@ def allowed_root(store=None) -> bool:
     if isinstance(store, LocalStore):
         return True
     root = root_name(store)
-    return root == TEST_ROOT or (PRODUCTION_APPROVED and root == PROD_ROOT)
+    return root in TEST_ROOTS or (PRODUCTION_APPROVED and root in PROD_ROOTS)
 
 
 def is_test_root(store=None) -> bool:
     from .storage import LocalStore
 
-    return isinstance(store, LocalStore) or root_name(store) == TEST_ROOT
+    return isinstance(store, LocalStore) or root_name(store) in TEST_ROOTS
 
 # ---------------------------------------------------------------- режим
 

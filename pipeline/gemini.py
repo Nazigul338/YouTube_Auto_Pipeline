@@ -171,7 +171,7 @@ class Gemini:
     # ------------------------------------------------------------ үн
     TTS_PROMPTS = (
         # 0: англисче режиссёрдук нускама + текст (нускаманы окубоо эскертилет)
-        "Read the following Russian text aloud as a narrator. Voice direction (do NOT read "
+        "Read the following {lang} text aloud as a narrator. Voice direction (do NOT read "
         "it aloud): {style}\n\n{text}",
         # 1: (алынды — сыноодо «Say in a deep…» деп ОКУЛУП калды) → таза текст
         "{text}",
@@ -180,7 +180,7 @@ class Gemini:
     )
 
     def tts(self, text: str, *, voice: str, style: str, variant: int = 0,
-            models: list[str] | None = None) -> tuple[bytes, int]:
+            models: list[str] | None = None, lang: str = "Russian") -> tuple[bytes, int]:
         """PCM s16le моно байттары жана жыштыгы. Gemini WAV да, таза PCM да кайтара алат."""
         import io
         import wave
@@ -188,7 +188,7 @@ class Gemini:
         from google.genai import types
 
         style_short = "Say in a deep, calm, confident voice"
-        prompt = self.TTS_PROMPTS[variant].format(style=style.strip(), style_short=style_short,
+        prompt = self.TTS_PROMPTS[variant].format(style=style.strip(), style_short=style_short, lang=lang,
                                                   text=text.strip())
 
         def fn(model: str) -> tuple[bytes, int]:

@@ -22,7 +22,7 @@ from typing import Any
 
 import difflib
 
-from .. import asr, media
+from .. import asr, lang, media
 from ..textutil import word_count
 from .base import Context, Stage, StageError, gemini_of
 
@@ -73,7 +73,7 @@ class VoiceStage(Stage):
         chunks = make_chunks(scenes)
         style = cfg.niche_data.get("tts_style", "Deep, calm, confident male voice.")
         from .. import voice_style
-        motivational = voice_style.enabled(ctx.store)     # СЫНАК гана (TEST папкасы + желек)
+        motivational = voice_style.enabled(ctx.store) and not lang.is_en(cfg)   # орусча режиссура гана
         kw_per_chunk = chunk_keywords(scenes) if motivational else []
         from .. import story as stl
         is_story = stl.is_story(cfg)
@@ -152,7 +152,8 @@ class VoiceStage(Stage):
         expect = [asr.norm_word(w) for w in text.split() if asr.norm_word(w)]
         for attempt, variant in enumerate((0, 2, 0, 2), 1):
             pcm, rate = g.tts(tts_text or text, voice=ctx.cfg.tts_voice, style=style, variant=variant,
-                              models=[self.pinned] if self.pinned else None)
+                              models=[self.pinned] if self.pinned else None,
+                              **({"lang": "English"} if lang.is_en(ctx.cfg) else {}))
             used = next((u["model"] for u in reversed(getattr(g, "usage", []))
                          if u.get("purpose") == "tts"), self.pinned or "?")
             dur = media.write_wav(wav, pcm, rate)

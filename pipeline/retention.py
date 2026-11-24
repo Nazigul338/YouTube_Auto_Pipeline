@@ -76,6 +76,65 @@ FIX_PROMPT = """Ты — сценарист психологического You
 {text}"""
 
 
+# ----------------------------------------------------------- англисче канал (2026-11-24, Tech History документалдык)
+GREETINGS_EN = ("hi ", "hello", "hey guys", "welcome", "in this video", "today we", "today i", "let's talk",
+                "what's up", "before we begin", "don't forget to subscribe")
+
+REVIEW_PROMPT_EN = """You are the most demanding viewer and audience-retention editor of an English-language technology
+history documentary YouTube channel. The goal is NOT to bait clicks but to honestly hook and keep viewers to the end.
+Rate the script strictly.
+
+Title: {title}
+Hook type: {hook_type}
+
+Reply ONLY with JSON:
+{{"hook_score": <1-10: will the first 3 seconds make a viewer stay? a surprising fact, paradox, high stake or open
+  question about the story; makes the viewer need to know what happened next; short, on topic, no deception or
+  sensationalism. 8+ only if the first 3 seconds truly grab>,
+ "hook_reason": "<short why>",
+ "hook_on_topic": <true/false: the hook is directly about the main story>,
+ "intro_drag": <true/false: the opening drags (greetings, long intro, background before the point)>,
+ "promise": "<what the viewer will learn by watching to the end — as promised in the opening>",
+ "promise_delivered": <true/false: the script really delivers it>,
+ "delivered_quote": "<VERBATIM short quote (5-15 words) from the script where the promise is delivered>",
+ "false_promises": ["<promises/teasers that are NOT answered in the script>"],
+ "repetitions": ["<ideas repeated without new value>"],
+ "sag_points": ["<where (sentence start) interest drops in the middle>"],
+ "reengagement": ["<sentence starts: questions/turns that bring attention back>"],
+ "ending_score": <1-10: the ending clearly lands the lesson/legacy of the story and leaves a strong impression>,
+ "ending_lesson": "<main takeaway of the ending in one sentence>",
+ "retention_strategy": "<the retention strategy of THIS video: which open questions, turns and reveals keep
+   attention and where>"}}
+
+SCRIPT:
+{text}"""
+
+FIX_PROMPT_EN = """You are the scriptwriter of a technology history documentary channel. Improve ONLY the parts listed
+below; keep everything else word for word. Do NOT add facts, numbers, dates, names or quotes that are not already in
+the script. Do not promise anything the script does not deliver.
+
+What to fix:
+{fixes}
+
+Hook rules (first 3 seconds — the channel's main requirement): the first sentence is at most {max_words} words, no
+greetings or intro, straight into a surprising fact, paradox, high stake or open question from the story of
+"{title}". Sentences 2-3 honestly tell the viewer what they will understand by the end (and it is in the script).
+Hook type: {hook_type}.
+Ending: land the story's lesson and legacy clearly and strongly, without clichés.
+
+Return only the full text.
+
+TEXT:
+{text}"""
+
+FIX_TEXT_EN = {
+    "башталыш": "Rewrite the first 2-3 sentences (the hook): {why}.",
+    "убада": "The opening promises something the script does not deliver: either deliver it in the body in one "
+             "paragraph, or fix/remove the promise in the opening. {why}.",
+    "жыйынтык": "Rewrite the last paragraph: {why}.",
+}
+
+
 def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", s.lower().replace("ё", "е"))).strip()
 
@@ -85,7 +144,7 @@ def first_phrase(text: str) -> str:
     return re.split(r"(?<=[,;:—–?!.…])\s+", sent.strip())[0]
 
 
-def local_checks(text: str) -> dict:
+def local_checks(text: str, lang: str = "ru") -> dict:
     """Детерминдүү өлчөөлөр (Gemini'сиз)."""
     sents = sentences(text)
     first = sents[0] if sents else ""
@@ -97,7 +156,8 @@ def local_checks(text: str) -> dict:
     low = _norm(first)
     return {"first_sentence": first[:240], "first_words": word_count(first),
             "first_phrase_words": word_count(first_phrase(text)),
-            "greeting": next((g for g in GREETINGS if low.startswith(_norm(g))), None),
+            "greeting": next((g for g in (GREETINGS_EN if lang == "en" else GREETINGS)
+                              if low.startswith(_norm(g))), None),
             "mid_questions": sum(1 for s in mid if s.rstrip().endswith("?")),
             "repeated_paragraph_starts": rep_starts[:5],
             "ending_words": word_count(paras[-1]) if paras else 0, "paragraphs": len(paras)}
@@ -115,10 +175,10 @@ def quote_in_text(quote: str, text: str) -> bool:
     return sum(w in tw for w in q) / len(q) >= 0.8
 
 
-def review(g, text: str, title: str, hook_type: str) -> dict:
+def review(g, text: str, title: str, hook_type: str, lang: str = "ru") -> dict:
     """Gemini баалоосу. Жооп келбесе/бузук болсо — {'source': 'none'} (local_checks гана иштейт)."""
     try:
-        r = g.json(REVIEW_PROMPT.format(title=title, hook_type=hook_type, text=text),
+        r = g.json((REVIEW_PROMPT_EN if lang == "en" else REVIEW_PROMPT).format(title=title, hook_type=hook_type, text=text),
                    purpose="retention_review", temperature=0.2)
     except Exception as e:
         return {"source": "none", "error": f"{type(e).__name__}: {str(e)[:120]}"}
@@ -173,21 +233,22 @@ FIX_TEXT = {
 }
 
 
-def fix_instructions(probs: list[str]) -> str:
+def fix_instructions(probs: list[str], lang: str = "ru") -> str:
     out = []
+    FIX = FIX_TEXT_EN if lang == "en" else FIX_TEXT
     for p in probs:
         if "жыйынтык" in p:
-            out.append(FIX_TEXT["жыйынтык"].format(why=p))
+            out.append(FIX["жыйынтык"].format(why=p))
         elif "убада" in p:
-            out.append(FIX_TEXT["убада"].format(why=p))
+            out.append(FIX["убада"].format(why=p))
         else:
-            out.append(FIX_TEXT["башталыш"].format(why=p))
+            out.append(FIX["башталыш"].format(why=p))
     return "\n".join(f"- {x}" for x in dict.fromkeys(out))
 
 
-def improve(g, text: str, title: str, hook_type: str, log) -> tuple[str, dict]:
+def improve(g, text: str, title: str, hook_type: str, log, lang: str = "ru") -> tuple[str, dict]:
     """Текшерет; жетишсиз болсо бир жолу оңдотуп кайра текшерет. → (текст, retention отчету)."""
-    loc, rev = local_checks(text), review(g, text, title, hook_type)
+    loc, rev = local_checks(text, lang), review(g, text, title, hook_type, lang)
     probs = problems(loc, rev)
     rounds = [{"local": loc, "review": rev, "problems": probs}]
     log(f"   🎯 Hook/retention: hook {rev.get('hook_score', '-')}/10, финал {rev.get('ending_score', '-')}/10, "
@@ -195,11 +256,11 @@ def improve(g, text: str, title: str, hook_type: str, log) -> tuple[str, dict]:
     for _ in range(FIX_ROUNDS):
         if not probs:
             break
-        new = g.text(FIX_PROMPT.format(fixes=fix_instructions(probs), max_words=HOOK_FIRST_WORDS, title=title,
+        new = g.text((FIX_PROMPT_EN if lang == "en" else FIX_PROMPT).format(fixes=fix_instructions(probs, lang), max_words=HOOK_FIRST_WORDS, title=title,
                                        hook_type=hook_type, text=text), purpose="retention_fix", temperature=0.6)
         new = new.strip()
         if word_count(new) >= 0.85 * word_count(text) and new != text.strip():
-            loc2, rev2 = local_checks(new), review(g, new, title, hook_type)
+            loc2, rev2 = local_checks(new, lang), review(g, new, title, hook_type, lang)
             probs2 = problems(loc2, rev2)
             rounds.append({"local": loc2, "review": rev2, "problems": probs2})
             if len(probs2) <= len(probs):

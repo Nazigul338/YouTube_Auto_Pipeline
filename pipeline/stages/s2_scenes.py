@@ -20,8 +20,8 @@ from .base import Context, Stage, StageError, gemini_of
 
 EMOTIONS = ["calm", "tense", "sad", "hopeful", "determined", "reflective", "inspired", "dramatic"]
 
-PROMPT = """You are a film director and editor for a Russian-language psychology/motivation YouTube channel.
-Below is the narration split into numbered scenes (Russian). For EVERY scene return metadata.
+PROMPT = """You are a film director and editor for a {channel} YouTube channel.
+Below is the narration split into numbered scenes ({lang}). For EVERY scene return metadata.
 
 Return a JSON array with exactly {n} objects, in the same order, each:
 {{
@@ -33,8 +33,8 @@ Return a JSON array with exactly {n} objects, in the same order, each:
               1) literal real-life footage of the idea, 2) a human situation that SHOWS the idea (not a literal
               picture of a metaphor word), 3) a different setting/place, 4) a close-up detail (hands, face,
               meaningful object), 5) mood/atmosphere with people],
-  "keywords": ["<1-2 important Russian words or short phrases copied EXACTLY from this scene's text>"],
-  "on_screen_text": "<optional: 2-5 Russian words for an animated title card, only for key ideas, else empty>",
+  "keywords": ["<1-2 important {lang} words or short phrases copied EXACTLY from this scene's text>"],
+  "on_screen_text": "<optional: 2-5 {lang} words for an animated title card, only for key ideas, else empty>",
   "music_mood": one of {moods}
 }}
 
@@ -59,6 +59,16 @@ CAMERAS = ("static", "slow_push_in", "pull_out", "pan", "tilt", "handheld", "tra
 # (run #44903598138: 103 бет-кадрдан 2'си гана эталонго дал келди), ошондуктан каармандын БЕТИ көрсөтүлбөйт.
 HERO_VIS = ("hands", "back", "silhouette", "pov", "none")
 HERO_SHOWN = ("back", "silhouette")
+
+DOC_EXTRA = """
+THIS VIDEO IS A TECHNOLOGY-HISTORY DOCUMENTARY. Stock libraries do NOT have the real products, brands or historical
+people, so NEVER search for brand names, product names or names of people. Show the ERA and the IDEA instead:
+period objects (old computer, CRT monitor, floppy disk, typewriter, mainframe, circuit board, cassette, keyboard),
+period places (1980s office, garage workshop, factory, laboratory, city at night), and the human action behind the
+fact (hands typing, engineer soldering, people in a meeting, money counting). Vintage, black-and-white, film-grain
+and close-up detail shots are welcome. on_screen_text: years, numbers or very short facts copied from the narration
+(e.g. "1979", "$1 million") — never invent numbers.
+"""
 
 STORY_EXTRA = """
 THIS VIDEO IS A SHORT CINEMATIC FILM about one protagonist. Scenes are consecutive moments of ONE story — the
@@ -134,7 +144,14 @@ class ScenesStage(Stage):
             except Exception:
                 pass
         numbered = "\n".join(f"{i + 1}. " + (f"[{acts[i]}] " if acts[i] else "") + t for i, t in enumerate(texts))
+        from .. import lang as lng
+
+        if lng.is_doc(ctx.cfg):                   # документалдык тарых (англисче канал): доордун атмосферасы
+            extra += DOC_EXTRA
         meta = g.json(PROMPT.format(n=len(texts), emotions=EMOTIONS, moods=moods, scenes=numbered,
+                                  channel=ctx.cfg.niche_data.get("channel_desc",
+                                                                 "Russian-language psychology/motivation"),
+                                  lang=lng.name(ctx.cfg),
                                   themes=THEME_KEYS, avoid="; ".join(avoid) or "(none)",
                                   visual_rules=VISUAL_RULES) + extra,
                       purpose="scenes", temperature=0.6)

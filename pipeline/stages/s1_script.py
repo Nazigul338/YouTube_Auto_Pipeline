@@ -256,6 +256,12 @@ class ScriptStage(Stage):
     retries = 2
 
     def run(self, ctx: Context) -> dict[str, Any]:
+        from .. import lang
+
+        if lang.is_doc(ctx.cfg):                 # англисче Tech History: булактуу документалдык сценарий
+            from .. import doc_script
+
+            return doc_script.run(ctx)
         g = gemini_of(ctx)
         cfg, niche, topic = ctx.cfg, ctx.cfg.niche_data, ctx.state.topic
         styles: dict[str, str] = niche.get("narrative_styles") or {"default": ""}

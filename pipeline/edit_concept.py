@@ -18,6 +18,8 @@ s7 (музыка маанайы/деңгээли), s8 (түс/карточка �
 
 from __future__ import annotations
 
+from . import lang
+
 import hashlib
 import json
 import random
@@ -348,7 +350,7 @@ def create(ctx, scenes: list[dict], title: str = "") -> dict:
         if g is None:
             break
         try:
-            raw = g.json(BRIEF_PROMPT.format(
+            raw = g.json(lang.localize(BRIEF_PROMPT, getattr(ctx, "cfg", None)).format(
                 title=title or ctx.video_id, theme=theme, arc=" → ".join(s.get("emotion", "") for s in scenes),
                 scenes="\n".join(f"{s['id']}. {s.get('text', '')[:140]}" for s in scenes), previous=prev_txt,
                 feedback=feedback, rules=VISUAL_RULES, story=story_txt, motions=", ".join(MOTION_TYPES),

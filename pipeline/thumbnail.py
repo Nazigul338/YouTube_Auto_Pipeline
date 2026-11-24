@@ -234,6 +234,20 @@ Return JSON array only: [{{"i": <image index>, "score": <1-10 thumbnail potentia
 emotion or a striking meaningful motif that fits THIS topic>, "person_emotion": <true/false>,
 "see": "<what is in the frame, 6-12 words>", "problems": [<any of: "foreign_text" (readable names, badges, signs,
 letters), "logo", "alcohol", "off_topic", "low_quality", "no_subject">]}}]"""
+
+
+def localize(prompt: str, cfg=None) -> str:
+    """Англисче канал (Tech History): промпттогу «Russian psychology» жана «Russian words» алмашат; ru — өзгөрүүсүз."""
+    from . import lang
+
+    if cfg is None or not lang.is_en(cfg):
+        return prompt
+    return (prompt.replace("Russian psychology", "English technology-history documentary")
+            .replace("Russian words", "English words")
+            .replace("(a person's face/gesture or a striking motif)",
+                     "(a striking period object, machine, place or human action of the era)"))
+
+
 SCREEN_MAX = 16
 SCREEN_MIN = 6
 
@@ -274,7 +288,8 @@ def screen_frames(gem, ctx, cands: list[dict], title: str, promise: str, work: P
     r = None
     for _ in range(2):                     # 503/убактылуу ката — бир жолу кайра
         try:
-            r = gem.judge_image(jpgs, SCREEN_PROMPT.format(title=title, promise=promise or "-"), purpose="thumbnail_frames")
+            r = gem.judge_image(jpgs, localize(SCREEN_PROMPT, getattr(ctx, "cfg", None)).format(title=title, promise=promise or "-"),
+                                purpose="thumbnail_frames")
             break
         except Exception as e:
             log = getattr(ctx, "log", print)
@@ -294,7 +309,7 @@ def screen_frames(gem, ctx, cands: list[dict], title: str, promise: str, work: P
     return [g for _, g in good[:8]]
 
 
-def vision_review(gem, path: Path, title: str, text: str, promise: str) -> dict | None:
+def vision_review(gem, path: Path, title: str, text: str, promise: str, cfg=None) -> dict | None:
     """Даяр обложканы Gemini көзү менен баалоо. Кызмат жок (тест) → None. Кызмат бар, бирок баа алынбаса →
     {"ok": False, "unavailable": True} — көрүлбөгөн обложка кабыл алынбайт (run #44892369934: 503'тон кийин
     көрүлбөгөн бүдөмүк обложка өтүп кеткен)."""
@@ -303,7 +318,7 @@ def vision_review(gem, path: Path, title: str, text: str, promise: str) -> dict 
     r = None
     for _ in range(2):
         try:
-            r = gem.judge_image(path.read_bytes(), VISION_PROMPT.format(title=title, text=text, promise=promise or "-"),
+            r = gem.judge_image(path.read_bytes(), localize(VISION_PROMPT, cfg).format(title=title, text=text, promise=promise or "-"),
                                 purpose="thumbnail_review")
             break
         except Exception:
@@ -390,7 +405,7 @@ def auto_thumbnails(ctx, title: str = "") -> dict:
     def propose(feedback: list[str]) -> list:
         opts = []
         try:
-            data = gem.json(THUMB_PROMPT.format(
+            data = gem.json(localize(THUMB_PROMPT, getattr(ctx, "cfg", None)).format(
                 title=title or meta.get("title", ""), hook=meta.get("hook", ""), world=brief.get("world", ""),
                 promise=meta.get("hook_promise", "") or "-", max_words=MAX_WORDS, story=story_txt,
                 previous="; ".join(prev[-12:] + [f"REJECTED: {r}" for r in feedback[-6:]]) or "(none)",
@@ -460,7 +475,7 @@ def auto_thumbnails(ctx, title: str = "") -> dict:
             if not q["ok_image"]:
                 rejected.append(f"«{text}»: контраст/жарык жетишсиз ({q['contrast']}, {q['brightness']})")
                 continue
-            vis = vision_review(gem, out, title or meta.get("title", ""), text, meta.get("hook_promise", ""))
+            vis = vision_review(gem, out, title or meta.get("title", ""), text, meta.get("hook_promise", ""), getattr(ctx, "cfg", None))
             qrow["vision"] = vis
             if vis is not None and not vis["ok"]:
                 rejected.append(f"«{text}»: көрүүчүнүн көзү менен өтпөдү (көңүл {vis['attention']}/10, тема "

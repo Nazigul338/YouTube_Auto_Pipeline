@@ -233,6 +233,7 @@ class QAStage(Stage):
             self.check_shot_meaning(ctx, rep)
             self.check_policy(ctx, rep, clip_lic, music, meta)
             self.check_ai_images(ctx, rep, shots)
+        self.check_facts(ctx, rep)
         self.check_subtitle_layout(ctx, rep)
         return self.finish(ctx, rep, final, meta, music, clip_lic)
 
@@ -502,6 +503,22 @@ class QAStage(Stage):
                 f"эң узун бурулушсуз жер {fmt.get('max_gap_sec')} сек"
                 + (f" — {'; '.join(fmt['problems'])}" if fmt.get("problems") else ""))
 
+    def check_facts(self, ctx, rep) -> None:
+        """МИЛДЕТТҮҮ (документалдык англисче канал): сценарийдеги ар факты Wikipedia булагындагы цитата менен
+        тастыкталган (script/facts.json), тастыкталбаганы 0."""
+        from .. import lang
+
+        if not lang.is_doc(ctx.cfg):
+            return
+        f = self._json(ctx, "script/facts.json") if ctx.path("script", "facts.json").exists() else {}
+        r = f.get("report") or {}
+        bad = r.get("unsupported") or []
+        ok = r.get("source") == "gemini" and not bad and (r.get("n") or 0) > 0
+        rep.add("facts", "Фактылар булак (Wikipedia) цитатасы менен тастыкталган, ойдон чыгарылганы жок", ok,
+                f"{r.get('n_ok', 0)}/{r.get('n', 0)} факты; булактар: " +
+                ", ".join(x.get("title", "") for x in f.get("sources") or []) +
+                (f" — тастыкталбаган: {[c.get('claim') for c in bad[:3]]}" if bad else ""))
+
     def check_hook(self, ctx, rep) -> None:
         """Hook (МИЛДЕТТҮҮ, 2026-11-24): негизги ою үндө ≤3 сек, экранда hook карточкасы ≤1 сек, шаблонсуз, түрү башка."""
         from .. import edit_concept as ecm
@@ -524,7 +541,9 @@ class QAStage(Stage):
             problems.append("hook жок")
         elif len(hook.split()) > 45:
             problems.append(f"hook узун ({len(hook.split())} сөз)")
-        if any(hook.lower().startswith(b) for b in HOOK_BANNED):
+        from ..doc_script import HOOK_BANNED_EN
+
+        if any(hook.lower().startswith(b) for b in HOOK_BANNED + HOOK_BANNED_EN):
             problems.append("шаблон башталыш")
         if not card or card["start"] > self.HOOK_CARD_SEC:
             problems.append(f"hook карточкасы {self.HOOK_CARD_SEC:.0f} сек ичинде экранда жок")
@@ -538,7 +557,7 @@ class QAStage(Stage):
             words = json.loads(ctx.path("subtitles", "timings.json").read_text(encoding="utf-8"))["words"]
             text = ctx.path("script", "script.txt").read_text(encoding="utf-8")
             timing = rt.hook_timing(words, text)
-            if rt.local_checks(text)["greeting"]:
+            if rt.local_checks(text, getattr(ctx.cfg, "language", "ru"))["greeting"]:
                 problems.append("саламдашуу/шаблон менен башталат")
         except Exception:
             pass
@@ -946,6 +965,10 @@ class QAStage(Stage):
         return out
 
     def description(self, ctx, meta, music) -> None:
+        from .. import lang
+
+        if lang.is_en(ctx.cfg):
+            return self.description_en(ctx, meta, music)
         script = ctx.path("script", "script.txt").read_text(encoding="utf-8")
         first = " ".join(script.split()[:45]) + "…"
         lines = [meta.get("title", ""), "", first, ""]
@@ -963,4 +986,27 @@ class QAStage(Stage):
             lines.append("Пример в видео — собирательный, совпадения случайны. Видео не заменяет консультацию специалиста.")
         if stl.is_story(ctx.cfg):                  # көркөм окуя — чыныгы/документалдык деп көрсөтүлбөйт
             lines.append("История и герои вымышлены; совпадения случайны. Видео не заменяет консультацию специалиста.")
+        ctx.path("youtube_description.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    def description_en(self, ctx, meta, music) -> None:
+        """Англисче канал: кыска баяндоо, булактар (Wikipedia), видео/музыка лицензиясы, AI белгилөө."""
+        script = ctx.path("script", "script.txt").read_text(encoding="utf-8")
+        lines = [meta.get("title", ""), "", " ".join(script.split()[:45]) + "…", ""]
+        src = meta.get("sources") or []
+        if src:
+            lines.append("Sources:")
+            lines += [f"• {x.get('title')} — {x.get('url')}" for x in src]
+            lines.append("")
+        lines.append("Footage: Pixabay (Pixabay Content License). Archive-style footage is illustrative of the era, "
+                     "not the actual products or people mentioned.")
+        if music.get("attribution"):
+            lines.append(music["attribution"])
+        sx = self.sfx_info(ctx)
+        for l in (sx.get("licenses") or []) if sx.get("events") else []:
+            if l.get("attribution_required"):
+                lines.append(f"Sound: \"{l['title']}\" — {l.get('author') or l['source']} ({l['license']})")
+        if self.ai_images_info(ctx).get("used"):
+            lines.append("Some images were generated with AI (Google Gemini).")
+        lines.append("Narration voice is AI-generated (Google Gemini TTS); script researched and fact-checked against "
+                     "the sources above.")
         ctx.path("youtube_description.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")

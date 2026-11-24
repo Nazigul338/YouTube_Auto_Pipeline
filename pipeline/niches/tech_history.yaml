@@ -1,0 +1,56 @@
+# Ниша профили: Technology History — англисче документалдык канал (өзүнчө канал, 2026-11-24)
+#
+# Референс: колдонуучу жиберген Lotus 1-2-3 тарыхы (жай кыймылдаган сүрөттөр, фокустан ачылуу, пленка, 3D экран).
+# Фактылар Wikipedia'дан гана (pipeline/sources.py), сценарий pipeline/doc_script.py.
+
+title: "Technology History (EN)"
+channel_desc: "English-language technology history documentary"
+
+config:
+  language: en
+  words_min: 1150          # англисче диктор ~145–155 сөз/мүн → ~8 мүн
+  words_max: 1300
+  tts_voice: Algenib       # терең эркек үн (Gemini TTS англисче да окуйт)
+
+structure: doc
+
+script_role: >
+  You are an original writer of technology-history documentaries for an English-speaking YouTube audience.
+  You tell true stories of computers, software, gadgets, inventors and tech companies as gripping, accurate
+  narratives: what happened, why it mattered, what went wrong or right, and what it changed.
+
+script_rules:
+  - Write from scratch; do not copy articles, books or other videos — retell the sourced facts in your own words.
+  - "Structure (in this order, without headings): 1) cold-open hook — the first 3 seconds; 2) context: the world and the problem before the breakthrough; 3) the people and the idea; 4) the rise — how it spread and why; 5) the conflict or turning point — competition, mistake, lawsuit, rival; 6) the outcome and the fall or transformation; 7) the legacy today and the lesson of the story."
+  - "Every 20–40 seconds: a new fact, a turn, a consequence or an open question that is answered later."
+  - Explain technical ideas simply, with a concrete everyday comparison.
+  - "Speak to the viewer naturally (\"you\" is fine), but this is a documentary narration, not a motivational speech."
+  - No clichés ("changed the world forever", "the rest is history", "little did they know").
+  - Do not repeat the same idea in different words.
+  - The ending lands the legacy and one clear lesson of the story.
+
+tts_style: >
+  Deep, warm, mature American English male documentary narrator. Calm authority, curious and engaged,
+  unhurried pace with natural pauses before reveals, varied intonation. Not a commercial voice.
+
+visual_style: "vintage, retro technology, 1980s office, film grain, black and white archive look"
+
+music_mood: "documentary, curious, retro synth, tense, cinematic"
+
+narrative_styles:
+  chronicle: >
+    Tell the story chronologically like a well-paced chronicle, but open on the most dramatic moment and then
+    jump back to how it all began.
+  mystery: >
+    Frame the story as a question to solve: why did it succeed (or fail)? Reveal clues one by one and give the
+    full answer near the end.
+  rivalry: >
+    Tell it through a rivalry or contrast — two companies, products or ideas — and what decided the outcome.
+  rise_and_fall: >
+    Rise and fall: the climb, the peak, the crack nobody noticed, and the fall — with the lesson it leaves.
+  explainer: >
+    Start from how the technology works in simple terms, then show the people and events that made it real,
+    and why it mattered.
+
+# Музыка китепканасы (YouTube_Auto/Music) жана анын _tags.json орусча канал менен ОРТОК — маанайлар ошол тизмеден.
+music_moods: [cinematic, dark_cinematic, dramatic, inspirational, emotional_piano]

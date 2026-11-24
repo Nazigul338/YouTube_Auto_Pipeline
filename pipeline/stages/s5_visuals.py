@@ -13,6 +13,8 @@
 
 from __future__ import annotations
 
+from .. import lang
+
 import hashlib
 import json
 import math
@@ -567,7 +569,7 @@ SHOTS:
         for k in range(0, len(todo), self.BEAT_CHUNK):
             part = todo[k:k + self.BEAT_CHUNK]
             try:
-                data = gemini_of(ctx).json(self.BEAT_PROMPT.format(
+                data = gemini_of(ctx).json(lang.localize(self.BEAT_PROMPT, getattr(ctx, "cfg", None)).format(
                     rules=VISUAL_RULES + world,
                     shots="\n".join(f"{i}. {stext[i][:450 if film else 300]}" for i in part)),
                     purpose="visual_beats", temperature=0.7)
