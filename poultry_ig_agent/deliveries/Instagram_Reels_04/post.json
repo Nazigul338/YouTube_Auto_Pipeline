@@ -12,51 +12,51 @@
   "shots": [
     {
       "source": "photo",
-      "file": "assets/reels04/p01.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p01.png",
       "motion": "card",
       "onscreen": "Жүнү түшүп калдыбы?",
       "visual": "photo p01.png",
       "n": 1,
-      "duration": 3.45
+      "duration": 3.57
     },
     {
       "source": "photo",
-      "file": "assets/reels04/header_hen.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/header_hen.png",
       "motion": "card",
       "onscreen": "Ар дайым эле оору эмес",
       "visual": "photo header_hen.png",
       "n": 2,
-      "duration": 3.45
+      "duration": 3.57
     },
     {
       "source": "photo",
-      "file": "assets/reels04/p02.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p02.png",
       "motion": "card",
       "onscreen": "1. Мезгилдик түлөө",
       "visual": "photo p02.png",
       "n": 3,
-      "duration": 4.54
+      "duration": 4.7
     },
     {
       "source": "photo",
-      "file": "assets/reels04/header_eggs.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/header_eggs.png",
       "motion": "card",
       "onscreen": "Бул учурда жумуртка азаят",
       "visual": "photo header_eggs.png",
       "n": 4,
-      "duration": 4.54
+      "duration": 4.7
     },
     {
       "source": "photo",
-      "file": "assets/reels04/p03.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p03.png",
       "motion": "card",
       "onscreen": "2. Азык жетишсиз",
       "visual": "photo p03.png",
       "n": 5,
-      "duration": 3.7
+      "duration": 3.83
     },
     {
-      "source": "real",
+      "source": "stock",
       "visual": "hens eating",
       "stock_query": "hens eating",
       "stock_require": [
@@ -66,19 +66,28 @@
       ],
       "onscreen": "Жүн — белоктон турат",
       "n": 6,
-      "duration": 3.7
+      "duration": 3.83,
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-24-9e5f235d-reel-ky/work/stock_6.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 112428,
+        "url": "https://pixabay.com/videos/id-112428/",
+        "author": "NickyPe",
+        "query": "hens eating",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "source": "photo",
-      "file": "assets/reels04/p04.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p04.png",
       "motion": "card",
       "onscreen": "3. Мите курттар: бит жана кене",
       "visual": "photo p04.png",
       "n": 7,
-      "duration": 2.75
+      "duration": 2.85
     },
     {
-      "source": "real",
+      "source": "stock",
       "visual": "chicken feathers",
       "stock_query": "chicken feathers",
       "stock_require": [
@@ -88,56 +97,65 @@
         "feathers"
       ],
       "onscreen": "Тери кычышат → жүн түшөт",
-      "duration": 2.75,
-      "n": 8
+      "duration": 2.85,
+      "n": 8,
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-24-9e5f235d-reel-ky/work/stock_8.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 105229,
+        "url": "https://pixabay.com/videos/id-105229/",
+        "author": "Eaktas06",
+        "query": "chicken feathers",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "source": "photo",
-      "file": "assets/reels04/p05.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p05.png",
       "motion": "card",
       "onscreen": "4. Стресс: тыгыздык, ызы-чуу",
       "visual": "photo p05.png",
       "n": 9,
-      "duration": 4.15
+      "duration": 4.29
     },
     {
       "source": "photo",
-      "file": "assets/reels04/p06.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p06.png",
       "motion": "card",
       "onscreen": "5. Начар шарт",
       "visual": "photo p06.png",
       "n": 10,
-      "duration": 3.31
+      "duration": 3.43
     },
     {
       "source": "photo",
-      "file": "assets/reels04/p07.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p07.png",
       "motion": "card",
       "onscreen": "Витамин да жетишсиз",
       "visual": "photo p07.png",
       "n": 11,
-      "duration": 3.31
+      "duration": 3.43
     },
     {
       "source": "photo",
-      "file": "assets/reels04/p08.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p08.png",
       "motion": "card",
       "onscreen": "✓ Белокко бай жем, жашыл чөп",
       "visual": "photo p08.png",
       "n": 12,
-      "duration": 3.83
+      "duration": 3.96
     },
     {
       "source": "photo",
-      "file": "assets/reels04/p09.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p09.png",
       "motion": "card",
       "onscreen": "✓ Тазалык жана дезинфекция",
       "visual": "photo p09.png",
       "n": 13,
-      "duration": 3.83
+      "duration": 3.96
     },
     {
-      "source": "real",
+      "source": "stock",
       "visual": "chicken farmer",
       "stock_query": "chicken farmer",
       "stock_require": [
@@ -148,25 +166,34 @@
       ],
       "onscreen": "Жара болсо — ветеринарга!",
       "n": 14,
-      "duration": 3.83
+      "duration": 3.96,
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-24-9e5f235d-reel-ky/work/stock_14.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 76881,
+        "url": "https://pixabay.com/videos/id-76881/",
+        "author": "FnBTV",
+        "query": "chicken farmer",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "source": "photo",
-      "file": "assets/reels04/p10.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/p10.png",
       "motion": "card",
       "onscreen": "Дени сак, жүнү тыгыз тооктор",
       "visual": "photo p10.png",
       "n": 15,
-      "duration": 2.54
+      "duration": 2.63
     },
     {
       "source": "photo",
-      "file": "assets/reels04/infographic.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels04/infographic.png",
       "motion": "card",
       "onscreen": "Катталыңыз!",
       "visual": "photo infographic.png",
       "n": 16,
-      "duration": 2.54
+      "duration": 2.63
     }
   ],
   "fade": 0.0,
@@ -217,7 +244,7 @@
     331459,
     378976
   ],
-  "caption": "Тооктор эмне үчүн жүнүн түшүрөт? 5 себеп жана эмне кылуу керек. Видеону сактап коюңуз 👇\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n🖼 Видеодогу сүрөттөр — иллюстрация.\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\n📌 Бул маалымат — автордун балапан багуудагы өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.",
+  "caption": "Тооктор эмне үчүн жүнүн түшүрөт? 5 себеп жана эмне кылуу керек. Видеону сактап коюңуз 👇\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n🖼 Видеодогу сүрөттөр — иллюстрация.\n\n⚠️ Бул жалпы маалымат, диагноз же дарылоо кеңеши эмес. Тооктор ооруса, дары же эмдөө керек болсо — ветеринарга кайрылыңыз.\n📌 Бул маалымат — автордун балапан багуудагы өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.\n🎞 Айрым кадрлар — стоктук видео (Pixabay/Pexels; иллюстрация, биздин ферма эмес).\n🎙 Диктордун үнү AI менен түзүлгөн.",
   "hashtags": [
     "#тоокферма",
     "#тоокчарбасы",
@@ -240,5 +267,63 @@
   "id": "2026-11-24-9e5f235d-reel-ky",
   "needs_vet_review": true,
   "lint_issues": [],
-  "status": "pending_review"
+  "status": "pending_review",
+  "ai_voice": true,
+  "music_info": {
+    "source": "generated",
+    "license": "own composition (poultry_ig_agent/music_gen.py)",
+    "key": "A",
+    "bpm": 84,
+    "progression": [
+      0,
+      5,
+      3,
+      0
+    ],
+    "mood": "calm"
+  },
+  "licenses": [
+    {
+      "shot": 6,
+      "source": "Pixabay",
+      "id": 112428,
+      "url": "https://pixabay.com/videos/id-112428/",
+      "author": "NickyPe",
+      "query": "hens eating",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 8,
+      "source": "Pixabay",
+      "id": 105229,
+      "url": "https://pixabay.com/videos/id-105229/",
+      "author": "Eaktas06",
+      "query": "chicken feathers",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 14,
+      "source": "Pixabay",
+      "id": 76881,
+      "url": "https://pixabay.com/videos/id-76881/",
+      "author": "FnBTV",
+      "query": "chicken farmer",
+      "license": "https://pixabay.com/service/license-summary/"
+    }
+  ],
+  "tts": {
+    "model": "gemini-3.8-flash-tts",
+    "voice": "Charon",
+    "style": "warm",
+    "consistency": [
+      {
+        "try": 1,
+        "f0": 131,
+        "centroid": 1014,
+        "distance": 0.091
+      }
+    ]
+  },
+  "video": "final.mp4",
+  "video_status": "ready"
 }
