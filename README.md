@@ -63,6 +63,8 @@ s9: биринчи фраза даяр үндө ≤5 сек, жалган уба
 | `GDRIVE_CLIENT_SECRET` | ✅ | Google Drive OAuth |
 | `GDRIVE_REFRESH_TOKEN` | ✅ | Google Drive OAuth (токен **Production** режиминде алынышы керек) |
 | `PEXELS_API_KEY` | – | кошумча клип булагы |
+| `CLOUDFLARE_API_TOKEN` | – | Cloudflare Workers AI (FLUX.1 schnell сүрөт) — СЫНАК, видеого кошула элек |
+| `CLOUDFLARE_ACCOUNT_ID` | – | Cloudflare аккаунтунун ID'си (ошол эле сынак үчүн) |
 
 Репозиторий **ачык**: ачкычтарды коддо, логдо, issue'да же чатта эч качан жазбаңыз.
 
@@ -184,6 +186,13 @@ API ачкычтары **GitHub Secrets'те гана**; логдо email жаш
 - **YouTube:** AI-сүрөт болсо QA «Altered or synthetic content = Yes» сунуштайт; LICENSE жана сүрөттөмөгө AI белгиси кошулат.
 - **Текшерүү:** Actions → `🔬 Мүмкүнчүлүктөрдү сыноо` → `only=image` (1 сүрөт ≈ $0.04).
 
+
+## ☁️ Cloudflare Workers AI — FLUX.1 schnell (СЫНАК, 2026-11-24)
+Видео системасына КОШУЛГАН ЭМЕС: өзүнчө сыноо. Actions → «☁️ Cloudflare AI сыноо» → Run workflow.
+Ал токенди жана `@cf/black-forest-labs/flux-1-schnell` моделинин жеткиликтүүлүгүн текшерет, анан **бир гана**
+тесттик сүрөт жаратат (Artifacts → `cloudflare-flux-test`). Код: `pipeline/cloudflare_ai.py` (токен/account ID
+логго чыкпайт, суроо кайталанбайт, бир иштетүүдө ≤1 сүрөт, акысыз лимит бүтсө токтойт), `pipeline/cf_probe.py`.
+Акысыз Workers AI лимити — күнүнө 10 000 neuron; Workers Paid планга өтүлбөйт.
 
 ## 🔊 Үн эффекттери (Sound Effects Library) — PRODUCTION'до күйүк (2026-11-20)
 

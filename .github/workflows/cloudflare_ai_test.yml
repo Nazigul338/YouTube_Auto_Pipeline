@@ -1,0 +1,38 @@
+name: ☁️ Cloudflare AI сыноо (FLUX.1 schnell)
+
+# Cloudflare Workers AI: токенди, FLUX.1 schnell жеткиликтүүлүгүн текшерет жана БИР тесттик сүрөт жаратат.
+# Видео системасына (make_video) тийбейт. Акысыз күнүмдүк лимит ичинде гана (бир сүрөт).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-ai-test
+  cancel-in-progress: false
+
+jobs:
+  flux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Сыноо (токен → модель → 1 сүрөт)
+        env:
+          # Секреттер env аркылуу гана өтөт; GitHub аларды логдо автоматтык *** менен жашырат.
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_OUT: cf_test
+        run: python -m pipeline.cf_probe
+      - name: Тесттик сүрөт (артефакт)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-flux-test
+          path: cf_test/
+          if-no-files-found: ignore
+          retention-days: 14

@@ -217,6 +217,7 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
 | Whisper (faster-whisper small, CPU) | ✅ (`av` талап кылынбайт) |
 | Google Drive | ✅ иштейт, бирок ⚠️ токен Testing (1-көйгөй) |
 | YouTube | – автоматтык жарыялоо атайын кошула элек |
+| Cloudflare Workers AI (FLUX.1 schnell) | 🧪 2026-11-24: секреттер кошулду; сыноо workflow'у `cloudflare_ai_test.yml` (жыйынтыгы 8т'да); видеого кошула элек |
 
 ## 8. Кийинки аткарыла турган тапшырмалар (ирети менен)
 
@@ -641,6 +642,12 @@ SHA-256 дал келди ✅. Мурунку Testing токенинин 2026-11
 6. Кийинки видеонун убактысын өлчөө (музыка белгилөөсүз ~45 мүн болушу керек — болжол).
 7. Эски публикалык run логдорун өчүрүү (уруксат менен), TEST видеолорун тазалоо (уруксат менен).
 8. Кошумча (сунуш): токен мөөнөтү жакындаса күн сайынгы workflow'до эскертүү.
+
+### 8т. ☁️ Cloudflare Workers AI сыноосу (2026-11-24, колдонуучунун тапшырмасы)
+- Колдонуучу GitHub Secrets'ке `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` кошту.
+- Жасалды: `pipeline/cloudflare_ai.py` (клиент), `pipeline/cf_probe.py`, `.github/workflows/cloudflare_ai_test.yml`,
+  `tests/test_cloudflare_ai.py` (жалган HTTP: 1 сүрөт, кайра аракет жок, секреттер логдо жок).
+- Талаптар: ачкычтар env аркылуу гана; акы төлөнүүчү режим жок; make_video'го тийилген жок.
 
 ## 9. Акыркы GitHub commit ID
 
