@@ -329,6 +329,14 @@ def resolve_shots(post, assets_dir, allow_ai_fallback=False):
     used, out, missing = set(), [], []
     for s in post["shots"]:
         s = dict(s)
+        if s.get("source") == "photo":           # колдонуучу берген сүрөт (репо ичинде)
+            path = s.get("file", "")
+            path = path if os.path.isabs(path) else os.path.join(os.path.dirname(__file__), path)
+            if os.path.exists(path):
+                s["file"] = path; out.append(s)
+            else:
+                missing.append(s["n"]); out.append(s)
+            continue
         if s.get("source") == "stock":          # мурунку build'дин сток кадры — кайра сток/реал изделет, AI'ге ӨТПӨЙТ
             s["source"] = "real"
             s.pop("file", None); s.pop("stock", None)
@@ -363,8 +371,31 @@ def _escape(p):
     return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
 
-def normalize(src, seconds, out, onscreen="", label="", tmp="."):
-    vf = ["scale=1080:1920:force_original_aspect_ratio=increase", "crop=1080:1920", "fps=30", "setsar=1"]
+MOTIONS = ("in", "out", "left", "right", "up", "down")
+
+
+def kenburns(motion, seconds, fps=30):
+    """Сүрөткө акырын камера кыймылы (zoompan). Сүрөт адегенде 2x чоңойтулат — кыймыл жылмакай болсун."""
+    n = max(1, int(seconds * fps))
+    z = {"in": f"1+0.12*on/{n}", "out": f"1.12-0.12*on/{n}"}.get(motion, "1.10")
+    x = {"left": f"(iw-iw/zoom)*(1-on/{n})", "right": f"(iw-iw/zoom)*on/{n}"}.get(motion, "(iw-iw/zoom)/2")
+    y = {"up": f"(ih-ih/zoom)*(1-on/{n})", "down": f"(ih-ih/zoom)*on/{n}"}.get(motion, "(ih-ih/zoom)/2")
+    return ["scale=2160:3840:force_original_aspect_ratio=increase:flags=lanczos", "crop=2160:3840",
+            f"zoompan=z='{z}':x='{x}':y='{y}':d={n}:s=1080x1920:fps={fps}", "unsharp=5:5:0.6"]
+
+
+TEXT_STYLES = {   # (тамга түсү, фон) — ар видео өз стилин тандай алат
+    "dark": ("white", "black@0.55"),
+    "cream": ("0x3b2a14", "0xfff4dc@0.88"),
+}
+
+
+def normalize(src, seconds, out, onscreen="", label="", tmp=".", motion=None, fade=0.0, text_style="dark"):
+    is_img = src.lower().endswith(IMG_EXT)
+    if is_img and motion in MOTIONS:
+        vf = kenburns(motion, seconds) + ["setsar=1"]
+    else:
+        vf = ["scale=1080:1920:force_original_aspect_ratio=increase", "crop=1080:1920", "fps=30", "setsar=1"]
     for i, (text, y0, size) in enumerate([(onscreen, 0.12, 64), (label, 0.04, 36)]):
         # DejaVu шрифтинде жок эмодзилер (🥚 👇 ...) видеодо □ болуп чыгат — алып салабыз
         text = " ".join("".join(ch for ch in (text or "") if ord(ch) < 0x1F000).split())
@@ -377,9 +408,11 @@ def normalize(src, seconds, out, onscreen="", label="", tmp="."):
             with open(tf, "w", encoding="utf-8") as f:
                 f.write(line)
             y = f"h*{y0}+{j * int(size * 1.45)}"
-            vf.append(f"drawtext=fontfile={FONT}:textfile={tf}:fontsize={size}:fontcolor=white:box=1:"
-                      f"boxcolor=black@0.55:boxborderw=14:x=(w-text_w)/2:y={y}")
-    is_img = src.lower().endswith(IMG_EXT)
+            fg, bg = TEXT_STYLES.get(text_style, TEXT_STYLES["dark"]) if i == 0 else TEXT_STYLES["dark"]
+            vf.append(f"drawtext=fontfile={FONT}:textfile={tf}:fontsize={size}:fontcolor={fg}:box=1:"
+                      f"boxcolor={bg}:boxborderw=14:x=(w-text_w)/2:y={y}")
+    if fade and seconds > 2 * fade + 0.2:      # жылмакай өтүү: ар кадр караңгыдан чыгып, караңгыга кирет
+        vf += [f"fade=t=in:st=0:d={fade}", f"fade=t=out:st={seconds - fade:.2f}:d={fade}"]
     pre = ["-loop", "1"] if is_img else ["-stream_loop", "-1"]
     _run(["ffmpeg", "-y", "-v", "error", *pre, "-i", src, "-t", f"{seconds:.2f}", "-an", "-vf", ",".join(vf),
           "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", out])
@@ -429,6 +462,11 @@ def fit_durations(shots, voice_seconds, pad=0.5, max_shot=8.0):
     """Кадрлардын узундугун диктордун узундугуна пропорционалдуу тууралайт (акыркы кадр гана узарбасын)."""
     plan = sum(float(s.get("duration", 3)) for s in shots) or 1
     target = voice_seconds + pad
+    if plan > target + 1.0:                       # план узун болсо — пропорционалдуу кыскартуу (үнсүз аяк болбосун)
+        k = target / plan
+        for s in shots:
+            s["duration"] = round(max(float(s.get("duration", 3)) * k, 1.5), 2)
+        return shots
     if target > plan:
         k = target / plan
         for s in shots:
@@ -458,6 +496,11 @@ def build(post, post_dir, veo, tts, assets_dir, allow_ai_fallback=False, niche=N
     os.makedirs(work, exist_ok=True)
     try:
         voice = tts.synth(post["voiceover"], os.path.join(work, "voice.wav"))
+        tempo = float(post.get("voice_tempo") or 1.0)
+        if abs(tempo - 1.0) > 0.01:                # үндүн ылдамдыгы (тону өзгөрбөйт)
+            fast = os.path.join(work, "voice_tempo.wav")
+            _run(["ffmpeg", "-y", "-v", "error", "-i", voice, "-filter:a", f"atempo={tempo}", fast])
+            voice = fast
         vlen = duration(voice)
         fit_durations(shots, vlen)
         clips = []
@@ -469,7 +512,9 @@ def build(post, post_dir, veo, tts, assets_dir, allow_ai_fallback=False, niche=N
             else:
                 src = s["file"]
             label = cfg["ai_label"][lang] if s["source"] == "ai" else ""
-            clips.append(normalize(src, sec, os.path.join(work, f"c{s['n']}.mp4"), s.get("onscreen", ""), label, work))
+            clips.append(normalize(src, sec, os.path.join(work, f"c{s['n']}.mp4"), s.get("onscreen", ""), label, work,
+                                   motion=s.get("motion"), fade=float(post.get("fade", 0) or 0),
+                                   text_style=post.get("text_style", "dark")))
         total = sum(float(s.get("duration", 3)) for s in shots)
         sp = os.path.join(work, "subs.srt")
         with open(sp, "w", encoding="utf-8") as f:
