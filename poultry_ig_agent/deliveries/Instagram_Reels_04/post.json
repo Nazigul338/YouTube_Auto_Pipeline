@@ -167,7 +167,7 @@
       "duration": 3.96
     },
     {
-      "source": "real",
+      "source": "stock",
       "visual": "veterinarian",
       "stock_query": [
         "veterinarian",
@@ -187,7 +187,16 @@
       "onscreen": "Жара болсо — ветеринарга!",
       "n": 14,
       "duration": 3.96,
-      "fallback_photo": "assets/reels04/p01.png"
+      "fallback_photo": "assets/reels04/p01.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-24-9e5f235d-reel-ky/work/stock_14.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 32662,
+        "url": "https://pixabay.com/videos/id-32662/",
+        "author": "satynek",
+        "query": "holding a chicken",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "source": "photo",
@@ -315,6 +324,15 @@
       "author": "BenjaminNelan",
       "query": "hen preening",
       "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 14,
+      "source": "Pixabay",
+      "id": 32662,
+      "url": "https://pixabay.com/videos/id-32662/",
+      "author": "satynek",
+      "query": "holding a chicken",
+      "license": "https://pixabay.com/service/license-summary/"
     }
   ],
   "tts": {
@@ -324,9 +342,9 @@
     "consistency": [
       {
         "try": 1,
-        "f0": 114,
-        "centroid": 882,
-        "distance": 0.052
+        "f0": 117,
+        "centroid": 909,
+        "distance": 0.026
       }
     ]
   },
