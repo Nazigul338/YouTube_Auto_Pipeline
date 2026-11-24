@@ -80,14 +80,44 @@ about this topic: the main subject first, then the key company/product/person/ev
 Return JSON only: {{"articles": ["<exact English Wikipedia article title>", ...]}} — 3 to {n} titles."""
 
 
+# Теманын «маанилүү сөздөрү» (булак темага тиешелүүбү): run #45408572177'де Gemini жооп бербей, «The rise and fall
+# of Lotus 1-2-3» издөөсү «Lotus Esprit» (унаа) макаласын берген — ушундай булак эми четке кагылат.
+STOP = {"the", "a", "an", "of", "and", "or", "in", "on", "to", "for", "how", "why", "what", "who", "when", "rise",
+        "fall", "history", "story", "untold", "true", "inside", "behind", "that", "which", "was", "is", "it", "its",
+        "from", "with", "by", "vs", "versus", "secret", "biggest", "first", "real", "life", "death", "end", "era"}
+MIN_RELEVANCE = 0.6
+
+
+def topic_terms(topic: str) -> list[str]:
+    """Аттар жана сандар (баш тамгасы/чоң тамгасы же цифрасы бар сөз: Lotus, 1-2-3, IBM, iPhone); алар жок болсо —
+    бардык маанилүү сөздөр. «born», «killed» сыяктуу жалпы сөздөр макалада жок болушу мүмкүн — эсептелбейт."""
+    words = [w for w in re.findall(r"[\w][\w.+#-]*", topic) if w.lower() not in STOP]
+    named = [w for w in words if any(c.isupper() or c.isdigit() for c in w)]
+    pool = named or [w for w in words if len(w) > 2]
+    return list(dict.fromkeys(w.lower() for w in pool))
+
+
+def relevance(topic: str, title: str, text: str) -> float:
+    """Теманын маанилүү сөздөрүнүн кайсы үлүшү макаланын атында/башында бар (0..1)."""
+    terms = topic_terms(topic)
+    if not terms:
+        return 1.0
+    hay = (title + " " + text[:8000]).lower()
+    return sum(t in hay for t in terms) / len(terms)
+
+
 def pick_articles(g, wiki, topic: str, log, n: int = MAX_ARTICLES) -> list[dict]:
-    """[{title, url, text}] — бош болсо StageError чакыруучу тарапта."""
+    """[{title, url, text}] — бош болсо StageError чакыруучу тарапта.
+
+    Gemini макала тизмесин бербесе — TransientError (кийин кайра): теманы «болжолдоп» издеген булак туура эмес
+    болушу мүмкүн. Биринчи (негизги) макала темага тиешелүү болушу МИЛДЕТТҮҮ (relevance ≥ MIN_RELEVANCE)."""
+    from .errors import TransientError
+
     try:
         r = g.json(PICK_PROMPT.format(topic=topic, n=n), purpose="sources_pick", temperature=0.2)
         wanted = [str(x) for x in (r.get("articles") if isinstance(r, dict) else r) or [] if str(x).strip()]
     except Exception as e:
-        log(f"   ⚠ Gemini макала тизмесин берген жок ({type(e).__name__}) — тема боюнча издөө")
-        wanted = []
+        raise TransientError(f"Gemini Wikipedia макалаларын тандай алган жок ({type(e).__name__}) — кийин кайра")
     wanted = (wanted or [])[:n] + [topic]
     out, seen, total = [], set(), 0
     for w in wanted:
@@ -103,6 +133,9 @@ def pick_articles(g, wiki, topic: str, log, n: int = MAX_ARTICLES) -> list[dict]
             continue
         text = clean_extract(text)[:ARTICLE_CHARS]
         if title in seen or len(text) < 800:
+            continue
+        if not out and relevance(topic, title, text) < MIN_RELEVANCE:   # негизги булак темага тиешелүү эмес
+            log(f"   ⚠ «{title}» темага тиешелүү эмес (relevance {relevance(topic, title, text):.2f}) — өткөрүлдү")
             continue
         seen.add(title)
         text = text[:max(0, TOTAL_CHARS - total)]

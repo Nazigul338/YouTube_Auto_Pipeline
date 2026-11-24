@@ -186,10 +186,15 @@ def run(ctx: Context) -> dict[str, Any]:
 
     # 1. Булактар (кэш: s1 кайра иштесе Wikipedia кайра суралбайт)
     src_file = ctx.path("script", "sources.json")
+    arts = []
     if src_file.exists():
         arts = json.loads(src_file.read_text(encoding="utf-8"))["articles"]
-        log(f"   📚 Булактар кэштен: {len(arts)}")
-    else:
+        if arts and sources.relevance(topic, arts[0]["title"], arts[0]["text"]) >= sources.MIN_RELEVANCE:
+            log(f"   📚 Булактар кэштен: {len(arts)}")
+        else:                                  # эски/туура эмес кэш (мис. «Lotus Esprit») — кайра изделет
+            log("   ⚠ Кэштеги булак темага тиешелүү эмес — кайра изделет")
+            arts = []
+    if not arts:
         arts = sources.pick_articles(g, sources.client(ctx), topic, log)
         if not arts:
             raise StageError("Wikipedia'дан булак табылган жок — фактысыз документалдык видео жасалбайт "

@@ -231,7 +231,13 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
   `niches/tech_history.yaml`; cinematic EN тамырлары (`YouTube_Auto_EN[_TEST]`); `make_video_en.yml`.
 - Тесттер: tests/test_tech_history.py 14 тез + 1 узак (тема → MP4, англисче, чыныгы FFmpeg, 142 сек) ✅; бардык тез
   303 ✅; tests/test_full_local.py (орусча) ✅.
-- ▶️ Чыныгы сынак №1 (s1–s2 гана, TTS квотасы бүгүн бүткөн): run #45408572177 (13:56 UTC, commit 973a63a, EN_TEST).
+- ❌ Чыныгы сынак №1: run #45408572177 (13:56 UTC, commit 973a63a, EN_TEST, Video_001, stop_after s2) — s1'де токтоду.
+  ✅ Wikipedia API Actions'тан ИШТЕЙТ. ❌ Gemini күнүмдүк текст квотасы бүткөн (429; flash-lite 503) — 19 суроо, 0 ийгилик.
+  ❌ ЧЫНЫГЫ КАТА (оңдолду): Gemini макала тандай албай, тема издөөсү «Lotus Esprit» (унаа!) макаласын алып, кэштеп
+  койгон. Оңдоо: Gemini тандабаса → TransientError (болжолдоп издөө жок); негизги макала темага тиешелүү болушу
+  милдеттүү (`sources.relevance`: теманын аттары/сандары ≥60%); туура эмес кэш кайра изделет. +5 тест.
+  ⏭ Кайра: эртең квота жаңылангандан кийин (08:00 UTC'дан соң; орусча Video_006 да ошол квотаны колдонот —
+  алгач Video_006, анан EN) → «🇺🇸 Tech History (EN)» video_id **Video_001**, test_run ✓ (кэш өзү текшерилет).
 - ▶️ КИЙИНКИ: (а) чыныгы сынак: Actions → «🇺🇸 Tech History (EN) видео жасоо», topic «The rise and fall of Lotus
   1-2-3», test_run ✓ (Gemini квотасы орусча канал менен ортоктош — Video_006 менен бир күнү эмес); текшерүү: Wikipedia
   Actions'тан жеткиликтүүбү, Algenib англисче, Whisper en, фактылар; (б) референс эффекттери (фокустан ачылуу + пленка

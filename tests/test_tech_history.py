@@ -152,6 +152,45 @@ class TestSources(unittest.TestCase):
         self.assertTrue(arts[0]["url"].startswith("https://en.wikipedia.org/wiki/"))
 
 
+class TestSourceRelevance(unittest.TestCase):
+    """run #45408572177: Gemini жооп бербей, тема издөөсү «Lotus Esprit» (унаа) макаласын берген."""
+
+    def test_wrong_article_rejected(self):
+        t = "The rise and fall of Lotus 1-2-3"
+        self.assertLess(sources.relevance(t, "Lotus Esprit", "The Lotus Esprit is a sports car."),
+                        sources.MIN_RELEVANCE)
+        self.assertGreaterEqual(sources.relevance(t, "Lotus 1-2-3", WIKI["Lotus 1-2-3"]), sources.MIN_RELEVANCE)
+        self.assertEqual(sources.topic_terms("How the iPhone was born"), ["iphone"])
+
+    def test_gemini_failure_is_transient_not_guess(self):
+        from pipeline.errors import TransientError
+
+        class Broken(FakeGeminiEN):
+            def json(self, prompt, *, purpose="json", **kw):
+                if purpose == "sources_pick":
+                    raise RuntimeError("503")
+                return super().json(prompt, purpose=purpose, **kw)
+        with self.assertRaises(TransientError):
+            sources.pick_articles(Broken(), FakeWiki(), "Lotus 1-2-3", lambda *_: None)
+
+    def test_irrelevant_first_article_skipped(self):
+        class EspritWiki(FakeWiki):
+            def search(self, q, limit=3):
+                return ["Lotus Esprit"] if "car" in q else super().search(q, limit)
+
+            def extract(self, title):
+                return (title, "The Lotus Esprit is a sports car built by Lotus Cars. " * 40) \
+                    if title == "Lotus Esprit" else super().extract(title)
+
+        class G(FakeGeminiEN):
+            def json(self, prompt, *, purpose="json", **kw):
+                if purpose == "sources_pick":
+                    return {"articles": ["Lotus car", "Lotus 1-2-3"]}
+                return super().json(prompt, purpose=purpose, **kw)
+        arts = sources.pick_articles(G(), EspritWiki(), "The rise and fall of Lotus 1-2-3", lambda *_: None)
+        self.assertEqual(arts[0]["title"], "Lotus 1-2-3")
+
+
 class TestDocScript(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -217,6 +256,15 @@ class TestDocScript(unittest.TestCase):
         with mock.patch.dict(WIKI, {k: "" for k in WIKI}, clear=True):
             self.assertEqual(self.run_video(g, stop="s1_script"), 1)
         self.assertNotIn("script_draft", g.calls)
+
+    def test_bad_cached_source_is_refetched(self):
+        p = self.proj() / "script"
+        p.mkdir(parents=True)
+        (p / "sources.json").write_text(json.dumps({"articles": [
+            {"title": "Lotus Esprit", "url": "x", "text": "The Lotus Esprit is a sports car. " * 50}]}))
+        self.assertEqual(self.run_video(FakeGeminiEN(), stop="s1_script"), 0)
+        meta = json.loads((p / "meta.json").read_text(encoding="utf-8"))
+        self.assertEqual(meta["sources"][0]["title"], "Lotus 1-2-3")
 
     def test_scene_prompt_is_english_documentary(self):
         g = FakeGeminiEN()
