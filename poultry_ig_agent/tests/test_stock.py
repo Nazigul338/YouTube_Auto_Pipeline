@@ -210,3 +210,26 @@ class ShotOverrides(unittest.TestCase):
 
     def test_require_still_blocks_negative(self):
         self.assertFalse(pexels.relevant("water, sheep", require=["water"]))
+
+
+class FallbackPhotoTest(unittest.TestCase):
+    def test_list_query_and_fallback_photo(self):
+        import tempfile
+        from poultry_ig_agent import video
+
+        class NoStock:
+            seen = []
+            def fetch(self, visual, sec, out, query=None, require=None):
+                self.seen.append(query)
+                raise RuntimeError("табылган жок")
+
+        with tempfile.TemporaryDirectory() as d:
+            img = os.path.join(d, "fb.png"); open(img, "wb").close()
+            shots = [{"n": 1, "source": "real", "stock_query": ["a", "b"], "fallback_photo": img},
+                     {"n": 2, "source": "real", "stock_query": "c"}]
+            st = NoStock()
+            lics, still = video.fill_stock(shots, [1, 2], st, d)
+            self.assertEqual(still, [2])
+            self.assertEqual(shots[0]["source"], "photo")
+            self.assertEqual(shots[0]["file"], img)
+            self.assertEqual(st.seen[0], ["a", "b"])

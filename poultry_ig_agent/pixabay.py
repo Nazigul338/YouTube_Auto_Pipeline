@@ -42,7 +42,7 @@ class PixabayStock:
             raise StockError(f"Pixabay HTTP {e.code}") from None
 
     def find(self, visual, min_seconds, query=None, require=None):
-        queries = [query] if query else [poultry_query(visual)] + list(FALLBACK_QUERIES)
+        queries = (list(query) if isinstance(query, (list, tuple)) else [query]) if query else [poultry_query(visual)] + list(FALLBACK_QUERIES)
         for q in queries:
             for h in self.search(q):
                 if h["id"] in self.used or h.get("duration", 0) < min(min_seconds, 8):

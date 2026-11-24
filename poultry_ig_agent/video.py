@@ -478,6 +478,12 @@ def fill_stock(shots, missing, stock, work):
                 s.update(source="stock", file=path, stock=lic)
                 lics.append({"shot": s["n"], **lic})
             except Exception as e:
+                fb = s.get("fallback_photo")
+                fb = fb if not fb or os.path.isabs(fb) else os.path.join(os.path.dirname(__file__), fb)
+                if fb and os.path.exists(fb):        # сток жок болсо — колдонуучунун сүрөтү (запас), AI'ге өтпөйт
+                    log.get().warning("Кадр %s: сток табылган жок (%s) → запас сүрөт %s", s["n"], e, os.path.basename(fb))
+                    s.update(source="photo", file=fb, motion=s.get("motion") or "card")
+                    continue
                 log.get().warning("Кадр %s үчүн сток табылган жок: %s", s["n"], e)
                 still.append(s["n"])
     return lics, still

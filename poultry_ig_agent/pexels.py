@@ -95,7 +95,7 @@ class PexelsStock:
         return _get(f"{API}?{q}", self.key, self.tx).get("videos", [])
 
     def find(self, visual, min_seconds, query=None, require=None):
-        queries = [query] if query else [poultry_query(visual)] + list(FALLBACK_QUERIES)
+        queries = (list(query) if isinstance(query, (list, tuple)) else [query]) if query else [poultry_query(visual)] + list(FALLBACK_QUERIES)
         for q in queries:
             for v in self.search(q):
                 if v["id"] in self.used or v.get("duration", 0) < min(min_seconds, 8):

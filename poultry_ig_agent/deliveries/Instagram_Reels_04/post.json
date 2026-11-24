@@ -58,15 +58,22 @@
     {
       "source": "real",
       "visual": "hens eating",
-      "stock_query": "hens eating",
+      "stock_query": [
+        "hens eating",
+        "chickens pecking",
+        "chicken feeding",
+        "hens grain"
+      ],
       "stock_require": [
         "chicken",
         "hen",
-        "hens"
+        "hens",
+        "chickens"
       ],
       "onscreen": "Жүн — белоктон турат",
       "n": 6,
-      "duration": 3.83
+      "duration": 3.83,
+      "fallback_photo": "assets/reels04/p08.png"
     },
     {
       "source": "photo",
@@ -80,15 +87,21 @@
     {
       "source": "real",
       "visual": "hen preening feathers",
-      "stock_query": "hen preening",
+      "stock_query": [
+        "hen preening",
+        "chicken preening",
+        "chicken feathers"
+      ],
       "stock_require": [
         "hen",
         "chicken",
-        "preening"
+        "preening",
+        "feathers"
       ],
       "onscreen": "Тери кычышат → жүн түшөт",
       "duration": 2.85,
-      "n": 8
+      "n": 8,
+      "fallback_photo": "assets/reels04/p04.png"
     },
     {
       "source": "photo",
@@ -138,7 +151,11 @@
     {
       "source": "real",
       "visual": "veterinarian",
-      "stock_query": "veterinarian",
+      "stock_query": [
+        "veterinarian",
+        "veterinary",
+        "vet clinic animal"
+      ],
       "stock_require": [
         "veterinarian",
         "vet",
@@ -146,7 +163,8 @@
       ],
       "onscreen": "Жара болсо — ветеринарга!",
       "n": 14,
-      "duration": 3.96
+      "duration": 3.96,
+      "fallback_photo": "assets/reels04/p10.png"
     },
     {
       "source": "photo",
