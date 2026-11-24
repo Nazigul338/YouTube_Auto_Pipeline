@@ -135,3 +135,39 @@ class UpperWrap(unittest.TestCase):
         video.normalize(src, 1, os.path.join(d, "o.mp4"), "СЕБЕП №5 · ЖАШ ЖАНА ДЕН СООЛУК", "", d)
         lines = [open(os.path.join(d, f), encoding="utf-8").read() for f in sorted(os.listdir(d)) if f.startswith("t_")]
         self.assertTrue(all(len(l) <= 18 for l in lines)); self.assertGreaterEqual(len(lines), 2)
+
+
+@unittest.skipUnless(HAVE, "ffmpeg жок")
+class PhotoStory(unittest.TestCase):
+    def _img(self, d, name="p.png"):
+        from PIL import Image
+        p = os.path.join(d, name); Image.new("RGB", (941, 1672), (180, 120, 60)).save(p); return p
+
+    def test_kenburns_clip_is_vertical_and_timed(self):
+        d = tempfile.mkdtemp(); img = self._img(d)
+        out = video.normalize(img, 2.0, os.path.join(d, "o.mp4"), "Себеп 1: Кальций аз", "", d, motion="in", fade=0.3)
+        v = [s for s in probe(out) if s["codec_type"] == "video"][0]
+        self.assertEqual((v["width"], v["height"]), (1080, 1920))
+        self.assertAlmostEqual(video.duration(out), 2.0, delta=0.15)
+
+    def test_photo_source_resolved_and_not_stock(self):
+        d = tempfile.mkdtemp(); img = self._img(d)
+        shots, missing = video.resolve_shots({"content_type": "education", "shots": [
+            {"n": 1, "source": "photo", "file": img, "duration": 3}, {"n": 2, "source": "photo", "file": "/nope.png"}]},
+            tempfile.mkdtemp())
+        self.assertEqual(missing, [2]); self.assertEqual(shots[0]["file"], img)
+
+    def test_fit_shrinks_long_plan(self):
+        sh = [{"n": i, "duration": 4} for i in range(10)]          # 40с план, үн 20с
+        video.fit_durations(sh, 20)
+        self.assertAlmostEqual(sum(s["duration"] for s in sh), 20.5, delta=0.3)
+
+    def test_voice_tempo_and_photo_build(self):
+        d = tempfile.mkdtemp(); assets = tempfile.mkdtemp(); os.makedirs(os.path.join(assets, "real"))
+        imgs = [self._img(d, f"i{k}.png") for k in range(3)]
+        post = {"lang": "ky", "content_type": "education", "voiceover": "x", "voice_tempo": 1.1, "fade": 0.25,
+                "shots": [{"n": k + 1, "source": "photo", "file": p, "duration": 4, "visual": "-", "motion": m, "onscreen": "Т"}
+                          for k, (p, m) in enumerate(zip(imgs, ("in", "left", "out")))]}
+        r = video.build(post, os.path.join(d, "out"), FakeVeo(), FakeTTS(), assets)
+        self.assertEqual(r["status"], "ready", r)
+        self.assertAlmostEqual(video.duration(r["path"]), 12 / 1.1 + 0.5, delta=0.6)   # 12с үн 1.1x тезирээк

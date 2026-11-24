@@ -1,0 +1,236 @@
+{
+  "format": "reel",
+  "lang": "ky",
+  "content_type": "education",
+  "purpose": "education",
+  "pillar": "education",
+  "topic_key": "layers",
+  "topic": "Тоок эмне үчүн өз жумурткасын жейт?",
+  "hook": "Тоокторуңуз өздөрү тууп жаткан жумуртканы жеп жатабы?",
+  "hook_onscreen": "Тоок жумуртканы жейби?",
+  "voiceover": "Тоокторуңуз өздөрү тууп жаткан жумуртканы жеп жатабы? Бул жөн гана жаман адат эмес! Мунун бир нече себеби бар.\n\nБиринчи себеп — кальцийдин жетишсиздиги.\n\nТооктун организмине кальций жетишпесе, жумуртканын кабыгы жука жана морт болуп калышы мүмкүн.\n\nЭкинчи себеп — жумуртканын сынышы.\n\nЖука кабыктуу жумуртка уяда оңой сынып калат. Тоок анын ичиндеги азыкты жеп көрүп, кийин бул адатка көнүп калышы мүмкүн.\n\nҮчүнчү себеп — уянын туура уюштурулбашы.\n\nЭгер уя тар, ыңгайсыз же жарык болсо, жумурткалар сынып калуу коркунучу жогорулайт.\n\nТөртүнчү себеп — жумуртканы уяда көпкө калтыруу.\n\nЖумурткаларды күн ичинде бир нече жолу чогултуп туруңуз.\n\nМындай көрүнүштү кантип алдын алса болот?\n\nТоокторго тең салмактуу жем бериңиз, кальций жетиштүү болушун камсыз кылыңыз, уяларды ыңгайлуу уюштуруп, жумурткаларды убагында чогултуңуз.\n\nТоок чарбасы боюнча дагы пайдалуу кеңештер үчүн баракчабызга катталыңыз!",
+  "own_text": true,
+  "shots": [
+    {
+      "n": 1,
+      "source": "photo",
+      "file": "assets/reels03/img12.png",
+      "motion": "in",
+      "onscreen": "Тоок жумуртканы жейби?",
+      "duration": 2.42,
+      "visual": "photo img12.png"
+    },
+    {
+      "n": 2,
+      "source": "photo",
+      "file": "assets/reels03/panel01.png",
+      "motion": "right",
+      "onscreen": "Бул жөн гана адат эмес",
+      "duration": 2.42,
+      "visual": "photo panel01.png"
+    },
+    {
+      "n": 3,
+      "source": "photo",
+      "file": "assets/reels03/img11.png",
+      "motion": "out",
+      "onscreen": "Анын 4 себеби бар",
+      "duration": 2.42,
+      "visual": "photo img11.png"
+    },
+    {
+      "n": 4,
+      "source": "photo",
+      "file": "assets/reels03/panel07.png",
+      "motion": "in",
+      "onscreen": "Себеп 1: Кальций жетишсиз",
+      "duration": 2.94,
+      "visual": "photo panel07.png"
+    },
+    {
+      "n": 5,
+      "source": "photo",
+      "file": "assets/reels03/panel02.png",
+      "motion": "left",
+      "onscreen": "Кабык жука жана морт",
+      "duration": 2.94,
+      "visual": "photo panel02.png"
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels03/panel10.png",
+      "motion": "in",
+      "onscreen": "Организмге кальций керек",
+      "visual": "photo panel10.png",
+      "duration": 2.94,
+      "n": 6
+    },
+    {
+      "n": 7,
+      "source": "photo",
+      "file": "assets/reels03/img13.png",
+      "motion": "in",
+      "onscreen": "Себеп 2: Жумуртка сынат",
+      "duration": 3.4,
+      "visual": "photo img13.png"
+    },
+    {
+      "n": 8,
+      "source": "photo",
+      "file": "assets/reels03/img01.png",
+      "motion": "down",
+      "onscreen": "Ичиндегисин татып көрөт…",
+      "duration": 3.4,
+      "visual": "photo img01.png"
+    },
+    {
+      "n": 9,
+      "source": "photo",
+      "file": "assets/reels03/img04.png",
+      "motion": "out",
+      "onscreen": "…анан адатка айланат",
+      "duration": 3.4,
+      "visual": "photo img04.png"
+    },
+    {
+      "n": 10,
+      "source": "photo",
+      "file": "assets/reels03/panel05.png",
+      "motion": "right",
+      "onscreen": "Себеп 3: Уя туура эмес",
+      "duration": 2.72,
+      "visual": "photo panel05.png"
+    },
+    {
+      "n": 11,
+      "source": "photo",
+      "file": "assets/reels03/img03.png",
+      "motion": "in",
+      "onscreen": "Тар · ыңгайсыз · жарык",
+      "duration": 2.72,
+      "visual": "photo img03.png"
+    },
+    {
+      "source": "photo",
+      "file": "assets/reels03/img09.png",
+      "motion": "out",
+      "onscreen": "Уя ыңгайлуу болсун",
+      "visual": "photo img09.png",
+      "duration": 2.72,
+      "n": 12
+    },
+    {
+      "n": 13,
+      "source": "photo",
+      "file": "assets/reels03/img07.png",
+      "motion": "in",
+      "onscreen": "Себеп 4: Уяда көп калат",
+      "duration": 3.46,
+      "visual": "photo img07.png"
+    },
+    {
+      "n": 14,
+      "source": "photo",
+      "file": "assets/reels03/panel06.png",
+      "motion": "left",
+      "onscreen": "Күнүнө бир нече жолу чогултуңуз",
+      "duration": 3.46,
+      "visual": "photo panel06.png"
+    },
+    {
+      "n": 15,
+      "source": "photo",
+      "file": "assets/reels03/img10.png",
+      "motion": "out",
+      "onscreen": "Кантип алдын алабыз?",
+      "duration": 2.38,
+      "visual": "photo img10.png"
+    },
+    {
+      "n": 16,
+      "source": "photo",
+      "file": "assets/reels03/img02.png",
+      "motion": "in",
+      "onscreen": "✓ Тең салмактуу жем",
+      "duration": 2.38,
+      "visual": "photo img02.png"
+    },
+    {
+      "n": 17,
+      "source": "photo",
+      "file": "assets/reels03/panel03.png",
+      "motion": "up",
+      "onscreen": "✓ Кальций жетиштүү",
+      "duration": 2.38,
+      "visual": "photo panel03.png"
+    },
+    {
+      "n": 18,
+      "source": "photo",
+      "file": "assets/reels03/img06.png",
+      "motion": "right",
+      "onscreen": "✓ Ыңгайлуу уя",
+      "duration": 2.38,
+      "visual": "photo img06.png"
+    },
+    {
+      "n": 19,
+      "source": "photo",
+      "file": "assets/reels03/img08.png",
+      "motion": "in",
+      "onscreen": "✓ Убагында чогултуу",
+      "duration": 2.38,
+      "visual": "photo img08.png"
+    },
+    {
+      "n": 20,
+      "source": "photo",
+      "file": "assets/reels03/img05.png",
+      "motion": "in",
+      "onscreen": "Пайдалуу кеңештер үчүн",
+      "visual": "photo img05.png (коллаж)",
+      "duration": 2.37
+    },
+    {
+      "n": 21,
+      "source": "photo",
+      "file": "assets/reels03/panel09.png",
+      "motion": "left",
+      "onscreen": "баракчабызга катталыңыз",
+      "duration": 2.37,
+      "visual": "photo panel09.png"
+    }
+  ],
+  "voice_tempo": 1.1,
+  "fade": 0.3,
+  "text_style": "cream",
+  "concept": "Сүрөт-баян: жылуу документалдык фото, Ken Burns кыймылы, караңгы аркылуу жумшак өтүү, ачык фондогу жазуулар",
+  "caption": "Тоок эмне үчүн өз жумурткасын жейт? 4 себеп жана алдын алуу жолдору. Видеону сактап коюңуз 👇\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n🖼 Видеодогу сүрөттөр — иллюстрация.",
+  "hashtags": [
+    "#тоокферма",
+    "#жумуртка",
+    "#тоокчарбасы",
+    "#кыргызстан",
+    "#фермер",
+    "#кальций"
+  ],
+  "cta": {
+    "type": "direct",
+    "text": "Direct'ке «КУРС» деп жазыңыз"
+  },
+  "sources": [
+    {
+      "type": "author_experience",
+      "note": "Автордун сценарийи (колдонуучу берген текст, 2026-11-24)"
+    }
+  ],
+  "output_name": "Instagram_Reels_03.mp4",
+  "id": "2026-11-24-50954172-reel-ky",
+  "originality": {
+    "vs_video_1_balapan": "сток видео + кескин кесүү + кара фондогу ак жазуу → бул: сүрөт + Ken Burns + караңгы аркылуу өтүү + ачык фон",
+    "vs_video_2_jumurtka": "'СЕБЕП №N' БАС тамга карталары, Pixabay видео → бул: кадимки тамга, суроо-жооп агымы, колдонуучунун сүрөттөрү",
+    "shared": "диктор (Charon) жана субтитрдин орду — бренд шайкештиги үчүн атайын сакталды"
+  },
+  "lint_issues": [],
+  "status": "pending_review"
+}

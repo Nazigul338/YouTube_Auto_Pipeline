@@ -80,10 +80,16 @@ class Durations(unittest.TestCase):
         self.assertAlmostEqual(sum(s["duration"] for s in sh), 44.8, delta=0.05)
         self.assertLess(max(s["duration"] for s in sh) - min(s["duration"] for s in sh), 0.5)
 
-    def test_short_voice_untouched(self):
+    def test_long_plan_shrinks_to_voice(self):
+        # 2026-11-24: план үндөн узун болсо кыскарат — видеонун аягында үнсүз бөлүк калбасын
         sh = [{"n": 1, "duration": 5}, {"n": 2, "duration": 5}]
         video.fit_durations(sh, 6)
-        self.assertEqual([s["duration"] for s in sh], [5, 5])
+        self.assertEqual([s["duration"] for s in sh], [3.25, 3.25])
+
+    def test_close_plan_untouched(self):
+        sh = [{"n": 1, "duration": 3.5}, {"n": 2, "duration": 3.5}]
+        video.fit_durations(sh, 6.2)
+        self.assertEqual([s["duration"] for s in sh], [3.5, 3.5])
 
 
 class Disclosure(unittest.TestCase):
