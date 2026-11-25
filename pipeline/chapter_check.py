@@ -76,7 +76,10 @@ def main() -> int:
         return 2
     folder = drive.find_path("YouTube_Auto_TEST", "Final_Videos")
     report, ok_all = {}, True
+    only = [x.strip() for x in os.environ.get("CHK_ONLY", "").split(",") if x.strip()]
     for name in CHAPTERS:
+        if only and name not in only:
+            continue
         item = drive.find_file(name, folder) if folder else None
         if not item:
             print(f"❌ {name}: Drive'да табылган жок")

@@ -4,6 +4,11 @@ name: ⏱ Тайм-код текшерүү (Video_001/004 cinematic)
 # Окуу гана: Drive'га эч нерсе жазылбайт.
 on:
   workflow_dispatch:
+    inputs:
+      only:
+        description: "Бир гана файл (мис. Video_003_cinematic.mp4); бош = баары"
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -27,6 +32,7 @@ jobs:
           GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
           GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
           GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          CHK_ONLY: ${{ inputs.only }}
         run: python -m pipeline.chapter_check
       - uses: actions/upload-artifact@v4
         if: always()
