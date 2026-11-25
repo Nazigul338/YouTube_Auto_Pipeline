@@ -552,10 +552,8 @@ class QAStage(Stage):
         from .. import edit_concept as ecm
         from .s1_script import HOOK_BANNED
 
-        try:
-            meta = json.loads(ctx.path("script", "meta.json").read_text(encoding="utf-8"))
-        except Exception:
-            meta = {}
+        from .. import hookmeta
+        meta = hookmeta.ensure(ctx)            # эски долбоор: hook маалыматы жок болсо толукталат
         hook, htype = meta.get("hook", ""), meta.get("hook_type")
         try:
             cards = json.loads(ctx.path("animation", "cards.json").read_text(encoding="utf-8"))

@@ -131,6 +131,51 @@ def render_shot(clip: Path, out: Path, kind: str, offset: float, dur: float,
                      f"клип: {clip.name}, offset {offset}")
 
 
+# ── Рендерден кийинки оңдоолор (2026-11-25, Video_003: run #45670505437) ──────────────────────────────────────
+# 1) s5 клиптин биринчи `dur` секундун гана текшерет, ал эми өтүү үчүн кадр +0.5 сек узартылат → кара экран QA'дан өтпөйт.
+#    Эми РЕНДЕРЛЕНГЕН кадрдын өзү текшерилет; кара болсо башка offset тандалат.
+# 2) план↔өлчөө (QA ≥85%): өлчөнгөн кыймыл планга дал келбесе, кадр башка кыймыл менен кайра рендерленет жана
+#    ЧЫНЫГЫ өлчөнгөн кыймыл планга жазылат (план менен жыйынтык дайыма бирдей).
+BLACK_FILTER = "blackdetect=d=0.3:pic_th=0.98:pix_th=0.04"
+BLACK_MAX = 0.35                       # QA: ≥0.5 сек кара экран өтпөйт — запас менен
+MOTION_ALTS = ("ken_burns", "dolly", "dolly_out")   # «кыймыл бар» жетиштүү түрлөр (motion.matches)
+
+
+def black_seconds(path: Path) -> float:
+    """Рендерленген кадрдагы кара/өтө караңгы секунддардын суммасы."""
+    import re
+    import subprocess
+
+    try:
+        r = subprocess.run(["ffmpeg", "-v", "info", "-i", str(path), "-vf", f"scale=160:-2,fps=8,{BLACK_FILTER}",
+                            "-an", "-f", "null", "-"], capture_output=True, text=True, timeout=120)
+    except Exception:
+        return 0.0
+    return round(sum(float(x) for x in re.findall(r"black_duration:([\d.]+)", r.stderr)), 2)
+
+
+def alt_offsets(real: float, dur: float, cur: float) -> list[float]:
+    """Кара болуп чыккан кадр үчүн башка баштоо убакыттары (клиптин ичинде, учурдагыдан ≥0.8 сек алыс)."""
+    room = max(0.0, real - dur - 0.3)
+    cands = [round(room * f, 2) for f in (0.0, 0.5, 0.25, 0.75, 1.0)]
+    out: list[float] = []
+    for c in cands:
+        if abs(c - cur) >= 0.8 and c not in out:
+            out.append(c)
+    return out[:4]
+
+
+def alt_motion(spec: str, idx: int, k: int) -> str | None:
+    """Дал келбеген кыймылдын ордуна k-альтернатива (кайталануучу). Түрлөр түгөнсө — None."""
+    from .. import motion as mv
+
+    name, seed = mv.parse(spec)
+    alts = [a for a in MOTION_ALTS if a != name]
+    if k >= len(alts):
+        return None
+    return f"v2:{alts[k]}@{(seed * 31 + idx * 17 + k) % 900000 + 1000}"
+
+
 def check_contiguous(shots: list[dict], total: float, tol: float = 0.02) -> None:
     """Кадрлар [0, total] аралыгын боштуксуз жана кайталанбай толук жабышы керек."""
     prev = 0.0
@@ -351,15 +396,54 @@ class RenderStage(Stage):
                 pre, info = cinematic.shot_prefilter(clip, kind, off, d)
                 idx = int(out.stem.split("_")[1])
                 infos[idx] = info
-                render_shot(clip, out, kind, off, d, motion, inten, prefilter=pre, card=card_for_shot.get(idx))
+                card = card_for_shot.get(idx)
+                render_shot(clip, out, kind, off, d, motion, inten, prefilter=pre, card=card)
+                fixes = []
+                if kind == "video":            # кара экран: рендерленген кадрды текшерүү
+                    bs = black_seconds(out)
+                    if bs >= BLACK_MAX:
+                        real = media.duration(clip)
+                        best, last = (bs, off, pre, info), off
+                        for off2 in alt_offsets(real, d, off):
+                            pre2, info2 = cinematic.shot_prefilter(clip, kind, off2, d)
+                            render_shot(clip, out, kind, off2, d, motion, inten, prefilter=pre2, card=card)
+                            last = off2
+                            b2 = black_seconds(out)
+                            if b2 < best[0]:
+                                best = (b2, off2, pre2, info2)
+                            if b2 < 0.1:
+                                break
+                        if best[1] != last:          # эң жакшы вариант акыркы рендер эмес — кайра рендерлөө
+                            render_shot(clip, out, kind, best[1], d, motion, inten, prefilter=best[2], card=card)
+                        _b, off, pre, info = best
+                        infos[idx] = info
+                        fixes.append(f"кара {bs:.2f}→{best[0]:.2f} сек (offset {best[1]})")
                 if motion.startswith("v2:"):        # кыймыл чындап барбы — рендерленген кадрдан өлчөө
                     from .. import motion as motion_v2
 
                     m = motion_v2.measure(out, d)
                     det = motion_v2.classify(m)
+                    match = motion_v2.matches(motion, det)
+                    if match is False:               # план↔өлчөө дал келбейт → башка кыймыл менен кайра рендер
+                        orig = motion
+                        for k in range(len(MOTION_ALTS)):
+                            alt = alt_motion(orig, idx, k)
+                            if alt is None:
+                                break
+                            render_shot(clip, out, kind, off, d, alt, inten, prefilter=pre, card=card)
+                            m2 = motion_v2.measure(out, d)
+                            det2 = motion_v2.classify(m2)
+                            if motion_v2.matches(alt, det2):
+                                fixes.append(f"кыймыл {motion_v2.parse(orig)[0]}→{motion_v2.parse(alt)[0]}")
+                                motion, m, det, match = alt, m2, det2, True
+                                break
+                        if match is False:           # ылайыктуу альтернатива табылган жок — баштапкы рендер кайтарылат
+                            render_shot(clip, out, kind, off, d, orig, inten, prefilter=pre, card=card)
                     info["motion"] = {"planned": motion_v2.parse(motion)[0], "detected": det,
-                                      "match": motion_v2.matches(motion, det),
+                                      "match": match,
                                       **{k: m.get(k) for k in ("dx", "dy", "scale", "diff")}}
+                if fixes:
+                    info["repairs"] = fixes
 
             with ThreadPoolExecutor(workers) as ex:
                 list(ex.map(job, jobs))

@@ -36,6 +36,10 @@ on:
         required: false
         default: false
         type: boolean
+      hook_card:
+        description: "(милдеттүү эмес) Hook карточкасынын тексти (≤6 сөз); эски долбоор үчүн, мис. «НАСТОЯЩАЯ ЖИЗНЬ — ЗА ПОВОРОТОМ?»"
+        required: false
+        type: string
       qa_profile:
         description: "QA профили: current = бардык азыркы эрежелер; legacy = эски видео үчүн 24-ноябрдагы катаал пункттарсыз"
         required: false
@@ -115,6 +119,7 @@ jobs:
           VIDEO_RERUN_FROM: ${{ inputs.rerun_from }}
           VIDEO_STOP_AFTER: ${{ inputs.stop_after }}
           VIDEO_QA_PROFILE: ${{ inputs.qa_profile }}
+          VIDEO_HOOK_CARD: ${{ inputs.hook_card }}
           YTA_DRIVE_FOLDER: ${{ inputs.test_run && 'YouTube_Auto_TEST' || 'YouTube_Auto' }}
           # Колдонуучу бекитти (2026-11-20): cinematic монтаж, угулуучу музыка, үн эффекттери, мотивациялык диктор.
           # AI-сүрөттөр өчүк (billing жок).

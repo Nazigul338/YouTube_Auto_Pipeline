@@ -187,6 +187,8 @@ class AnimationStage(Stage):
         gap = 4.0 * concept.get("card_every", 3)       # концепция: карточкалардын жыштыгы
         hook = ""
         if cine:   # видеонун башындагы hook карточкасы (s1 «КАРТОЧКА:»)
+            from .. import hookmeta
+            hookmeta.ensure(ctx, ctx.log)      # эски долбоор: meta.json'до hook жок болсо толуктайт
             try:
                 hook = json.loads(ctx.path("script", "meta.json").read_text(encoding="utf-8")).get("hook_card", "")
             except Exception:
