@@ -106,7 +106,7 @@ class Inventory:
         for f in files:
             folder = path_of((f.get("parents") or [None])[0]) or "(Менин Drive'ым — тамыр)"
             cat, why = classify(folder + "/" + f["name"], f["name"], f["mimeType"])
-            rows.append({"name": f["name"], "folder": folder, "mb": mb(f.get("size")), "bytes": int(f.get("size") or 0),
+            rows.append({"id": f["id"], "name": f["name"], "folder": folder, "mb": mb(f.get("size")), "bytes": int(f.get("size") or 0),
                          "modified": f.get("modifiedTime", "")[:10], "md5": f.get("md5Checksum"), "cat": cat,
                          "why": why})
         # кайталанган көчүрмө (бир эле md5, бирөөсү protected эмес) — белгилейт гана
