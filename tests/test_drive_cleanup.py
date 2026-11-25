@@ -116,6 +116,20 @@ class TestCleanup(unittest.TestCase):
                 row(74, "Poultry/videos", "reel.mp4")]
         self.assertEqual({x["id"] for x in dc.plan(rows, "keep_latest")["files"]}, {"id71", "id72"})
 
+    def test_restore_only_matching_names_and_sizes(self):
+        svc = mock.MagicMock()
+        files = [{"id": "a", "name": "Video_001.mp4", "size": "515922558"},
+                 {"id": "b", "name": "Video_001.mp4", "size": "1"},            # көлөмү башка — тийилбейт
+                 {"id": "c", "name": "Video_003.mp4", "size": "327325984"}]
+        svc.files.return_value.list.return_value.execute.return_value = {"files": files}
+        svc.files.return_value.get.return_value.execute.return_value = {"name": "Video_001.mp4", "trashed": False, "size": "515922558"}
+        out = dc.restore(svc, log=lambda *_: None)
+        self.assertEqual(len(out), 1)
+        ids = [c.kwargs["fileId"] for c in svc.files.return_value.update.call_args_list]
+        self.assertEqual(ids, ["a"])
+        for c in svc.files.return_value.update.call_args_list:
+            self.assertEqual(c.kwargs["body"], {"trashed": False})
+
     def test_no_delete_in_code(self):
         src = open(dc.__file__, encoding="utf-8").read()
         self.assertNotIn(".delete(", src)

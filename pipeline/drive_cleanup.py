@@ -197,12 +197,39 @@ def trash(svc, p: dict, code: str, log=print) -> dict:
             "failed": [f"{r['folder']}/{r['name']}" for r in failed]}
 
 
+RESTORE_NAMES = {"Video_001.mp4": 515922558, "Video_001_cinematic.mp4": 443086950}
+
+
+def restore(svc, log=print) -> list[dict]:
+    """Колдонуучунун суроосу (2026-11-25): Video_001 MP4'терин себеттен КАЙТАРУУ (телефонго жүктөп алуу үчүн).
+    Аты ЖАНА байт көлөмү дал келген, себеттеги, колдонуучуга таандык файлдар гана; trashed=False. Башкага тийбейт."""
+    out, tok = [], None
+    while True:
+        r = svc.files().list(q="trashed = true and 'me' in owners and mimeType = 'video/mp4'",
+                             fields="nextPageToken, files(id,name,size,parents)", pageSize=200,
+                             pageToken=tok).execute(num_retries=3)
+        for f in r.get("files", []):
+            if RESTORE_NAMES.get(f["name"]) == int(f.get("size") or 0):
+                svc.files().update(fileId=f["id"], body={"trashed": False}, fields="id").execute(num_retries=3)
+                chk = svc.files().get(fileId=f["id"], fields="id,name,trashed,webViewLink,size").execute(num_retries=3)
+                if not chk.get("trashed"):
+                    out.append(chk)
+                    log(f"♻️ Кайтарылды: {chk['name']} ({int(chk['size']) / 1_048_576:.0f} МБ) {chk.get('webViewLink', '')}")
+        tok = r.get("nextPageToken")
+        if not tok:
+            return out
+
+
 def main() -> int:
     from .drive import DriveClient
     drive = DriveClient.from_env()
     if drive is None:
         print("❌ GDRIVE_* секреттери жок")
         return 2
+    if os.environ.get("CLEAN_MODE") == "restore":
+        res = restore(drive.svc)
+        print(json.dumps([{"name": x["name"], "link": x.get("webViewLink")} for x in res], ensure_ascii=False))
+        return 0 if len(res) == len(RESTORE_NAMES) else 1
     rows = Inventory(drive.svc).collect()["rows"]
     which = os.environ.get("CLEAN_SET", "tests")
     p = plan(rows, which)
