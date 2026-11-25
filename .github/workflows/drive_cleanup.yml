@@ -1,0 +1,51 @@
+name: 🧹 Drive тазалоо (план / себетке)
+
+# plan  — өчүрүлө турган файлдардын тизмеси жана план коду (эч нерсе өзгөрбөйт; демейки).
+# trash — колдонуучу уруксат бергенден кийин гана: план коду дал келсе, ошол файлдар Google Drive СЕБЕТИНЕ
+#         жылдырылат (биротоло өчүрүлбөйт; 30 күн калыбына келтирүүгө болот).
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "plan — тизме гана; trash — себетке жылдыруу (уруксат менен)"
+        default: plan
+        type: choice
+        options: [plan, trash]
+      plan_code:
+        description: "trash үчүн: план режиминде берилген код"
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drive-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -q google-api-python-client google-auth
+      - name: Тазалоо
+        env:
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+          CLEAN_MODE: ${{ inputs.mode }}
+          CLEAN_CODE: ${{ inputs.plan_code }}
+        run: python -m pipeline.drive_cleanup
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: drive-cleanup-${{ inputs.mode }}
+          path: drive_cleanup/
+          if-no-files-found: ignore
+          retention-days: 30
