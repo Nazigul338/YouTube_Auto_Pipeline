@@ -130,6 +130,32 @@ class TestCleanup(unittest.TestCase):
         for c in svc.files.return_value.update.call_args_list:
             self.assertEqual(c.kwargs["body"], {"trashed": False})
 
+    def test_named_video_002_005(self):
+        folders = [{"id": "r", "name": "YouTube_Auto_TEST", "parents": ["x"]},
+                   {"id": "p", "name": "Projects", "parents": ["r"]},
+                   {"id": "p5", "name": "Video_005", "parents": ["p"]},
+                   {"id": "p5a", "name": "audio", "parents": ["p5"]},
+                   {"id": "p4", "name": "Video_004", "parents": ["p"]},
+                   {"id": "o", "name": "Other", "parents": ["x"]},
+                   {"id": "o5", "name": "Video_005", "parents": ["o"]},
+                   {"id": "p50", "name": "Video_0050", "parents": ["p"]}]
+        files = [{"id": "f1", "name": "script.txt", "parents": ["p5"], "size": "10", "mimeType": "text/plain"},
+                 {"id": "f2", "name": "x.wav", "parents": ["p5a"], "size": "10", "mimeType": "audio/wav"},
+                 {"id": "f3", "name": "Video_005_voice.wav", "parents": ["r"], "size": "10", "mimeType": "audio/wav"},
+                 {"id": "f4", "name": "Video_002.log", "parents": ["r"], "size": "9", "mimeType": "text/plain"},
+                 {"id": "f5", "name": "Video_004.log", "parents": ["r"], "size": "9", "mimeType": "text/plain"},
+                 {"id": "f6", "name": "_registry.json", "parents": ["p"], "size": "9", "mimeType": "application/json"}]
+        svc = mock.MagicMock()
+
+        def lst(**k):
+            m = mock.MagicMock()
+            m.execute.return_value = {"files": folders if "folder' and" in k["q"] else files}
+            return m
+        svc.files.return_value.list.side_effect = lst
+        names = [(i["path"], i["name"]) for i in dc.named_plan(svc)]
+        self.assertEqual(sorted(names), [("YouTube_Auto_TEST", "Video_002.log"), ("YouTube_Auto_TEST", "Video_005_voice.wav"),
+                                         ("YouTube_Auto_TEST/Projects", "Video_005")])
+
     def test_no_delete_in_code(self):
         src = open(dc.__file__, encoding="utf-8").read()
         self.assertNotIn(".delete(", src)

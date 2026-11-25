@@ -197,6 +197,68 @@ def trash(svc, p: dict, code: str, log=print) -> dict:
             "failed": [f"{r['folder']}/{r['name']}" for r in failed]}
 
 
+NAMED_RE = re.compile(r"^Video_00(2|5)(?![0-9])")     # Video_002 / Video_005 (Video_0050 эмес)
+SYSTEM_ROOTS = ("YouTube_Auto", "YouTube_Auto_TEST", "YouTube_Auto_EN", "YouTube_Auto_EN_TEST")
+NAMED_MAX_BYTES = 200 * 1024 * 1024      # бир элемент ~200 МБ'ден чоң болсо — токтойт (күтүлбөгөн нерсе)
+NAMED_MAX_ITEMS = 120
+
+
+def named_plan(svc) -> list[dict]:
+    """Video_002 / Video_005 деген аттагы папкалар жана файлдар (системанын тамырларында, себетте эмес).
+    Папка трешке кетсе ичиндегилери да кетет, ошондуктан жогорку деңгээлдегилер гана алынат."""
+    def lst(q, fields):
+        out, tok = [], None
+        while True:
+            r = svc.files().list(q=q, fields=f"nextPageToken, files({fields})", pageSize=1000, pageToken=tok,
+                                 spaces="drive").execute(num_retries=3)
+            out += r.get("files", [])
+            tok = r.get("nextPageToken")
+            if not tok:
+                return out
+    folders = {f["id"]: f for f in lst("mimeType = 'application/vnd.google-apps.folder' and trashed = false", "id,name,parents")}
+    files = lst("mimeType != 'application/vnd.google-apps.folder' and trashed = false and 'me' in owners",
+                "id,name,parents,size,mimeType")
+
+    def chain(pid, d=0):
+        names = []
+        while pid and pid in folders and d < 30:
+            names.append(folders[pid]["name"])
+            pid, d = (folders[pid].get("parents") or [None])[0], d + 1
+        return list(reversed(names))
+    items = []
+    for kind, src in (("folder", list(folders.values())), ("file", files)):
+        for x in src:
+            if not NAMED_RE.match(x["name"]):
+                continue
+            ch = chain((x.get("parents") or [None])[0])
+            if not ch or ch[0] not in SYSTEM_ROOTS:
+                continue
+            items.append({"id": x["id"], "name": x["name"], "kind": kind, "path": "/".join(ch),
+                          "bytes": int(x.get("size") or 0), "mime": x.get("mimeType", "")})
+    top = [i for i in items if not any(NAMED_RE.match(n) for n in i["path"].split("/"))]
+    return sorted(top, key=lambda i: i["path"] + "/" + i["name"])
+
+
+def trash_named(svc, log=print) -> dict:
+    plan_ = named_plan(svc)
+    bad = [i for i in plan_ if i["bytes"] > NAMED_MAX_BYTES or "Final_Videos" in i["path"]
+           or i["name"].startswith("_registry")]
+    if bad or len(plan_) > NAMED_MAX_ITEMS:
+        raise SystemExit(f"⛔ Күтүлбөгөн нерсе: {len(plan_)} элемент, шектүү: {[b['name'] for b in bad][:5]} — эч нерсе жасалган жок")
+    for i in plan_:
+        log(f"   • {i['kind']}: {i['path']}/{i['name']} ({i['bytes'] / 1_048_576:.1f} МБ)")
+    done, failed = [], []
+    for i in plan_:
+        try:
+            svc.files().update(fileId=i["id"], body={"trashed": True}, fields="id").execute(num_retries=3)
+            chk = svc.files().get(fileId=i["id"], fields="trashed").execute(num_retries=3)
+            (done if chk.get("trashed") else failed).append(i)
+        except Exception as e:
+            failed.append({**i, "error": type(e).__name__})
+    log(f"🗑 Video_002/Video_005: себетке жылдырылды {len(done)} элемент; ката: {len(failed)}")
+    return {"trashed": [f"{i['path']}/{i['name']}" for i in done], "failed": [i["name"] for i in failed]}
+
+
 RESTORE_NAMES = {"Video_001.mp4": 515922558, "Video_001_cinematic.mp4": 443086950}
 
 
@@ -226,6 +288,10 @@ def main() -> int:
     if drive is None:
         print("❌ GDRIVE_* секреттери жок")
         return 2
+    if os.environ.get("CLEAN_MODE") == "trash_named":
+        res = trash_named(drive.svc)
+        print(json.dumps(res, ensure_ascii=False))
+        return 1 if res["failed"] else 0
     if os.environ.get("CLEAN_MODE") == "restore":
         res = restore(drive.svc)
         print(json.dumps([{"name": x["name"], "link": x.get("webViewLink")} for x in res], ensure_ascii=False))
