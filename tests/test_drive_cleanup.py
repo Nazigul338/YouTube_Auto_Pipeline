@@ -149,7 +149,7 @@ class TestCleanup(unittest.TestCase):
 
         def lst(**k):
             m = mock.MagicMock()
-            m.execute.return_value = {"files": folders if "folder' and" in k["q"] else files}
+            m.execute.return_value = {"files": folders if k["q"].startswith("mimeType = ") else files}
             return m
         svc.files.return_value.list.side_effect = lst
         names = [(i["path"], i["name"]) for i in dc.named_plan(svc)]
