@@ -28,4 +28,4 @@ jobs:
           if [ -n "${FOLDER:-}" ]; then LIST=("poultry_ig_agent/inbox/$FOLDER"); else LIST=(); for f in poultry_ig_agent/inbox/*/transcribe_request.txt; do LIST+=("$(dirname "$f")"); done; fi
           for d in "${LIST[@]}"; do python -m poultry_ig_agent.tools.transcribe "$d"; rm -f "$d/transcribe_request.txt"; done
       - name: Сактоо
-        run: bash poultry_ig_agent/tools/commit_push.sh "Poultry: транскрипция (Gemini)" poultry_ig_agent/inbox
+        run: bash poultry_ig_agent/tools/commit_push.sh "Poultry — транскрипция (Gemini)" poultry_ig_agent/inbox
