@@ -734,6 +734,13 @@ SHA-256 дал келди ✅. Мурунку Testing токенинин 2026-11
   дал келгендер гана) — Video_001.mp4 (492 МБ) жана Video_001_cinematic.mp4 (423 МБ) себеттен КАЙТАРЫЛДЫ (Final_Videos'ко).
   Video_002: MP4 эч качан болгон эмес (реестр in_progress; Drive'да Video_002.log 1 КБ + бош папка). ⏳ Колдонуучу жүктөп
   алып, тастыктаган соң гана Video_001 кайра себетке жылдырылат (өзүнчө уруксат).
+- ✅ Колдонуучу: «Video_005, Video_002 керек эмес, өчүрүп сала бер» → run #45644713166 (mode=trash_named), СЕБЕТКЕ (биротоло эмес):
+  9 элемент — Projects/Video_002 жана Projects/Video_005 папкалары (ичиндегилери менен), Clips/Video_005_clips.json,
+  Logs/Video_002.log, Video_005.log, Video_005_production_report.md, Scripts/Video_005.txt, Subtitles/Video_005.{ass,srt}.
+  Ката 0. `_registry.json` ТИЙИЛГЕН ЖОК (Video_002 in_progress, Video_005 failed жазуулары калды — оригиналдуулук
+  салыштыруусу үчүн; керек болсо өзүнчө тазаланат). Video_004/001/003/006 тийилген жок.
+- ⚠️ commit 'Drive cleanup: trash_named…' тест кулап турганда push болуп кеткен (команда `;` менен чынжырланган); кийинки
+  commit оңдоду, толук тесттер азыр ✅. Мындан ары `&&` менен: тест өтпөсө commit жок.
   Себет орун ээлей берет; аккаунттун көйгөйү Gmail+Photos 44.6 ГБ — тазалоо аны чечпейт.
 
 ## 9. Акыркы GitHub commit ID
