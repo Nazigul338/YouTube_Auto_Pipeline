@@ -30,32 +30,46 @@ def mb(n) -> float:
     return round(int(n or 0) / 1_048_576, 1)
 
 
+ABANDONED = ("Video_005",)      # колдонуучунун чечими 2026-11-24: кино-окуя сынагы улантылбайт
+INTERMEDIATE = ("music_bed.wav", "voice_raw.wav", "gap.wav")
+
+
 def classify(path: str, name: str, mime: str) -> tuple[str, str]:
-    """→ (категория, себеби). Шектүү болсо ар дайым сактоо тарапка."""
+    """→ (категория, себеби). Шектүү болсо ар дайым САКТОО тарапка (run #45537869128'ден кийин катаалдатылды:
+    даяр видеолор TEST/Final_Videos'то турат; Colab доорундагы `video_001_*` кичине тамга менен)."""
     ext = os.path.splitext(name)[1].lower()
     parts = path.split("/")
     root = parts[0] if parts else ""
-    if "Video_001" in path or name.startswith("Video_001"):
-        return "protected", "Video_001 — салыштыруунун негизи, өзгөртүлбөйт"
+    low = path.lower()
+    if "video_001" in low:
+        return "protected", "Video_001 (сценарий/аудио/клиптер/MP4) — өзгөртүлбөйт"
     if mime.startswith("application/vnd.google-apps") or ext in KEEP_EXT:
         return "protected", "сценарий/метадайын/код/лицензия/журнал (кичине, келечекте керек)"
     if any(a in path for a in ACTIVE):
         return "active", "иштеп жаткан сынак видеосу"
     if root not in SYSTEM_ROOTS:
         return "user", "системанын папкасынан тышкары — колдонуучу өзү чечет"
-    if "Licenses" in parts:
-        return "protected", "лицензия маалыматы"
-    if "Music" in parts or "SFX" in parts or "Sfx" in parts or "sfx" in parts:
-        return "protected", "музыка/үн эффекттеринин китепканасы (кийинки видеолор колдонот)"
+    if "Final_Videos" in parts:
+        return "protected", "даяр видео (Final_Videos) — бир видеонун эки версиясы болсо, кайсынысы калаарын сиз чечесиз"
+    if "Thumbnails" in parts:
+        return "protected", "даяр обложка"
+    if any(x in parts for x in ("Licenses", "Music", "Sound_Effects", "SFX", "Sfx", "sfx")):
+        return "protected", "лицензия / музыка / үн эффекттеринин китепканасы (кийинки видеолор колдонот)"
     if ext not in MEDIA_EXT:
         return "protected", "медиа эмес файл"
-    if root == "YouTube_Auto" and "Final_Videos" in parts and FINAL_RE.match(name):
-        return "protected", "даяр видеонун акыркы MP4'ү"
-    if root.endswith("_TEST"):
-        return "candidate", "TEST папкасындагы сынак медиасы (кайра түзүлөт)"
-    if re.search(r"_(cinematic|preview|60s|sample|test)", name, re.I):
-        return "candidate", "сынак/превью версиясы (негизги MP4 өзүнчө сакталган)"
-    return "keep_review", "системанын медиасы — кошумча текшерүүсүз өчүрүлбөйт"
+    if any(a in path for a in ABANDONED):
+        return "candidate", "Video_005 — токтотулган кино-окуя сынагы, даяр видео жок"
+    if "/audio/chunks/" in path + "/" or name in INTERMEDIATE:
+        return "candidate", "аралык аудио (бөлүктөр/фон/чийки үн) — акыркы MP4'тө бар, кайра түзүлөт"
+    if any(x in parts for x in ("_preview", "_diagnose", "_voice_test", "test_2k")):
+        return "candidate", "сынак/превью/диагностика файлы"
+    if "thumbnails" in parts and name.startswith("f_"):
+        return "candidate", "обложка үчүн алынган кадр (обложка өзү Thumbnails/'та)"
+    if len(parts) > 1 and parts[-2] == "Audio" and name.endswith("_voice.wav"):
+        return "candidate", "Projects/…/audio/voice.wav'дын көчүрмөсү (бир нускасы калат)"
+    if name == "voice.wav":
+        return "protected", "даяр видеонун диктор үнү (бир нускасы)"
+    return "keep_review", "эски/белгисиз медиа — кошумча текшерүүсүз өчүрүлбөйт, сиз чечесиз"
 
 
 class Inventory:
