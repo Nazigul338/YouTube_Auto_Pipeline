@@ -145,6 +145,33 @@ class TestFirstShot(unittest.TestCase):
         self.assertIn(("first_shot", False), items)
 
 
+    def test_legacy_profile_relaxes_only_new_rules(self):
+        import json
+        import os
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+
+        from pipeline.stages.s9_qa import QAStage
+        d = Path(tempfile.mkdtemp())
+        (d / "clips").mkdir()
+        shots = [{"start": i * 3.0, "ai_score": 3} for i in range(20)]
+        (d / "clips" / "shots.json").write_text(json.dumps({"shots": shots}), encoding="utf-8")
+        ctx = SimpleNamespace(path=lambda *p: d.joinpath(*p))
+        items = []
+        rep = SimpleNamespace(add=lambda key, title, ok, note, required=True: items.append((key, ok, required)))
+        with mock.patch.dict(os.environ, {"VIDEO_QA_PROFILE": "legacy"}):
+            self.assertTrue(QAStage.legacy_profile())
+            QAStage().check_shot_meaning(ctx, rep)
+        self.assertIn(("first_shot", False, False), items)          # милдеттүү эмес
+        self.assertIn(("shot_meaning", True, True), items)          # орточо 3.0 — эски/жаңы бирдей, милдеттүү калат
+        items.clear()
+        with mock.patch.dict(os.environ, {"VIDEO_QA_PROFILE": ""}):
+            self.assertFalse(QAStage.legacy_profile())
+            QAStage().check_shot_meaning(ctx, rep)
+        self.assertIn(("first_shot", False, True), items)           # азыркы профиль: милдеттүү
+
+
 if __name__ == "__main__":
     unittest.main()
 
