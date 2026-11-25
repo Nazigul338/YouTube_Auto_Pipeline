@@ -67,6 +67,11 @@ def eligible_set(r: dict, which: str) -> tuple[bool, str]:
         if r["folder"] == "YouTube_Auto/Long_Videos/clips_2k" and EXTRA_RE.match(r["name"]):
             return True, "Colab доорундагы эски клип (азыркы система Long_Videos'ту колдонбойт)"
         return False, "топко кирбейт"
+    if which == "colab_clips":   # колдонуучунун буйругу 2026-11-25: «Колабдагы бүт эски видео клиптерди өчүр»
+        if r["folder"] in ("YouTube_Auto/Long_Videos/clips", "YouTube_Auto/Long_Videos/clips_2k") \
+                and r["name"].lower().endswith(".mp4"):
+            return True, "Colab доорундагы эски видео клип (азыркы система Long_Videos'ту колдонбойт)"
+        return False, "топко кирбейт"
     if which == "preview":
         if r["folder"] == "YouTube_Auto_TEST/_preview" and r["name"].startswith("Video_003_cinematic_"):
             return True, "Video_003'тун 60 сек превьюсу/кадр барагы (даяр MP4 Final_Videos'то калат)"
