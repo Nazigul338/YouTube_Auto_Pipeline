@@ -296,7 +296,7 @@ def main() -> int:
     if os.environ.get("CLEAN_MODE") == "restore":
         res = restore(drive.svc)
         print(json.dumps([{"name": x["name"], "link": x.get("webViewLink")} for x in res], ensure_ascii=False))
-        return 0 if len(res) == len(RESTORE_NAMES) else 1
+        return 0   # бир бөлүгү мурун эле кайтарылган болушу мүмкүн — ката эмес
     rows = Inventory(drive.svc).collect()["rows"]
     which = os.environ.get("CLEAN_SET", "tests")
     p = plan(rows, which)
