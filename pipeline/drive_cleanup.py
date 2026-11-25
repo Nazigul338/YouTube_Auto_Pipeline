@@ -259,7 +259,8 @@ def trash_named(svc, log=print) -> dict:
     return {"trashed": [f"{i['path']}/{i['name']}" for i in done], "failed": [i["name"] for i in failed]}
 
 
-RESTORE_NAMES = {"Video_001.mp4": 515922558, "Video_001_cinematic.mp4": 443086950}
+RESTORE_NAMES = {"Video_001.mp4": 515922558, "Video_001_cinematic.mp4": 443086950,
+                 "Video_003_cinematic.mp4": 363401299}
 
 
 def restore(svc, log=print) -> list[dict]:

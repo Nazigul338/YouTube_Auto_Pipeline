@@ -127,6 +127,7 @@ class TestCleanup(unittest.TestCase):
         self.assertEqual(len(out), 1)
         ids = [c.kwargs["fileId"] for c in svc.files.return_value.update.call_args_list]
         self.assertEqual(ids, ["a"])
+        self.assertIn("Video_003_cinematic.mp4", dc.RESTORE_NAMES)
         for c in svc.files.return_value.update.call_args_list:
             self.assertEqual(c.kwargs["body"], {"trashed": False})
 
