@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 import json
 import os
 import sys
@@ -52,10 +53,31 @@ def eligible(r: dict) -> tuple[bool, str]:
     return False, "ачык эреже жок — сакталат"
 
 
-def plan(rows: list[dict]) -> dict:
+# Колдонуучу өзү атаган кошумча топтор (2026-11-25): ар бири өзүнчө план коду менен, өзүнчө уруксат.
+EXTRA_RE = re.compile(r"^extra_0\d\.mp4$")
+
+
+def eligible_set(r: dict, which: str) -> tuple[bool, str]:
+    """extra: Colab доорундагы Long_Videos/clips_2k/extra_0*.mp4 (азыркы система колдонбойт);
+    preview: _preview/Video_003_cinematic_60s.mp4 + _sheet.jpg (Video_003'тун превьюсу, даяр MP4 эмес)."""
+    path = f"{r['folder']}/{r['name']}"
+    if "video_001" in path.lower() or "Final_Videos" in path:
+        return False, "корголгон"
+    if which == "extra":
+        if r["folder"] == "YouTube_Auto/Long_Videos/clips_2k" and EXTRA_RE.match(r["name"]):
+            return True, "Colab доорундагы эски клип (азыркы система Long_Videos'ту колдонбойт)"
+        return False, "топко кирбейт"
+    if which == "preview":
+        if r["folder"] == "YouTube_Auto_TEST/_preview" and r["name"].startswith("Video_003_cinematic_"):
+            return True, "Video_003'тун 60 сек превьюсу/кадр барагы (даяр MP4 Final_Videos'то калат)"
+        return False, "топко кирбейт"
+    return eligible(r)
+
+
+def plan(rows: list[dict], which: str = "tests") -> dict:
     sel, dups = [], []
     for r in rows:
-        ok, why = eligible(r)
+        ok, why = eligible_set(r, which)
         if ok:
             sel.append({**r, "why": why})
     # кайталанган көчүрмөлөрдү ЧЫНДАП текшерүү: md5 + көлөм бирдей
@@ -89,7 +111,9 @@ def plan_md(p: dict, excluded: list[tuple[dict, str]]) -> str:
         d = r.get("duplicate")
         dd = (f"бирдей ✅ md5 {d['identical_md5'][:8]}…, {d['bytes']} байт; көчүрмө: {d['copies'][0]}"
               + ("" if d["copy_kept"] else " (экөө тең пландa)")) if d else "—"
-        L.append(f"| {i} | {r['name']} | {r['mb']} | {r['folder']} | {r['why']} | {dd} |")
+        L.append(f"| {i} | {r['name']} | {r['mb']} ({r['bytes']} байт) | {r['folder']} | {r['why']} | {dd} |")
+    if not excluded:
+        return "\n".join(L) + "\n"
     L += ["", f"## Мурунку 73 тизмеден ЧЫГАРЫЛГАНДАР ({len(excluded)} файл) — сакталат", "| Файл | МБ | Папка | Себеби |",
           "|---|---|---|---|"]
     for r, why in sorted(excluded, key=lambda x: -x[0]["bytes"]):
@@ -123,8 +147,9 @@ def main() -> int:
         print("❌ GDRIVE_* секреттери жок")
         return 2
     rows = Inventory(drive.svc).collect()["rows"]
-    p = plan(rows)
-    old = [r for r in rows if r["cat"] == "candidate"]
+    which = os.environ.get("CLEAN_SET", "tests")
+    p = plan(rows, which)
+    old = [r for r in rows if r["cat"] == "candidate"] if which == "tests" else []
     ids = {r["id"] for r in p["files"]}
     excluded = [(r, eligible(r)[1]) for r in old if r["id"] not in ids]
     md = plan_md(p, excluded)

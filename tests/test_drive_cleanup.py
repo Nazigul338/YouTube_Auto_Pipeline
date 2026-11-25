@@ -58,6 +58,19 @@ class TestCleanup(unittest.TestCase):
         svc.files.return_value.delete.assert_not_called()
         svc.files.return_value.emptyTrash.assert_not_called()
 
+    def test_named_sets(self):
+        rows = [row(30, "YouTube_Auto/Long_Videos/clips_2k", "extra_01.mp4", "cc"),
+                row(31, "YouTube_Auto/Long_Videos/clips_2k", "new_03.mp4", "cc"),
+                row(32, "YouTube_Auto/Long_Videos/clips", "extra_02.mp4"),
+                row(33, "YouTube_Auto_TEST/_preview", "Video_003_cinematic_60s.mp4"),
+                row(34, "YouTube_Auto_TEST/Final_Videos", "Video_003_cinematic.mp4"),
+                row(35, "YouTube_Auto/Long_Videos/final", "video_001_final_v2.mp4")]
+        ex = dc.plan(rows, "extra")
+        self.assertEqual([r["id"] for r in ex["files"]], ["id30"])
+        self.assertTrue(ex["files"][0]["duplicate"]["copy_kept"])          # new_03 калат
+        self.assertEqual([r["id"] for r in dc.plan(rows, "preview")["files"]], ["id33"])
+        self.assertNotEqual(ex["code"], dc.plan(rows, "preview")["code"])
+
     def test_no_delete_in_code(self):
         src = open(dc.__file__, encoding="utf-8").read()
         self.assertNotIn(".delete(", src)
