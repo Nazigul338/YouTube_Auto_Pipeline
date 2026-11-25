@@ -399,9 +399,15 @@ class RenderStage(Stage):
                 card = card_for_shot.get(idx)
                 render_shot(clip, out, kind, off, d, motion, inten, prefilter=pre, card=card)
                 fixes = []
-                if kind == "video":            # кара экран: рендерленген кадрды текшерүү
+                if kind == "video":            # кара экран: рендерленген кадрды ЖАНА булак клипти текшерүү
+                    from .s5_visuals import dark_seconds
+
                     bs = black_seconds(out)
-                    if bs >= BLACK_MAX:
+                    # cinematic prefilter караңгы клипти жарыктатат, ошондуктан рендерленген кадр «кара эмес» көрүнүшү мүмкүн
+                    # (Video_003: клип 16/255 жарыктыкта, финалда өтүүдө кара экран) — булак да текшерилет
+                    src_dark = dark_seconds(clip, off, d)
+                    if bs >= BLACK_MAX or src_dark >= 0.4:
+                        bs = max(bs, src_dark)
                         real = media.duration(clip)
                         best, last = (bs, off, pre, info), off
                         for off2 in alt_offsets(real, d, off):
