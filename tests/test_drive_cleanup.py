@@ -80,6 +80,22 @@ class TestCleanup(unittest.TestCase):
                 row(45, "YouTube_Auto/Long_Videos/clips_2k", "video_001_clip.mp4")]
         self.assertEqual({r["id"] for r in dc.plan(rows, "colab_clips")["files"]}, {"id40", "id41"})
 
+    def test_colab_rest(self):
+        def r(i, folder, name, created="2026-11-05", mime="audio/wav"):
+            x = row(i, folder, name)
+            x.update(created=created, mime=mime)
+            return x
+        rows = [r(50, "YouTube_Auto", "music.mp3"),
+                r(51, "YouTube_Auto/Long_Videos/audio", "test_Orus.wav"),
+                r(52, "YouTube_Auto/Long_Videos/audio", "video_001_part_01.wav"),
+                r(53, "YouTube_Auto/Long_Videos/final", "video_001_final_v2.mp4"),
+                r(54, "YouTube_Auto/Music", "song.mp3"),
+                r(55, "YouTube_Auto", "notes.txt", mime="text/plain"),
+                r(56, "Colab Notebooks", "nb", mime="application/vnd.google.colaboratory"),
+                r(57, "YouTube_Auto", "late.mp3", created="2026-11-20"),
+                r(58, "YouTube_Auto_TEST", "x.wav")]
+        self.assertEqual({x["id"] for x in dc.plan(rows, "colab_rest")["files"]}, {"id50", "id51"})
+
     def test_no_delete_in_code(self):
         src = open(dc.__file__, encoding="utf-8").read()
         self.assertNotIn(".delete(", src)

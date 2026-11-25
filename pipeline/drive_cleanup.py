@@ -57,6 +57,43 @@ def eligible(r: dict) -> tuple[bool, str]:
 EXTRA_RE = re.compile(r"^extra_0\d\.mp4$")
 
 
+GITHUB_START = "2026-11-16"     # GitHub системасынын биринчи видеосу (Video_001, run #43974637107)
+COLAB_TEMP_MEDIA = (".mp4", ".mov", ".wav", ".mp3", ".m4a")
+
+
+def colab_era(r: dict) -> bool:
+    """Colab мезгилиндеги файл: YouTube_Auto (TEST эмес) ичинде 16-ноябрга чейин түзүлгөн же Long_Videos'то,
+    же «Colab Notebooks» папкасында."""
+    f = r["folder"]
+    if f.startswith("Colab Notebooks"):
+        return True
+    if not (f == "YouTube_Auto" or f.startswith("YouTube_Auto/")):
+        return False
+    return "/Long_Videos" in f or (r.get("created") or "9999") < GITHUB_START
+
+
+def colab_rest(r: dict) -> tuple[bool, str]:
+    """Colab мезгилинен калган, азыркы системага кереги жок УБАКТЫЛУУ/ТЕСТ медиа (катаал)."""
+    path = f"{r['folder']}/{r['name']}"
+    parts = r["folder"].split("/")
+    if not colab_era(r):
+        return False, "Colab мезгилине кирбейт"
+    if "video_001" in path.lower():
+        return False, "Video_001 (Colab нускасы) — жалгыз нуска, сакталат"
+    if r["folder"].startswith("Colab Notebooks") or r.get("mime", "").startswith("application/vnd.google"):
+        return False, "блокнот/документ (код) — сакталат"
+    if any(x in parts for x in ("Music", "Sound_Effects", "Licenses", "Final_Videos", "Thumbnails", "Clips",
+                                "Projects", "Logs", "Scripts", "Subtitles")):
+        return False, "азыркы система колдонгон папка — сакталат"
+    if not r["name"].lower().endswith(COLAB_TEMP_MEDIA):
+        return False, "медиа эмес (сценарий/лицензия/маалымат) — сакталат"
+    if r["folder"] == "YouTube_Auto":
+        return True, "Colab'тын тамырдагы сынак аудиосу/музыкасы (система колдонбойт)"
+    if r["folder"] == "YouTube_Auto/Long_Videos/audio" and r["name"].startswith("test_"):
+        return True, "Colab'тагы үн сынагы (test_*.wav)"
+    return False, "ачык эреже жок — сакталат"
+
+
 def eligible_set(r: dict, which: str) -> tuple[bool, str]:
     """extra: Colab доорундагы Long_Videos/clips_2k/extra_0*.mp4 (азыркы система колдонбойт);
     preview: _preview/Video_003_cinematic_60s.mp4 + _sheet.jpg (Video_003'тун превьюсу, даяр MP4 эмес)."""
@@ -67,6 +104,8 @@ def eligible_set(r: dict, which: str) -> tuple[bool, str]:
         if r["folder"] == "YouTube_Auto/Long_Videos/clips_2k" and EXTRA_RE.match(r["name"]):
             return True, "Colab доорундагы эски клип (азыркы система Long_Videos'ту колдонбойт)"
         return False, "топко кирбейт"
+    if which == "colab_rest":
+        return colab_rest(r)
     if which == "colab_clips":   # колдонуучунун буйругу 2026-11-25: «Колабдагы бүт эски видео клиптерди өчүр»
         if r["folder"] in ("YouTube_Auto/Long_Videos/clips", "YouTube_Auto/Long_Videos/clips_2k") \
                 and r["name"].lower().endswith(".mp4"):
@@ -119,7 +158,8 @@ def plan_md(p: dict, excluded: list[tuple[dict, str]]) -> str:
         L.append(f"| {i} | {r['name']} | {r['mb']} ({r['bytes']} байт) | {r['folder']} | {r['why']} | {dd} |")
     if not excluded:
         return "\n".join(L) + "\n"
-    L += ["", f"## Мурунку 73 тизмеден ЧЫГАРЫЛГАНДАР ({len(excluded)} файл) — сакталат", "| Файл | МБ | Папка | Себеби |",
+    L += ["", f"## Текшерилген, бирок САКТАЛА турган файлдар ({len(excluded)} файл, "
+          f"{sum(r['bytes'] for r, _ in excluded) / 1_048_576:.0f} МБ)", "| Файл | МБ | Папка | Себеби |",
           "|---|---|---|---|"]
     for r, why in sorted(excluded, key=lambda x: -x[0]["bytes"]):
         L.append(f"| {r['name']} | {r['mb']} | {r['folder']} | {why} |")
@@ -154,7 +194,8 @@ def main() -> int:
     rows = Inventory(drive.svc).collect()["rows"]
     which = os.environ.get("CLEAN_SET", "tests")
     p = plan(rows, which)
-    old = [r for r in rows if r["cat"] == "candidate"] if which == "tests" else []
+    old = ([r for r in rows if r["cat"] == "candidate"] if which == "tests"
+           else [r for r in rows if colab_era(r)] if which == "colab_rest" else [])
     ids = {r["id"] for r in p["files"]}
     excluded = [(r, eligible(r)[1]) for r in old if r["id"] not in ids]
     md = plan_md(p, excluded)

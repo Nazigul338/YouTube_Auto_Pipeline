@@ -12,10 +12,10 @@ on:
         type: choice
         options: [plan, trash]
       set:
-        description: "Топ: tests (сынак файлдары) · extra (Long_Videos/clips_2k/extra_0*) · preview (Video_003 превью) · colab_clips (Long_Videos/clips*)"
+        description: "Топ: tests (сынак файлдары) · extra (Long_Videos/clips_2k/extra_0*) · preview (Video_003 превью) · colab_clips (Long_Videos/clips*) · colab_rest (Colab калган убактылуу медиа)"
         default: tests
         type: choice
-        options: [tests, extra, preview, colab_clips]
+        options: [tests, extra, preview, colab_clips, colab_rest]
       plan_code:
         description: "trash үчүн: план режиминде берилген код"
         default: ""
