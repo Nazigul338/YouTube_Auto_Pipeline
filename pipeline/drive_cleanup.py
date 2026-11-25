@@ -98,6 +98,12 @@ def eligible_set(r: dict, which: str) -> tuple[bool, str]:
     """extra: Colab доорундагы Long_Videos/clips_2k/extra_0*.mp4 (азыркы система колдонбойт);
     preview: _preview/Video_003_cinematic_60s.mp4 + _sheet.jpg (Video_003'тун превьюсу, даяр MP4 эмес)."""
     path = f"{r['folder']}/{r['name']}"
+    if which == "colab_videos":   # колдонуучунун ачык буйругу 2026-11-25: «Colabдагы бүт видеолорду өчүрүп сал»
+        # Colab'тагы Video_001 версиясы да кошулат (колдонуучу ачык тандады); учурдагы Final_Videos/Video_001.mp4 кирбейт.
+        if (r["folder"].startswith("YouTube_Auto/Long_Videos") and r["name"].lower().endswith(".mp4")
+                and (r.get("created") or "9999") < GITHUB_START and "Final_Videos" not in path):
+            return True, "Colab мезгилиндеги видео (азыркы система колдонбойт; колдонуучу ачык тандады)"
+        return False, "топко кирбейт"
     if "video_001" in path.lower() or "Final_Videos" in path:
         return False, "корголгон"
     if which == "extra":
