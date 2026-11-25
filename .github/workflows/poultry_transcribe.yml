@@ -1,0 +1,31 @@
+name: "📝 Poultry — колдонуучунун видеосундагы сөздү текстке айлантуу (Gemini)"
+# poultry_ig_agent/inbox/<папка>/transcribe_request.txt түшкөндө: *.mp3 → *.txt (Gemini), кайра commit
+on:
+  workflow_dispatch:
+    inputs:
+      folder: {description: "inbox ичиндеги папка", required: true}
+  push:
+    branches: [claude/youtube-auto-pipeline-87d41t]
+    paths: [poultry_ig_agent/inbox/*/transcribe_request.txt]
+permissions:
+  contents: write
+concurrency: {group: poultry-transcribe, cancel-in-progress: false}
+jobs:
+  transcribe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - name: Транскрипция
+        env:
+          POULTRY_GEMINI_API_KEY: ${{ secrets.POULTRY_GEMINI_API_KEY }}
+          FOLDER: ${{ inputs.folder }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${FOLDER:-}" ]; then LIST=("poultry_ig_agent/inbox/$FOLDER"); else LIST=(); for f in poultry_ig_agent/inbox/*/transcribe_request.txt; do LIST+=("$(dirname "$f")"); done; fi
+          for d in "${LIST[@]}"; do python -m poultry_ig_agent.tools.transcribe "$d"; rm -f "$d/transcribe_request.txt"; done
+      - name: Сактоо
+        run: bash poultry_ig_agent/tools/commit_push.sh "Poultry: транскрипция (Gemini)" poultry_ig_agent/inbox
