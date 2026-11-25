@@ -98,6 +98,12 @@ def eligible_set(r: dict, which: str) -> tuple[bool, str]:
     """extra: Colab доорундагы Long_Videos/clips_2k/extra_0*.mp4 (азыркы система колдонбойт);
     preview: _preview/Video_003_cinematic_60s.mp4 + _sheet.jpg (Video_003'тун превьюсу, даяр MP4 эмес)."""
     path = f"{r['folder']}/{r['name']}"
+    if which == "keep_latest":   # колдонуучу 2026-11-25: «Акыркы жасалган видеону калтыр, калган видеолорду өчүр»
+        keep = "Video_004_cinematic.mp4"  # акыркы даяр видео (реестр: Video_004 ready, 2026-11-21)
+        if (r["folder"].split("/")[0] in ("YouTube_Auto", "YouTube_Auto_TEST", "YouTube_Auto_EN", "YouTube_Auto_EN_TEST")
+                and r["name"].lower().endswith(".mp4") and r["name"] != keep):
+            return True, "даяр/превью видео — колдонуучу акыркысын гана калтырууну буйруду (визуалдык изи реестрде калат)"
+        return False, "акыркы видео же видео эмес"
     if which == "colab_videos":   # колдонуучунун ачык буйругу 2026-11-25: «Colabдагы бүт видеолорду өчүрүп сал»
         # Colab'тагы Video_001 версиясы да кошулат (колдонуучу ачык тандады); учурдагы Final_Videos/Video_001.mp4 кирбейт.
         if (r["folder"].startswith("YouTube_Auto/Long_Videos") and r["name"].lower().endswith(".mp4")
