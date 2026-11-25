@@ -161,6 +161,15 @@ class QAStage(Stage):
             lo, hi = AUDIBLE_RANGE
             rep.add("music_audible", "Фондук музыка угулат (бирок дикторду баспайт)", lo <= audible <= hi,
                     f"басаңдатылгандан кийин диктордон {audible} LU акырын (керек {lo:.0f}–{hi:.0f})")
+        # Музыка мурунку даяр видеолордукун кайталабайт (колдонуучу 2026-11-25). Китепкана түгөнгөндө гана (repeat_forced) өтөт.
+        trk = music.get("track")
+        if trk:
+            clash = [k for k, v in ctx.registry.get("videos", {}).items()
+                     if k != ctx.video_id and v.get("status") == "ready" and v.get("music") == trk]
+            rep.add("music_unique", "Фондук музыка мурунку даяр видеолордукун кайталабайт",
+                    not clash or bool(music.get("repeat_forced")),
+                    f"«{music.get('title')}»" + (f" — {', '.join(clash)} колдонгон" if clash else " — жаңы трек")
+                    + ("; китепкана түгөнгөн, күч менен кайталанды" if music.get("repeat_forced") else ""))
         self.check_sfx(ctx, rep, music)
 
         # 6. Кара экран, катып калган кадр, тынчтык

@@ -65,12 +65,26 @@ def video_mood(scenes: list[dict]) -> str:
     return max(weight, key=weight.get)
 
 
+def used_by_finished(registry: dict, video_id: str) -> set[str]:
+    """Башка ДАЯР видеолор колдонгон тректер (колдонуучу 2026-11-25: «фондук музыканы кайталап койбо»)."""
+    return {v["music"] for k, v in registry.get("videos", {}).items()
+            if k != video_id and v.get("status") == "ready" and v.get("music")}
+
+
 def pick_track(tracks, tags: dict, mood: str, registry: dict, video_id: str):
+    """Тандоо: (1) башка даяр видеолордун трегин ЖАНА бул видеонун мурунку трегин (кайра иштетүүдө) ЧЫГАРЫП салат —
+    жаңы трек болбосо гана (китепкана түгөнсө) эң аз колдонулганы; (2) калгандардан маанайы дал келгени, анан эң аз
+    колдонулганы. Кайтарат: (трек, себеп, күч менен кайталандыбы)."""
     usable = [t for t in tracks if t.is_known and not tags.get(t.rel, {}).get("vocals")]
     if not usable:
-        return None, "вокалсыз, булагы белгилүү трек жок"
+        return None, "вокалсыз, булагы белгилүү трек жок", False
     history = [v.get("music") for k, v in sorted(registry.get("videos", {}).items())
                if k != video_id and v.get("music")]
+    own_prev = (registry.get("videos", {}).get(video_id) or {}).get("music")
+    avoid = used_by_finished(registry, video_id) | ({own_prev} if own_prev else set())
+    fresh = [t for t in usable if t.rel not in avoid]
+    forced = not fresh
+    pool = fresh or usable
 
     def rank(t):
         mood_ok = 0 if tags.get(t.rel, {}).get("mood") == mood else 1
@@ -78,10 +92,14 @@ def pick_track(tracks, tags: dict, mood: str, registry: dict, video_id: str):
         last = max((i for i, m in enumerate(history) if m == t.rel), default=-1)
         return (mood_ok, uses, last, t.rel)
 
-    best = min(usable, key=rank)
+    best = min(pool, key=rank)
     why = "маанайы дал келет" if tags.get(best.rel, {}).get("mood") == mood else \
-        "маанайы дал келген вокалсыз трек жок — эң жакыны"
-    return best, why
+        "маанайы дал келген жаңы вокалсыз трек жок — эң жакыны"
+    if forced:
+        why = "⚠ жаңы трек калган жок (китепкана түгөндү) — эң аз колдонулганы кайталанды"
+    elif avoid:
+        why += f"; мурунку трек(тер) чыгарылды: {len(avoid & {t.rel for t in usable})}"
+    return best, why, forced
 
 
 def audible_mode(ctx: Context) -> bool:
@@ -207,7 +225,7 @@ class MusicStage(Stage):
         brief = edit_concept.get(ctx, scenes) if edit_concept.enabled(ctx) else None
         if brief and brief.get("music_mood") and any(v.get("mood") == brief["music_mood"] for v in tags.values()):
             mood = brief["music_mood"]          # концепциянын музыкалык атмосферасы
-        track, why = pick_track(tracks, tags, mood, ctx.registry, ctx.video_id)
+        track, why, forced_repeat = pick_track(tracks, tags, mood, ctx.registry, ctx.video_id)
         if track is None:
             raise StageError(f"Музыка тандалган жок: {why}")
         ctx.log(f"   Видеонун маанайы: {mood} → «{track.title}» ({why})")
@@ -241,7 +259,8 @@ class MusicStage(Stage):
             ctx.log("   🎼 Музыкалык арка (актыга жараша): " + ", ".join(f"{a:.0f}–{b:.0f}с {db:+.1f}дБ" for a, b, db in arc))
         info = {"track": track.rel, "title": track.title, "mood": mood, "why": why, "arc": arc,
                 "tags": tags.get(track.rel), "levels": levels, "voice_minus_music_lu": round(rel, 1),
-                "license": track.license_record(), "attribution": attribution_text(track)}
+                "license": track.license_record(), "attribution": attribution_text(track),
+                "repeat_forced": forced_repeat}
         out = ctx.path("music", "music.json")
         out.write_text(json.dumps(info, ensure_ascii=False, indent=1), encoding="utf-8")
         ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})["music"] = track.rel
