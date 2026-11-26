@@ -232,7 +232,13 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
   JSON отчетто `description_credits`. Workflow `history_hook.yml` (dispatch + ушул branch'ка push). Тесттер: `tests/test_history_hook.py` 9 тез + 1 рендер.
 - Текшерилди: жергиликтүү, сыноо сүрөттөрү менен, үнсүз — 1920×1080, hook_end 4.38 сек, текст 0.12 сек. Чыныгы Pixabay/Commons/TTS
   менен — Actions run (push менен башталат; ID'ни `curl .../actions/workflows/history_hook.yml/runs` көрсөтөт).
-- ⏭ Кийинки: run'дун жыйынтыгын көрүү (Artifacts → qr_hook_16x9); окуянын калган бөлүгү — колдонуучу берсе.
+- ❌ run #45751589228: Pillow requirements.txt'те жок → workflow'го кошулду.
+- ❌ run #45751726825 (QA ❌): (1) TTS ар сап ~28 сек (6 сөз!) — нускама окулган → `tts_lines` эми Whisper менен
+  текшерет (variant 0/2/0/2, ашыкча сөз ≤1, угулду ≥85%) жана WAV'ды айтылган сөздөргө кесет; (2) factory сүрөтү 2/10 →
+  10 издөө, ≤3 айлампа × 10 талапкер, босого 6/10, QA `photos_fit` ≥5; (3) ✅ Хара: Commons «Masahiro Hara cropped 1
+  Masahiro Hara 202303.jpg», CC BY 4.0, автор 日本学士院 (Япония академиясы) → CJK шрифт (fonts-noto-cjk) экрандагы кредит үчүн.
+  Gemini 3.8/3.5-flash күнүмдүк квотасы бүткөн (запас моделдер иштеди).
+- ⏭ Кийинки: жаңы run'дун жыйынтыгы (Artifacts → qr_hook_16x9); окуянын калган бөлүгү — колдонуучу берсе.
 
 ### 8т. 🆕 АНГЛИСЧЕ КАНАЛ: TECHNOLOGY HISTORY (документалдык, ӨЗҮНЧӨ канал) — 1–3-КАДАМ ДАЯР (2026-11-24 ~14:00 UTC)
 - Колдонуучу: «Жаңы канал болот, Технология тарыхы», «Англисче канал».

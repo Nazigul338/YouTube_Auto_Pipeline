@@ -51,6 +51,30 @@ class LicenseTest(unittest.TestCase):
         self.assertNotIn("CRISIS", " ".join(hh.SPEC["line2"]))
 
 
+class FakeGem:
+    def __init__(self, rows):
+        self.rows = rows
+
+    def judge_image(self, jpgs, prompt, purpose=""):
+        return self.rows
+
+
+class JudgeTest(unittest.TestCase):
+    def test_logo_and_face_rejected_text_penalised(self):
+        d = Path(tempfile.mkdtemp())
+        try:
+            files = []
+            for k in range(3):
+                Image.new("RGB", (64, 36), (k * 40, 0, 0)).save(d / f"{k}.jpg")
+                files.append(d / f"{k}.jpg")
+            rows = [{"i": 0, "fit": 9, "logo": True}, {"i": 1, "fit": 8, "face": True},
+                    {"i": 2, "fit": 7, "text": True, "focus": [0.99, 0.0]}, {"i": 9, "fit": 10}, "junk"]
+            out = hh.judge(FakeGem(rows), files, "x", log=lambda *_: None)
+            self.assertEqual(out, [(6, 2, (0.85, 0.15))])
+        finally:
+            shutil.rmtree(d, ignore_errors=True)
+
+
 def _photos(d: Path) -> None:
     rng = np.random.default_rng(0)
     for name in ("scan", "factory", "barcode"):

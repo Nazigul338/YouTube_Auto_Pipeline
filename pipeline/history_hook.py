@@ -42,6 +42,7 @@ W, H, FPS, SR = 1920, 1080, 30, 48000
 HOOK_MAX = 5.0          # hook (текст 1 + текст 2 + алардын үнү) ушундан узун болбойт
 TEXT_MAX_START = 1.0    # биринчи текст ≤ 1 сек ичинде көрүнөт
 SHOTS = ("scan", "factory", "barcode")
+PHOTO_FIT_MIN = 6       # Gemini баасы (1–10): мындан төмөн болсо кийинки издөөлөр сыналат; QA ≥5 талап кылат
 
 SPEC = {
     "topic": "The Car Parts That Created QR Codes",
@@ -66,7 +67,8 @@ SPEC = {
         "scan": {"queries": ["qr code scan smartphone", "scanning qr code", "qr code phone", "qr code"],
                  "want": "a close-up of a QR code being scanned with a phone camera; the QR code is large and sharp"},
         "factory": {"queries": ["car factory assembly line", "automotive assembly line", "car production line",
-                                "car factory"],
+                                "car factory", "car manufacturing", "automobile factory", "car body assembly",
+                                "assembly line workers", "auto parts factory", "factory production line"],
                     "want": "a car factory / automotive assembly line interior with car bodies or parts, dramatic "
                             "industrial light, works as a documentary 'archive-style' shot"},
         "barcode": {"queries": ["barcode label box", "barcode cardboard box", "barcode scanner warehouse", "barcode"],
@@ -94,6 +96,7 @@ def _font_path(kind: str) -> str | None:
         "black": ["InterDisplay-Black.otf", "Inter-Black.otf", "Montserrat-Black.ttf", "Montserrat-ExtraBold.ttf",
                   "DejaVuSans-Bold.ttf"],
         "mono": ["JetBrainsMono-Bold.ttf", "DejaVuSansMono-Bold.ttf", "DejaVuSansMono.ttf"],
+        "cjk": ["NotoSansCJK-Bold.ttc", "NotoSansCJKjp-Bold.otf", "NotoSansCJK-Regular.ttc", "DejaVuSansMono-Bold.ttf"],
     }[kind]
     roots = [Path("/usr/share/fonts"), Path("/usr/local/share/fonts"), Path.home() / ".fonts"]
     for name in cands:
@@ -210,7 +213,7 @@ class TextBlock:
 def mono_text(img: Image.Image, txt: str, xy, size: int, col, alpha: float, chars: int | None = None) -> None:
     if alpha <= 0.01:
         return
-    f = font("mono", size)
+    f = font("mono" if txt.isascii() else "cjk", size)       # япон автордун аты (CC BY атрибуциясы)
     txt = txt if chars is None else txt[:chars]
     lay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     ImageDraw.Draw(lay).text(xy, txt, font=f, fill=col + (int(255 * alpha),), stroke_width=3,
@@ -251,51 +254,72 @@ def fetch_photos(out_dir: Path, spec: dict = SPEC, log=print) -> dict[str, Photo
     used: set[str] = set()
     res: dict[str, Photo] = {}
     for shot, cfg in spec["photos"].items():
-        cands = []
-        for q in cfg["queries"]:
-            cands += [a for a in st.images(q) if a.id not in used and a.id not in {c.id for c in cands}]
-            if len(cands) >= 8:
+        queries = list(cfg["queries"])
+        seen: set[str] = set(used)
+        pool: list = []                                        # (fit, asset, file, focus)
+        for rnd in range(3):                                   # ≤3 айлампа × 10 талапкер (Gemini квотасы үнөмдөлөт)
+            cands = []
+            while queries and len(cands) < 10:
+                q = queries.pop(0)
+                for a in st.images(q):
+                    if a.id not in seen and len(cands) < 10:
+                        seen.add(a.id)
+                        cands.append(a)
+            if not cands:
                 break
-        cands = cands[:8]
-        if not cands:
+            files = [st.download(a, out_dir / "cand" / f"{shot}_{rnd}_{k}.jpg") for k, a in enumerate(cands)]
+            rated = judge(gem, files, cfg["want"], log) if gem is not None else []
+            if not rated:                                       # Gemini жок — Pixabay тартиби (тегдер)
+                rated = [(5, 0, (0.5, 0.5))]
+            for fit, i, focus in rated:
+                pool.append((fit, cands[i], files[i], focus))
+            best_fit = max(p[0] for p in pool)
+            log(f"🖼 {shot}: {rnd + 1}-айлампа, {len(cands)} талапкер, эң жакшысы {best_fit}/10")
+            if best_fit >= PHOTO_FIT_MIN or gem is None:
+                break
+        if not pool:
             raise RuntimeError(f"Pixabay: «{shot}» үчүн сүрөт табылган жок")
-        files = []
-        for k, a in enumerate(cands):
-            p = st.download(a, out_dir / f"{shot}_{k}.jpg")
-            files.append(p)
-        best, focus = 0, (0.5, 0.5)
-        if gem is not None:
-            try:
-                jpgs = []
-                for p in files:
-                    im = Image.open(p).convert("RGB")
-                    im.thumbnail((768, 768))
-                    b = io.BytesIO()
-                    im.save(b, "JPEG", quality=85)
-                    jpgs.append(b.getvalue())
-                r = gem.judge_image(jpgs, JUDGE.format(want=cfg["want"]), purpose="hook_photo")
-                rows = [x for x in (r if isinstance(r, list) else []) if isinstance(x, dict)]
-                ok = [x for x in rows if not x.get("logo") and not x.get("face") and 0 <= int(x.get("i", -1)) < len(files)]
-                ok.sort(key=lambda x: (-(x.get("fit") or 0), bool(x.get("text"))))
-                if ok:
-                    best = int(ok[0]["i"])
-                    f = ok[0].get("focus") or [0.5, 0.5]
-                    focus = (min(max(float(f[0]), 0.15), 0.85), min(max(float(f[1]), 0.15), 0.85))
-                    log(f"🖼 {shot}: #{best} fit {ok[0].get('fit')}/10 (Gemini, {len(rows)} талапкер)")
-            except Exception as e:  # noqa: BLE001
-                log(f"⚠ {shot}: Gemini баалоосу иштеген жок ({str(e)[:80]}) — биринчиси алынат")
-        a = cands[best]
+        fit, a, src, focus = max(pool, key=lambda p: p[0])
         used.add(a.id)
         dst = out_dir / f"{shot}.jpg"
-        shutil.copy(files[best], dst)
-        res[shot] = Photo(shot, dst, focus, {"source": "Pixabay", "id": a.id, "page": a.page_url, "author": a.author,
-                                             "license": a.license, "license_url": a.license_url, "tags": a.tags})
+        shutil.copy(src, dst)
+        res[shot] = Photo(shot, dst, focus, {"fit": fit, "source": "Pixabay", "id": a.id, "page": a.page_url,
+                                             "author": a.author, "license": a.license,
+                                             "license_url": a.license_url, "tags": a.tags})
     hara = commons_photo(spec["hara_query"], out_dir / "hara.jpg", log=log)
     if hara:
         res["hara"] = hara
     (out_dir / "photos.json").write_text(json.dumps({k: {**v.meta, "focus": v.focus} for k, v in res.items()},
                                                     ensure_ascii=False, indent=2))
     return res
+
+
+def judge(gem, files: list[Path], want: str, log=print) -> list[tuple[int, int, tuple[float, float]]]:
+    """Gemini көрүү: [(fit, индекс, focus)] — логотиптүү же бети ачык көрүнгөн сүрөттөр алынып салынат."""
+    try:
+        jpgs = []
+        for p in files:
+            im = Image.open(p).convert("RGB")
+            im.thumbnail((640, 640))
+            b = io.BytesIO()
+            im.save(b, "JPEG", quality=82)
+            jpgs.append(b.getvalue())
+        r = gem.judge_image(jpgs, JUDGE.format(want=want), purpose="hook_photo")
+    except Exception as e:  # noqa: BLE001
+        log(f"⚠ Gemini баалоосу иштеген жок ({str(e)[:80]})")
+        return []
+    out = []
+    for x in (r if isinstance(r, list) else []):
+        try:
+            i = int(x.get("i", -1))
+            if not 0 <= i < len(files) or x.get("logo") or x.get("face"):
+                continue
+            f = x.get("focus") or [0.5, 0.5]
+            fit = int(x.get("fit") or 0) - (1 if x.get("text") else 0)
+            out.append((fit, i, (min(max(float(f[0]), 0.15), 0.85), min(max(float(f[1]), 0.15), 0.85))))
+        except (TypeError, ValueError, AttributeError):
+            continue
+    return out
 
 
 def commons_photo(query: str, dst: Path, log=print) -> Photo | None:
@@ -664,26 +688,50 @@ def mix(music: np.ndarray, voices: dict[str, tuple[float, np.ndarray]]) -> np.nd
 # ============================================================ TTS
 
 def tts_lines(out_dir: Path, spec: dict = SPEC, log=print) -> dict[str, Path]:
-    """Gemini TTS (Algenib) — ар сап өзүнчө (тайминг так болсун). GOOGLE_API_KEY керек."""
+    """Gemini TTS (Algenib) — ар сап өзүнчө. Whisper менен текшерилет: нускама окулбасын, текст толук угулсун;
+    WAV так айтылган сөздөргө чейин кесилет (run #45751726825: 6 сөздүк сап 28 сек болгон — нускама окулган)."""
+    from . import asr
     from .config import load_config
     from .gemini import from_config
+    from .stages.s3_voice import check_heard
 
     cfg = load_config("tech_history")
     g = from_config(cfg, log=log)
     out_dir.mkdir(parents=True, exist_ok=True)
     paths = {}
     for name, text in spec["narration"].items():
-        pcm, rate = g.tts(text, voice=cfg.tts_voice, style=spec["tts_style"], variant=0, lang="English")
-        p = out_dir / f"{name}.wav"
-        with wave.open(str(p), "wb") as w:
-            w.setnchannels(1)
-            w.setsampwidth(2)
-            w.setframerate(rate)
-            w.writeframes(pcm)
-        paths[name] = p
-        log(f"🎙 {name}: {len(pcm) / 2 / rate:.2f} сек")
+        expect = [asr.norm_word(w) for w in text.split() if asr.norm_word(w)]
+        tries = []
+        for attempt, variant in enumerate((0, 2, 0, 2), 1):
+            pcm, rate = g.tts(text, voice=cfg.tts_voice, style=spec["tts_style"], variant=variant, lang="English")
+            raw = out_dir / f"{name}_raw.wav"
+            with wave.open(str(raw), "wb") as w:
+                w.setnchannels(1)
+                w.setsampwidth(2)
+                w.setframerate(rate)
+                w.writeframes(pcm)
+            words = asr.transcribe(raw, language="en")
+            heard = [w for w, _, _ in words]
+            extra, cov, gap = check_heard(expect, heard)
+            dur = len(pcm) / 2 / rate
+            ok = extra <= 1 and cov >= 0.85 and gap <= 2 and bool(words)
+            log(f"🎙 {name}: {dur:.1f} сек, угулду {cov:.0%}, башында ашыкча {extra} сөз (variant {variant})"
+                + ("" if ok else f" — {attempt}-аракет ийгиликсиз"))
+            tries.append(f"{dur:.1f}s/{cov:.0%}/+{extra}")
+            if not ok:
+                continue
+            # нускаманын калдыгын жана узун тынчтыкты кесүү: акыркы n сөздүн башынан аягына чейин
+            n = len(expect)
+            seg = words[-n:] if len(words) >= n else words
+            t0, t1 = max(0.0, seg[0][1] - 0.06), min(dur, seg[-1][2] + 0.18)
+            p = out_dir / f"{name}.wav"
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(raw), "-ss", f"{t0:.3f}", "-to", f"{t1:.3f}",
+                            str(p)], check=True)
+            paths[name] = p
+            break
+        else:
+            raise RuntimeError(f"TTS «{name}» 4 аракеттен кийин да туура эмес: {tries}")
     return paths
-
 
 
 def render(out: Path, photos: dict[str, Photo], *, voice_dir: Path | None = None, spec: dict = SPEC,
@@ -835,6 +883,7 @@ def check(tl: Timeline, first_luma: float, has_voice: bool, photos: dict[str, Ph
         "first_frame_not_dark": first_luma >= 25,
         "no_logo_intro": True,
         "licenses_known": all(bool(p.meta.get("license")) for p in (photos or {}).values()) if photos else False,
+        "photos_fit": all(int(p.meta.get("fit", 5)) >= 5 for p in (photos or {}).values()),
         "voice": has_voice,
     }
     c["ok"] = all(v for k, v in c.items() if k not in ("voice", "licenses_known"))
