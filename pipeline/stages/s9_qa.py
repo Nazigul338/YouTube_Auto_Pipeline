@@ -485,7 +485,7 @@ class QAStage(Stage):
         except Exception:
             return {}
 
-    HOOK_CARD_SEC = 1.0
+    HOOK_CARD_SEC = 3.0              # 2026-11-26: 3 сек/1 сек эрежеси алынды — карточка алгачкы 3 сек ичинде
     LEGACY_HOOK_CARD_SEC = 3.0       # эски профиль (2026-11-18): hook карточкасы 3 сек ичинде
     LEGACY_HOOK_PHRASE_SEC = 5.0     # эски профиль: биринчи ой ≤5 сек (2026-11-21 эреже)
 
@@ -548,7 +548,7 @@ class QAStage(Stage):
                 (f" — тастыкталбаган: {[c.get('claim') for c in bad[:3]]}" if bad else ""))
 
     def check_hook(self, ctx, rep) -> None:
-        """Hook (МИЛДЕТТҮҮ, 2026-11-24): негизги ою үндө ≤3 сек, экранда hook карточкасы ≤1 сек, шаблонсуз, түрү башка."""
+        """Hook (МИЛДЕТТҮҮ; 2026-11-26: ~20 сек): биринчи ой үндө ≤5 сек, hook карточкасы ≤3 сек, шаблонсуз, түрү башка."""
         from .. import edit_concept as ecm
         from .s1_script import HOOK_BANNED
 
@@ -565,7 +565,7 @@ class QAStage(Stage):
         problems = []
         if not hook:
             problems.append("hook жок")
-        elif len(hook.split()) > 45:
+        elif len(hook.split()) > 70:
             problems.append(f"hook узун ({len(hook.split())} сөз)")
         from ..doc_script import HOOK_BANNED_EN
 
@@ -576,7 +576,7 @@ class QAStage(Stage):
             problems.append(f"hook карточкасы {card_sec:.0f} сек ичинде экранда жок")
         if htype and last and htype == last:
             problems.append(f"hook түрү мурунку видеодогудай ({htype})")
-        # даяр үндө: биринчи фраза алгачкы 3 секундда бүтөбү (саламдашуу/узун кириш жок)
+        # даяр үндө: биринчи фраза ≤5 сек ичинде бүтөбү (саламдашуу/узун кириш жок)
         from .. import retention as rt
 
         timing = {}
@@ -593,7 +593,7 @@ class QAStage(Stage):
         if pe is not None and pe > phrase_sec:
             problems.append(f"биринчи ой {pe} сек'те гана айтылат (> {phrase_sec})")
         ctx.path("hook_timing.json").write_text(rt.dump(timing), encoding="utf-8")
-        rep.add("hook", "Hook: алгачкы 3 секунд көңүл бурат (өз түрү, кыска, экранда)", not problems,
+        rep.add("hook", "Hook: алгачкы ~20 секунд көңүл бурат (өз түрү, экранда)", not problems,
                 (f"түрү {htype}; «{hook[:90]}»; биринчи фраза {pe} сек, сүйлөм {timing.get('sentence_end_sec')} сек; "
                  f"карточка «{(card or {}).get('text', '-')}»" + (f" — {'; '.join(problems)}" if problems else "")))
         self.check_retention(ctx, rep)

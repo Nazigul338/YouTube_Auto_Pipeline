@@ -8,7 +8,7 @@
 | Талап | Кайда | Кантип текшерилет |
 |---|---|---|
 | 7 бөлүк: hook → problem → causes → story → meaning → practice → finale | `motivation.yaml` (`structure: mp7`), `sections.map_sections` | бир Gemini белгилөө (`format_map`); жок бөлүк → `sections.enforce` оңдотот (≤2) |
-| №1 Hook алгачкы 3 сек | `retention.py` (≤8 сөз, ≥8/10, 2 айлампа), `s6` карточка 0.4 сек, `s8` fade-in 0.15 | s9 `check_hook`: үндө ≤3.0 сек, карточка ≤1 сек (милдеттүү) |
+| №1 Hook алгачкы ~20 сек (2026-11-26) | `retention.py` (≤16 сөз, ≥8/10, 2 айлампа), `sections.check` (hook ≤25 сек), `s6` карточка 0.4 сек, `s8` fade-in 0.15 | s9 `check_hook`: үндө ≤5 сек, карточка ≤3 сек (милдеттүү) |
 | Биринчи кадр күчтүү | `s5_visuals.FIRST_MIN` = 4 (алмаштыруу) | s9 `first_shot` ≥4/5 (милдеттүү) |
 | №2 БИР окуя ортосунда, 10–25%, мисал белгиси, мааниси кийин | `sections.check` | s1 format.json + s9 `check_format` (милдеттүү) |
 | Окуя чыныгы деп көрсөтүлбөйт | `sections.REAL_CLAIMS/EXAMPLE_MARKERS`, s9 сүрөттөмө | «Пример в видео — собирательный» |

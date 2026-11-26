@@ -4,7 +4,7 @@
 темага кайтуу) → practice (практикалык кеңештер) → finale (мотивациялык жыйынтык).
 
 Милдеттүү эрежелер:
-  №1 Hook алгачкы 3 секундда (retention.py: биринчи сүйлөм ≤8 сөз, үндө ≤3.0 сек, баа ≥8/10).
+  №1 Hook — алгачкы ~20 секунд (2026-11-26; retention.py: hook бөлүгү ≤25 сек, биринчи сүйлөм ≤16 сөз, баа ≥8/10).
   №2 БИР гана окуя: сценарийдин ортосунда (25–65%), 10–25% көлөмү, андан кийин мааниси жана темага кайтуу,
      ойдон чыгарылганы чыныгы деп көрсөтүлбөйт, мурунку видеолордун окуясын кайталабайт.
   Көңүлдү ар 20–40 сек сайын жандандыруу (жаңы ой/суроо/мисал/бурулуш): эки бурулуштун ортосу ≤40 сек.
@@ -17,6 +17,7 @@ import json
 import re
 
 from .story import _find
+from .retention import HOOK_MAX_SEC, HOOK_SEC
 from .textutil import jaccard
 
 KEYS = ["hook", "problem", "causes", "story", "meaning", "practice", "finale"]
@@ -56,7 +57,7 @@ story — жизненная история/пример с конкретным
 
 FIX_PROMPT = """Ты — автор мотивационно-психологических сценариев для русскоязычного YouTube-канала.
 Исправь сценарий по замечаниям редактора. Тема: «{topic}».
-Формат (обязателен): 1) hook — первые 3 секунды, первое предложение не длиннее 8 слов; 2) раскрытие
+Формат (обязателен): 1) hook — первые ~20 секунд (≈40–50 слов), первое предложение не длиннее 16 слов; 2) раскрытие
 психологической проблемы; 3) причины; 4) ОДНА короткая жизненная история (60–100 секунд, 10–25% текста) в середине,
 явно поданная как пример («Представь…», «Например…»), без диалогов и без утверждений, что это реальный случай;
 5) психологический смысл истории и возвращение к теме; 6) 3–4 практических шага и одно упражнение; 7) сильный
@@ -169,6 +170,10 @@ def check(info: dict, text: str, prev: list[dict] | None = None, g=None) -> dict
             st["similar"] = story_similarity(st["summary"], prev, g)
             if st["similar"]["too_similar"]:
                 p.append(f"окуя {st['similar']['closest']} видеосунун окуясына окшош — жаңы окуя керек")
+    hook_end = next((s["w0"] for s in info["sections"] if s["section"] != "hook"), None)
+    if hook_end is not None and hook_end / REAL_WPS > HOOK_MAX_SEC:
+        p.append(f"hook узун (~{hook_end / REAL_WPS:.0f} сек; керек ~{HOOK_SEC:.0f} сек, ≤{HOOK_MAX_SEC:.0f}) — "
+                 f"психологиялык көйгөй ~{int(HOOK_SEC * REAL_WPS)}-сөздөн башталсын")
     claims = [c for c in REAL_CLAIMS if c in _low(text)]
     if claims:
         p.append(f"ойдон чыгарылган мисал чыныгы катары көрсөтүлгөн: «{claims[0]}»")
@@ -287,7 +292,7 @@ def enforce(g, text: str, topic: str, prev: list[dict], log, tries: int = 2) -> 
 
 SCENE_RULE = """
 THIS VIDEO'S STRUCTURE (motivation + psychology monologue, NOT a film): each scene is tagged with its part.
-- [hook]: the very first scene is the 3-second hook — the most striking, emotional, on-topic image of the video.
+- [hook]: the very first scene opens the ~20-second hook — the most striking, emotional, on-topic image of the video.
 - [story]: the ONE life example told by the narrator — show its place, objects, light and mood (hands, back,
   silhouette, everyday details); no faces in close-up, no text.
 - [meaning]/[causes]/[problem]: show the psychological idea through real human situations or clear visual metaphors.

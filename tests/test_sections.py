@@ -113,13 +113,27 @@ class TestFormatCheck(unittest.TestCase):
         self.assertEqual(lab[-1], "finale")
 
 
-class TestHookThreeSeconds(unittest.TestCase):
+class TestHookTwentySeconds(unittest.TestCase):
+    """2026-11-26 колдонуучу: «Hook 20 секунд болсун» — 3 сек/≤8 сөз эрежеси алынды."""
     def test_thresholds(self):
-        self.assertEqual(retention.HOOK_FIRST_WORDS, 8)
-        self.assertEqual(retention.HOOK_PHRASE_SEC, 3.0)
+        self.assertEqual(retention.HOOK_SEC, 20.0)
+        self.assertEqual(retention.HOOK_FIRST_WORDS, 16)
+        self.assertEqual(retention.HOOK_PHRASE_SEC, 5.0)
         self.assertGreaterEqual(retention.HOOK_MIN_SCORE, 8)
-        loc = retention.local_checks("Ты стараешься изо всех сил каждый божий день и всё равно недоволен собой. Почему?")
-        self.assertTrue(any("биринчи сүйлөм узун" in p for p in retention.problems(loc, {"hook_score": 9})))
+        ok = retention.local_checks("Ты стараешься изо всех сил каждый божий день и всё равно недоволен собой. Почему?")
+        self.assertFalse(any("биринчи сүйлөм узун" in p for p in retention.problems(ok, {"hook_score": 9})))
+        long = retention.local_checks(" ".join(["слово"] * 20) + ". Почему?")
+        self.assertTrue(any("биринчи сүйлөм узун" in p for p in retention.problems(long, {"hook_score": 9})))
+
+    def test_hook_section_too_long(self):
+        text = make_script(1150, "-x")
+        info, _ = mapped(text)
+        self.assertFalse(any("hook узун" in p for p in sections.check(info, text)["problems"]))
+        secs = [dict(s) for s in info["sections"]]
+        nxt = next(s for s in secs if s["section"] != "hook")
+        nxt["w0"] = int(40 * sections.REAL_WPS)            # ~40 сек hook
+        probs = sections.check(dict(info, sections=secs), text)["problems"]
+        self.assertTrue(any("hook узун" in p for p in probs))
 
     def test_find_handles_hyphenated_words(self):
         from pipeline.story import _find
