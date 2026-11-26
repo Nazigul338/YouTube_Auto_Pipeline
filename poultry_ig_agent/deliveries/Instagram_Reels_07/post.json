@@ -12,128 +12,128 @@
   "shots": [
     {
       "source": "photo",
-      "file": "assets/reels07/header_hen.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/header_hen.png",
       "motion": "card",
       "visual": "photo header_hen.png",
       "onscreen": "42 күндө канча салмак?",
-      "duration": 3.5,
+      "duration": 4.74,
       "n": 1
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p10_scale.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p10_scale.png",
       "motion": "card",
       "visual": "photo p10_scale.png",
       "onscreen": "Туура бакса — 2,5–3 кг",
-      "duration": 3.5,
+      "duration": 4.74,
       "n": 2
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p01.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p01.png",
       "motion": "card",
       "visual": "photo p01.png",
       "onscreen": "1. Сапаттуу балапан",
-      "duration": 4,
+      "duration": 5.41,
       "n": 3
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p02.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p02.png",
       "motion": "card",
       "visual": "photo p02.png",
       "onscreen": "2. Куракка жараша жем",
-      "duration": 4.5,
+      "duration": 6.09,
       "n": 4
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p03.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p03.png",
       "motion": "card",
       "visual": "photo p03.png",
       "onscreen": "3. Толук азык",
-      "duration": 4,
+      "duration": 5.41,
       "n": 5
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p04.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p04.png",
       "motion": "card",
       "visual": "photo p04.png",
       "onscreen": "4. Таза суу — дайыма",
-      "duration": 3.5,
+      "duration": 4.74,
       "n": 6
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p05.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p05.png",
       "motion": "card",
       "visual": "photo p05.png",
       "onscreen": "5. Туура температура",
-      "duration": 5,
+      "duration": 6.77,
       "n": 7
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p06.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p06.png",
       "motion": "card",
       "visual": "photo p06.png",
       "onscreen": "6. Желдетүү, таза аба",
-      "duration": 3.5,
+      "duration": 4.74,
       "n": 8
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p07.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p07.png",
       "motion": "card",
       "visual": "photo p07.png",
       "onscreen": "7. Кургак төшөнүч",
-      "duration": 3.8,
+      "duration": 5.14,
       "n": 9
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p08.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p08.png",
       "motion": "card",
       "visual": "photo p08.png",
       "onscreen": "8. Витамин — адистин кеңеши менен",
-      "duration": 3.8,
+      "duration": 5.14,
       "n": 10
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p09.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p09.png",
       "motion": "card",
       "visual": "photo p09.png",
       "onscreen": "9. Тыгыздык: 10–12 баш/м²",
-      "duration": 4.5,
+      "duration": 6.09,
       "n": 11
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p10.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p10.png",
       "motion": "card",
       "visual": "photo p10.png",
       "onscreen": "Натыйжа: 42 күндө 2,5–3 кг",
-      "duration": 4.5,
+      "duration": 6.09,
       "n": 12
     },
     {
       "source": "photo",
-      "file": "assets/reels07/infographic.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/infographic.png",
       "motion": "card",
       "visual": "photo infographic.png",
       "onscreen": "Сактап коюңуз!",
-      "duration": 3.0,
+      "duration": 4.06,
       "n": 13
     },
     {
       "source": "photo",
-      "file": "assets/reels07/p01.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p01.png",
       "motion": "card",
       "visual": "photo p01.png",
       "onscreen": "Катталыңыз!",
-      "duration": 2.5,
+      "duration": 3.38,
       "n": 14
     }
   ],
@@ -193,7 +193,7 @@
     352519,
     378976
   ],
-  "caption": "Бройлерди кантип туура багуу керек? Тез өсүү жана жакшы салмак үчүн 10 кеңеш. Видеону сактап коюңуз 👇\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n🖼 Видеодогу сүрөттөр — иллюстрация.\n\n⚠️ Бул жалпы маалымат. Салмак тукумга, жемге жана шартка жараша өзгөрөт — кепилдик эмес. Витамин, дары же оору маселесинде ветеринарга кайрылыңыз.\n📌 Бул маалымат — автордун өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.\n🎙 Диктордун үнү AI менен түзүлгөн.",
+  "caption": "Бройлерди кантип туура багуу керек? Тез өсүү жана жакшы салмак үчүн 10 кеңеш. Видеону сактап коюңуз 👇\n\n📚 Курс «Тоок чарбачылыгы: нөлдөн баштап кирешелүү фермага чейин» — 3000 сом. Консультация алуу же курска катталуу үчүн Direct'ке «КУРС» деп жазыңыз 👇\n🖼 Видеодогу сүрөттөр — иллюстрация.\n\n⚠️ Бул жалпы маалымат. Салмак тукумга, жемге жана шартка жараша өзгөрөт — кепилдик эмес. Витамин, дары же оору маселесинде ветеринарга кайрылыңыз.\n📌 Бул маалымат — автордун өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.\n🎙 Диктордун үнү AI менен түзүлгөн.\n📌 Бул маалымат — автордун балапан багуудагы өз практикасынан. Шартыңызга жараша ветеринар же адис менен кеңешиңиз.",
   "hashtags": [
     "#бройлер",
     "#тоокчарбасы",
@@ -214,8 +214,38 @@
   ],
   "output_name": "Instagram_Reels_07.mp4",
   "needs_vet_review": true,
-  "lint_issues": [],
+  "lint_issues": [
+    "Reel узактыгы 72.54с — 15–60с болушу керек"
+  ],
   "status": "pending_review",
   "ai_voice": true,
-  "id": "2026-11-26-87de8f95-reel-ky"
+  "id": "2026-11-26-87de8f95-reel-ky",
+  "music_info": {
+    "source": "generated",
+    "license": "own composition (poultry_ig_agent/music_gen.py)",
+    "key": "G",
+    "bpm": 86,
+    "progression": [
+      3,
+      0,
+      4,
+      0
+    ],
+    "mood": "calm"
+  },
+  "tts": {
+    "model": "gemini-3.8-flash-tts",
+    "voice": "Charon",
+    "style": "warm",
+    "consistency": [
+      {
+        "try": 1,
+        "f0": 118,
+        "centroid": 968,
+        "distance": 0.041
+      }
+    ]
+  },
+  "video": "final.mp4",
+  "video_status": "ready"
 }
