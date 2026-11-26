@@ -42,14 +42,15 @@ QA `check_story`. Модулдар: `pipeline/story.py`, `pipeline/continuity.py
 - Код: `pipeline/lang.py` (тил/формат), `pipeline/doc_script.py` (s1), `pipeline/sources.py`,
   `niches/tech_history.yaml`, `.github/workflows/make_video_en.yml`; тесттер `tests/test_tech_history.py`.
 
-## 📱 Shorts hook (9:16): «The Car Parts That Created QR Codes» (2026-11-26)
+## 🎬 Hook 16:9: «The Car Parts That Created QR Codes» (2026-11-26)
 
-`pipeline/shorts_hook.py` + workflow **«🎬 Shorts hook (9:16, QR коддор)»**: 1080×1920, ≤5 сек кинематографиялык hook
-(QR макро + сканер + lock → zoom-through + жарк → 1990-жылдардын башындагы унаа тетиктери заводу) + Масахиро Хара тууралуу
-окуяга көпүрө (lower-third «1992 · DENSO, JAPAN»). Логотип/интро жок. Кадрлар, музыка жана SFX нөлдөн синтезделет (CC0),
-завод экранда «ILLUSTRATIVE RECONSTRUCTION» деп белгиленет. Диктор: Gemini TTS Algenib (`--tts`, `GOOGLE_API_KEY`).
-Текшерүүлөр: текст ≤1 сек, hook ≤5.0 сек, биринчи кадр караңгы эмес. `--story <mp4>` — негизги окуяны 9:16'га келтирип улайт.
-Жыйынтык: run бетиндеги Artifacts → `qr_hook_9x16` (Drive'га жазбайт).
+`pipeline/history_hook.py` + workflow **«🎬 Hook 16:9 (QR коддор, архивдик сүрөттөр)»**: 1920×1080, ≤5 сек hook. Курамы:
+QR сканерленген сүрөт (фокустан ачылуу, сканер/lock/beep) → QR чекитине zoom-through + жарк → унаа заводунун сүрөтү
+архивдик иштетүүдө (сепия, пленка тырмагы, grain, термелүү) → штрих-код → Масахиро Хара (lower-third). Логотип/интро жок.
+Сүрөттөр Pixabay'дан (Gemini көрүү тандайт: логотип/бет жок), экранда «ILLUSTRATIVE STOCK PHOTOS». Харанын портрети
+Wikimedia Commons'тон ЭРКИН лицензия (CC0/PD/CC BY/CC BY-SA) менен гана, автор экранда жана сүрөттөмөдө.
+Ачкычтар: `PIXABAY_API_KEY`, `GOOGLE_API_KEY`. Жыйынтык: Artifacts → `qr_hook_16x9` (Drive'га жазбайт).
+Жергиликтүү: `python -m pipeline.history_hook --photos-dir <папка>` (scan/factory/barcode[/hara].jpg).
 
 ## 🥇 Оригиналдуулук — №1 приоритет
 Ар видео өз монтаж концепциясы менен жасалат жана мурунку даяр видеолор менен салыштырылат; окшош болсо QA
