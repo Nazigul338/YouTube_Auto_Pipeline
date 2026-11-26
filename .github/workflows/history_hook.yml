@@ -37,7 +37,7 @@ jobs:
           sudo apt-get install -y -qq ffmpeg fonts-inter fonts-jetbrains-mono fonts-dejavu-core
 
       - name: Китепканалар
-        run: pip install -q -r requirements.txt
+        run: pip install -q -r requirements.txt Pillow
 
       - name: Тесттер
         env:
