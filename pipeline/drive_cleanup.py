@@ -283,7 +283,8 @@ def restore(svc, log=print) -> list[dict]:
             return out
 
 
-TRASH_FINAL = {"Video_003_cinematic.mp4": 289269797}   # колдонуучу телефонго жүктөдү (2026-11-26) — аты + байт дал келсе
+TRASH_FINAL = {"Video_003_cinematic.mp4": 289269797,        # колдонуучу телефонго жүктөдү (2026-11-26) — аты + байт дал келсе
+               "Video_001_cinematic.mp4": 443086950, "Video_004_cinematic.mp4": 333151574}
 
 
 def trash_final(svc, log=print) -> dict:
