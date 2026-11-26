@@ -1,0 +1,128 @@
+[
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/header_hen.png",
+    "motion": "card",
+    "visual": "photo header_hen.png",
+    "onscreen": "42 күндө канча салмак?",
+    "duration": 4.74,
+    "n": 1
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p10_scale.png",
+    "motion": "card",
+    "visual": "photo p10_scale.png",
+    "onscreen": "Туура бакса — 2,5–3 кг",
+    "duration": 4.74,
+    "n": 2
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p01.png",
+    "motion": "card",
+    "visual": "photo p01.png",
+    "onscreen": "1. Сапаттуу балапан",
+    "duration": 5.41,
+    "n": 3
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p02.png",
+    "motion": "card",
+    "visual": "photo p02.png",
+    "onscreen": "2. Куракка жараша жем",
+    "duration": 6.09,
+    "n": 4
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p03.png",
+    "motion": "card",
+    "visual": "photo p03.png",
+    "onscreen": "3. Толук азык",
+    "duration": 5.41,
+    "n": 5
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p04.png",
+    "motion": "card",
+    "visual": "photo p04.png",
+    "onscreen": "4. Таза суу — дайыма",
+    "duration": 4.74,
+    "n": 6
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p05.png",
+    "motion": "card",
+    "visual": "photo p05.png",
+    "onscreen": "5. Туура температура",
+    "duration": 6.77,
+    "n": 7
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p06.png",
+    "motion": "card",
+    "visual": "photo p06.png",
+    "onscreen": "6. Желдетүү, таза аба",
+    "duration": 4.74,
+    "n": 8
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p07.png",
+    "motion": "card",
+    "visual": "photo p07.png",
+    "onscreen": "7. Кургак төшөнүч",
+    "duration": 5.14,
+    "n": 9
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p08.png",
+    "motion": "card",
+    "visual": "photo p08.png",
+    "onscreen": "8. Витамин — адистин кеңеши менен",
+    "duration": 5.14,
+    "n": 10
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p09.png",
+    "motion": "card",
+    "visual": "photo p09.png",
+    "onscreen": "9. Тыгыздык: 10–12 баш/м²",
+    "duration": 6.09,
+    "n": 11
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p10.png",
+    "motion": "card",
+    "visual": "photo p10.png",
+    "onscreen": "Натыйжа: 42 күндө 2,5–3 кг",
+    "duration": 6.09,
+    "n": 12
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/infographic.png",
+    "motion": "card",
+    "visual": "photo infographic.png",
+    "onscreen": "Сактап коюңуз!",
+    "duration": 4.06,
+    "n": 13
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels07/p01.png",
+    "motion": "card",
+    "visual": "photo p01.png",
+    "onscreen": "Катталыңыз!",
+    "duration": 3.38,
+    "n": 14
+  }
+]

@@ -1,0 +1,128 @@
+[
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p06.png",
+    "motion": "card",
+    "visual": "photo p06.png",
+    "onscreen": "Бири-бирин чокуп жатабы?",
+    "n": 1,
+    "duration": 5.02
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/header_wound.png",
+    "motion": "card",
+    "visual": "photo header_wound.png",
+    "onscreen": "Бул кокус эмес",
+    "n": 2,
+    "duration": 4.3
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p02.png",
+    "motion": "card",
+    "visual": "photo p02.png",
+    "onscreen": "1. Жарык өтө күчтүү",
+    "n": 3,
+    "duration": 5.59
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p03.png",
+    "motion": "card",
+    "visual": "photo p03.png",
+    "onscreen": "2. Тыгыздык",
+    "n": 4,
+    "duration": 5.74
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p04.png",
+    "motion": "card",
+    "visual": "photo p04.png",
+    "onscreen": "3. Жемде белок аз",
+    "n": 5,
+    "duration": 5.59
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p05.png",
+    "motion": "card",
+    "visual": "photo p05.png",
+    "onscreen": "4. Стресс: үн, чуу",
+    "n": 6,
+    "duration": 5.44
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p01.png",
+    "motion": "card",
+    "visual": "photo p01.png",
+    "onscreen": "5. Витамин, минерал аз",
+    "n": 7,
+    "duration": 4.3
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p07.png",
+    "motion": "card",
+    "visual": "photo p07.png",
+    "onscreen": "✓ Суу жана тоют дайыма",
+    "n": 8,
+    "duration": 5.02
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p08.png",
+    "motion": "card",
+    "visual": "photo p08.png",
+    "onscreen": "✓ Орточо жарык, туура жылуулук",
+    "n": 9,
+    "duration": 5.44
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p09.png",
+    "motion": "card",
+    "visual": "photo p09.png",
+    "onscreen": "✓ Кенен аянт",
+    "n": 10,
+    "duration": 4.3
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p10.png",
+    "motion": "card",
+    "visual": "photo p10.png",
+    "onscreen": "✓ Витамин — адистин кеңеши менен",
+    "n": 11,
+    "duration": 5.02
+  },
+  {
+    "source": "photo",
+    "visual": "photo p06_close.png",
+    "onscreen": "Жарадарын дароо бөлүңүз",
+    "n": 12,
+    "duration": 5.03,
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p06_close.png",
+    "motion": "card"
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/infographic.png",
+    "motion": "card",
+    "visual": "photo infographic.png",
+    "onscreen": "Жара оор болсо — ветеринарга",
+    "n": 13,
+    "duration": 4.3
+  },
+  {
+    "source": "photo",
+    "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/header_chick.png",
+    "motion": "card",
+    "visual": "photo header_chick.png",
+    "onscreen": "Катталыңыз!",
+    "n": 14,
+    "duration": 3.59
+  }
+]
