@@ -58,6 +58,105 @@ class TestCleanup(unittest.TestCase):
         svc.files.return_value.delete.assert_not_called()
         svc.files.return_value.emptyTrash.assert_not_called()
 
+    def test_named_sets(self):
+        rows = [row(30, "YouTube_Auto/Long_Videos/clips_2k", "extra_01.mp4", "cc"),
+                row(31, "YouTube_Auto/Long_Videos/clips_2k", "new_03.mp4", "cc"),
+                row(32, "YouTube_Auto/Long_Videos/clips", "extra_02.mp4"),
+                row(33, "YouTube_Auto_TEST/_preview", "Video_003_cinematic_60s.mp4"),
+                row(34, "YouTube_Auto_TEST/Final_Videos", "Video_003_cinematic.mp4"),
+                row(35, "YouTube_Auto/Long_Videos/final", "video_001_final_v2.mp4")]
+        ex = dc.plan(rows, "extra")
+        self.assertEqual([r["id"] for r in ex["files"]], ["id30"])
+        self.assertTrue(ex["files"][0]["duplicate"]["copy_kept"])          # new_03 калат
+        self.assertEqual([r["id"] for r in dc.plan(rows, "preview")["files"]], ["id33"])
+        self.assertNotEqual(ex["code"], dc.plan(rows, "preview")["code"])
+
+    def test_colab_clips_set(self):
+        rows = [row(40, "YouTube_Auto/Long_Videos/clips_2k", "new_09.mp4"),
+                row(41, "YouTube_Auto/Long_Videos/clips", "clip_03.mp4"),
+                row(42, "YouTube_Auto/Long_Videos/final", "video_001_final_v2.mp4"),
+                row(43, "YouTube_Auto/Long_Videos/audio", "video_001_part_01.wav"),
+                row(44, "YouTube_Auto_TEST/Clips", "x.mp4"),
+                row(45, "YouTube_Auto/Long_Videos/clips_2k", "video_001_clip.mp4")]
+        self.assertEqual({r["id"] for r in dc.plan(rows, "colab_clips")["files"]}, {"id40", "id41"})
+
+    def test_colab_rest(self):
+        def r(i, folder, name, created="2026-11-05", mime="audio/wav"):
+            x = row(i, folder, name)
+            x.update(created=created, mime=mime)
+            return x
+        rows = [r(50, "YouTube_Auto", "music.mp3"),
+                r(51, "YouTube_Auto/Long_Videos/audio", "test_Orus.wav"),
+                r(52, "YouTube_Auto/Long_Videos/audio", "video_001_part_01.wav"),
+                r(53, "YouTube_Auto/Long_Videos/final", "video_001_final_v2.mp4"),
+                r(54, "YouTube_Auto/Music", "song.mp3"),
+                r(55, "YouTube_Auto", "notes.txt", mime="text/plain"),
+                r(56, "Colab Notebooks", "nb", mime="application/vnd.google.colaboratory"),
+                r(57, "YouTube_Auto", "late.mp3", created="2026-11-20"),
+                r(58, "YouTube_Auto_TEST", "x.wav")]
+        self.assertEqual({x["id"] for x in dc.plan(rows, "colab_rest")["files"]}, {"id50", "id51"})
+
+    def test_colab_videos(self):
+        def r(i, folder, name, created="2026-11-05"):
+            x = row(i, folder, name)
+            x["created"] = created
+            return x
+        rows = [r(60, "YouTube_Auto/Long_Videos/final", "video_001_final_v2.mp4"),
+                r(61, "YouTube_Auto/Long_Videos/final", "video_001_visual.mp4"),
+                r(62, "YouTube_Auto_TEST/Final_Videos", "Video_001.mp4", "2026-11-16"),
+                r(63, "YouTube_Auto/Long_Videos/audio", "video_001_full_voice_same6.wav"),
+                r(64, "YouTube_Auto/Long_Videos/final", "new.mp4", "2026-11-20")]
+        self.assertEqual({x["id"] for x in dc.plan(rows, "colab_videos")["files"]}, {"id60", "id61"})
+
+    def test_keep_latest(self):
+        rows = [row(70, "YouTube_Auto_TEST/Final_Videos", "Video_004_cinematic.mp4"),
+                row(71, "YouTube_Auto_TEST/Final_Videos", "Video_001.mp4"),
+                row(72, "YouTube_Auto_TEST/_preview", "Video_003_cinematic_60s.mp4"),
+                row(73, "YouTube_Auto_TEST/Projects/Video_001/audio", "voice.wav"),
+                row(74, "Poultry/videos", "reel.mp4")]
+        self.assertEqual({x["id"] for x in dc.plan(rows, "keep_latest")["files"]}, {"id71", "id72"})
+
+    def test_restore_only_matching_names_and_sizes(self):
+        svc = mock.MagicMock()
+        files = [{"id": "a", "name": "Video_001.mp4", "size": "515922558"},
+                 {"id": "b", "name": "Video_001.mp4", "size": "1"},            # көлөмү башка — тийилбейт
+                 {"id": "c", "name": "Video_003.mp4", "size": "327325984"}]
+        svc.files.return_value.list.return_value.execute.return_value = {"files": files}
+        svc.files.return_value.get.return_value.execute.return_value = {"name": "Video_001.mp4", "trashed": False, "size": "515922558"}
+        out = dc.restore(svc, log=lambda *_: None)
+        self.assertEqual(len(out), 1)
+        ids = [c.kwargs["fileId"] for c in svc.files.return_value.update.call_args_list]
+        self.assertEqual(ids, ["a"])
+        self.assertIn("Video_003_cinematic.mp4", dc.RESTORE_NAMES)
+        for c in svc.files.return_value.update.call_args_list:
+            self.assertEqual(c.kwargs["body"], {"trashed": False})
+
+    def test_named_video_002_005(self):
+        folders = [{"id": "r", "name": "YouTube_Auto_TEST", "parents": ["x"]},
+                   {"id": "p", "name": "Projects", "parents": ["r"]},
+                   {"id": "p5", "name": "Video_005", "parents": ["p"]},
+                   {"id": "p5a", "name": "audio", "parents": ["p5"]},
+                   {"id": "p4", "name": "Video_004", "parents": ["p"]},
+                   {"id": "o", "name": "Other", "parents": ["x"]},
+                   {"id": "o5", "name": "Video_005", "parents": ["o"]},
+                   {"id": "p50", "name": "Video_0050", "parents": ["p"]}]
+        files = [{"id": "f1", "name": "script.txt", "parents": ["p5"], "size": "10", "mimeType": "text/plain"},
+                 {"id": "f2", "name": "x.wav", "parents": ["p5a"], "size": "10", "mimeType": "audio/wav"},
+                 {"id": "f3", "name": "Video_005_voice.wav", "parents": ["r"], "size": "10", "mimeType": "audio/wav"},
+                 {"id": "f4", "name": "Video_002.log", "parents": ["r"], "size": "9", "mimeType": "text/plain"},
+                 {"id": "f5", "name": "Video_004.log", "parents": ["r"], "size": "9", "mimeType": "text/plain"},
+                 {"id": "f6", "name": "_registry.json", "parents": ["p"], "size": "9", "mimeType": "application/json"}]
+        svc = mock.MagicMock()
+
+        def lst(**k):
+            m = mock.MagicMock()
+            m.execute.return_value = {"files": folders if k["q"].startswith("mimeType = ") else files}
+            return m
+        svc.files.return_value.list.side_effect = lst
+        names = [(i["path"], i["name"]) for i in dc.named_plan(svc)]
+        self.assertEqual(sorted(names), [("YouTube_Auto_TEST", "Video_002.log"), ("YouTube_Auto_TEST", "Video_005_voice.wav"),
+                                         ("YouTube_Auto_TEST/Projects", "Video_005")])
+
     def test_no_delete_in_code(self):
         src = open(dc.__file__, encoding="utf-8").read()
         self.assertNotIn(".delete(", src)
@@ -66,3 +165,35 @@ class TestCleanup(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTrashFinal(unittest.TestCase):
+    def test_only_exact_name_size_in_final_videos(self):
+        from pipeline import drive_cleanup as dc
+
+        updates = []
+
+        class Req:
+            def __init__(s, v): s.v = v
+            def execute(s, **k): return s.v
+
+        class Files:
+            def list(s, q, **k):
+                return Req({"files": [
+                    {"id": "a", "name": "Video_003_cinematic.mp4", "size": "289269797", "parents": ["F"]},
+                    {"id": "b", "name": "Video_003_cinematic.mp4", "size": "363401299", "parents": ["F"]},
+                    {"id": "c", "name": "Video_003_cinematic.mp4", "size": "289269797", "parents": ["X"]}]})
+
+            def get(s, fileId, fields, **k):
+                if fileId == "F": return Req({"name": "Final_Videos"})
+                if fileId == "X": return Req({"name": "Elsewhere"})
+                return Req({"trashed": True})
+
+            def update(s, fileId, body, **k):
+                updates.append((fileId, body)); return Req({})
+
+        class Svc:
+            def files(s): return Files()
+        res = dc.trash_final(Svc(), log=lambda *a: None)
+        self.assertEqual(updates, [("a", {"trashed": True})])
+        self.assertEqual(res, {"trashed": ["Video_003_cinematic.mp4"], "failed": []})

@@ -89,3 +89,40 @@ class TestPick(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestNoRepeatedMusic(unittest.TestCase):
+    """2026-11-25 (колдонуучу): фондук музыка мурунку даяр видеолордукун кайталабайт."""
+
+    def lib(self):
+        d = make_library(["YouTube Audio Library Attribution/Keys.mp3", "YouTube Audio Library Attribution/Duty.mp3",
+                          "YouTube Audio Library Attribution/Missing.mp3", "YouTube Audio Library Attribution/Fresh.mp3"])
+        return d, music.scan(Path(d.name))
+
+    def test_avoids_ready_videos_and_own_previous(self):
+        from pipeline.stages.s7_music import pick_track
+        d, tracks = self.lib()
+        rel = lambda n: f"YouTube Audio Library Attribution/{n}.mp3"
+        tags = {rel("Keys"): {"mood": "emotional_piano", "vocals": False},        # маанайы дал келет, бирок колдонулган
+                rel("Duty"): {"mood": "dark", "vocals": False},
+                rel("Missing"): {"mood": "dark", "vocals": False},
+                rel("Fresh"): {"mood": "calm", "vocals": False}}
+        reg = {"videos": {"Video_001": {"status": "ready", "music": rel("Keys")},
+                          "Video_004": {"status": "ready", "music": rel("Keys")},
+                          "Video_003": {"status": "failed", "music": rel("Missing")}}}
+        best, why, forced = pick_track(tracks, tags, "emotional_piano", reg, "Video_003")
+        self.assertNotEqual(best.rel, rel("Keys"))          # маанай дал келсе да — кайталанбайт
+        self.assertNotEqual(best.rel, rel("Missing"))        # өз мурунку трегин да алмаштырат
+        self.assertFalse(forced)
+        self.assertEqual(best.rel, rel("Duty"))              # калгандардын эң аз колдонулганы (тең → аты боюнча)
+
+    def test_library_exhausted_flags_forced_repeat(self):
+        from pipeline.stages.s7_music import pick_track, used_by_finished
+        d = make_library(["YouTube Audio Library Attribution/Only.mp3"])
+        tracks = music.scan(Path(d.name))
+        rel = tracks[0].rel
+        reg = {"videos": {"Video_001": {"status": "ready", "music": rel}}}
+        self.assertEqual(used_by_finished(reg, "Video_009"), {rel})
+        best, why, forced = pick_track(tracks, {rel: {"mood": "x", "vocals": False}}, "x", reg, "Video_009")
+        self.assertTrue(forced)
+        self.assertIn("китепкана түгөндү", why)

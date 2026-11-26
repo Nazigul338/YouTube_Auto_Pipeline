@@ -10,6 +10,7 @@ QA өтсө: Final_Videos/<ID>.mp4, Licenses/<ID>_LICENSE.txt.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 from datetime import date
@@ -161,6 +162,15 @@ class QAStage(Stage):
             lo, hi = AUDIBLE_RANGE
             rep.add("music_audible", "Фондук музыка угулат (бирок дикторду баспайт)", lo <= audible <= hi,
                     f"басаңдатылгандан кийин диктордон {audible} LU акырын (керек {lo:.0f}–{hi:.0f})")
+        # Музыка мурунку даяр видеолордукун кайталабайт (колдонуучу 2026-11-25). Китепкана түгөнгөндө гана (repeat_forced) өтөт.
+        trk = music.get("track")
+        if trk:
+            clash = [k for k, v in ctx.registry.get("videos", {}).items()
+                     if k != ctx.video_id and v.get("status") == "ready" and v.get("music") == trk]
+            rep.add("music_unique", "Фондук музыка мурунку даяр видеолордукун кайталабайт",
+                    not clash or bool(music.get("repeat_forced")),
+                    f"«{music.get('title')}»" + (f" — {', '.join(clash)} колдонгон" if clash else " — жаңы трек")
+                    + ("; китепкана түгөнгөн, күч менен кайталанды" if music.get("repeat_forced") else ""))
         self.check_sfx(ctx, rep, music)
 
         # 6. Кара экран, катып калган кадр, тынчтык
@@ -230,6 +240,11 @@ class QAStage(Stage):
             self.check_hook(ctx, rep)
             self.check_story(ctx, rep, total)
             self.check_format(ctx, rep)
+            if self.legacy_profile():
+                ctx.registry.setdefault("videos", {}).setdefault(ctx.video_id, {})["qa_profile"] = "legacy"
+                rep.add("qa_profile", "QA профили", None,
+                        "ЭСКИ (2026-11-18) — 24-ноябрдагы катаал пункттар (mp7-формат, hook 3 сек, биринчи кадр) колдонулган жок",
+                        required=False)
             self.check_shot_meaning(ctx, rep)
             self.check_policy(ctx, rep, clip_lic, music, meta)
             self.check_ai_images(ctx, rep, shots)
@@ -471,6 +486,15 @@ class QAStage(Stage):
             return {}
 
     HOOK_CARD_SEC = 1.0
+    LEGACY_HOOK_CARD_SEC = 3.0       # эски профиль (2026-11-18): hook карточкасы 3 сек ичинде
+    LEGACY_HOOK_PHRASE_SEC = 5.0     # эски профиль: биринчи ой ≤5 сек (2026-11-21 эреже)
+
+    @staticmethod
+    def legacy_profile() -> bool:
+        """VIDEO_QA_PROFILE=legacy: 2026-11-24'те кошулган катаал пункттар (mp7-формат, hook 3 сек/карточка 1 сек,
+        биринчи кадр ≥4) КОЛДОНУЛБАЙТ — эски формат менен чыккан видео (Video_003) үчүн колдонуучунун чечими 2026-11-25.
+        Калган бардык милдеттүү пункттар (кадр↔маани, музыка, үн, субтитр, лицензия, оригиналдуулук) ӨЗГӨРБӨЙТ."""
+        return os.environ.get("VIDEO_QA_PROFILE", "").strip().lower() == "legacy"
 
     def check_format(self, ctx, rep) -> None:
         """МИЛДЕТТҮҮ (2026-11-24, мотивация+психология): 7 бөлүк, БИР окуя ортосунда (10–25%), мисал катары
@@ -478,6 +502,10 @@ class QAStage(Stage):
         from .. import sections as sec
 
         if not sec.enabled(ctx.cfg):
+            return
+        if self.legacy_profile():
+            rep.add("format", "Формат: мотивация+психология (7 бөлүк, бир окуя, бурулуштар)", None,
+                    "эски профиль — бул видео жаңы форматка чейин жасалган, текшерилген жок", required=False)
             return
         try:
             fmt = json.loads(ctx.path("script", "format.json").read_text(encoding="utf-8"))
@@ -524,10 +552,8 @@ class QAStage(Stage):
         from .. import edit_concept as ecm
         from .s1_script import HOOK_BANNED
 
-        try:
-            meta = json.loads(ctx.path("script", "meta.json").read_text(encoding="utf-8"))
-        except Exception:
-            meta = {}
+        from .. import hookmeta
+        meta = hookmeta.ensure(ctx)            # эски долбоор: hook маалыматы жок болсо толукталат
         hook, htype = meta.get("hook", ""), meta.get("hook_type")
         try:
             cards = json.loads(ctx.path("animation", "cards.json").read_text(encoding="utf-8"))
@@ -545,8 +571,9 @@ class QAStage(Stage):
 
         if any(hook.lower().startswith(b) for b in HOOK_BANNED + HOOK_BANNED_EN):
             problems.append("шаблон башталыш")
-        if not card or card["start"] > self.HOOK_CARD_SEC:
-            problems.append(f"hook карточкасы {self.HOOK_CARD_SEC:.0f} сек ичинде экранда жок")
+        card_sec = self.LEGACY_HOOK_CARD_SEC if self.legacy_profile() else self.HOOK_CARD_SEC
+        if not card or card["start"] > card_sec:
+            problems.append(f"hook карточкасы {card_sec:.0f} сек ичинде экранда жок")
         if htype and last and htype == last:
             problems.append(f"hook түрү мурунку видеодогудай ({htype})")
         # даяр үндө: биринчи фраза алгачкы 3 секундда бүтөбү (саламдашуу/узун кириш жок)
@@ -562,8 +589,9 @@ class QAStage(Stage):
         except Exception:
             pass
         pe = timing.get("phrase_end_sec")
-        if pe is not None and pe > rt.HOOK_PHRASE_SEC:
-            problems.append(f"биринчи ой {pe} сек'те гана айтылат (> {rt.HOOK_PHRASE_SEC})")
+        phrase_sec = self.LEGACY_HOOK_PHRASE_SEC if self.legacy_profile() else rt.HOOK_PHRASE_SEC
+        if pe is not None and pe > phrase_sec:
+            problems.append(f"биринчи ой {pe} сек'те гана айтылат (> {phrase_sec})")
         ctx.path("hook_timing.json").write_text(rt.dump(timing), encoding="utf-8")
         rep.add("hook", "Hook: алгачкы 3 секунд көңүл бурат (өз түрү, кыска, экранда)", not problems,
                 (f"түрү {htype}; «{hook[:90]}»; биринчи фраза {pe} сек, сүйлөм {timing.get('sentence_end_sec')} сек; "
@@ -644,7 +672,9 @@ class QAStage(Stage):
         first = min(shots, key=lambda s: s.get("start", 0)) if shots else {}
         if isinstance(first.get("ai_score"), int):    # 2026-11-24: Hook'тун биринчи кадры да күчтүү болушу керек
             rep.add("first_shot", "Биринчи кадр (алгачкы 3 сек) күчтүү жана темага дал келет (AI ≥4/5)",
-                    first["ai_score"] >= 4, f"{first['ai_score']}/5")
+                    first["ai_score"] >= 4, f"{first['ai_score']}/5" + (" (эски профиль: милдеттүү эмес)"
+                                                                        if self.legacy_profile() else ""),
+                    required=not self.legacy_profile())
         avg = sum(sc) / len(sc)
         bad = sum(1 for x in sc if x <= 1)
         rep.add("shot_meaning", "Кадрлар баяндалган ойго дал келет (бардык кадр, AI)",

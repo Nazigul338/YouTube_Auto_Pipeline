@@ -100,14 +100,14 @@ class Inventory:
             up = path_of((f.get("parents") or [None])[0], depth + 1)
             return f"{up}/{f['name']}" if up else f["name"]
         files = self._list(f"mimeType != '{FOLDER}' and trashed = false and 'me' in owners",
-                           "id,name,size,mimeType,parents,modifiedTime,md5Checksum")
+                           "id,name,size,mimeType,parents,modifiedTime,createdTime,md5Checksum")
         trash = self._list("trashed = true and 'me' in owners", "id,name,size,mimeType,modifiedTime")
         rows = []
         for f in files:
             folder = path_of((f.get("parents") or [None])[0]) or "(Менин Drive'ым — тамыр)"
             cat, why = classify(folder + "/" + f["name"], f["name"], f["mimeType"])
             rows.append({"id": f["id"], "name": f["name"], "folder": folder, "mb": mb(f.get("size")), "bytes": int(f.get("size") or 0),
-                         "modified": f.get("modifiedTime", "")[:10], "md5": f.get("md5Checksum"), "cat": cat,
+                         "modified": f.get("modifiedTime", "")[:10], "created": f.get("createdTime", "")[:10], "mime": f["mimeType"], "md5": f.get("md5Checksum"), "cat": cat,
                          "why": why})
         # кайталанган көчүрмө (бир эле md5, бирөөсү protected эмес) — белгилейт гана
         by_md5: dict = {}

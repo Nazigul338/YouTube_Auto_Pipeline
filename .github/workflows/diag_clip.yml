@@ -1,0 +1,27 @@
+name: 🔎 Клип диагностикасы (жарыктык)
+
+# Окуу гана: клиптин берилген бөлүгүндөгү жарыктык жана blackdetect. Drive'га тийбейт.
+on:
+  workflow_dispatch:
+    inputs:
+      clips:
+        description: "url|offset|dur;url|offset|dur"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+      - env:
+          CLIPS: ${{ inputs.clips }}
+        run: python -m pipeline.diag_clip

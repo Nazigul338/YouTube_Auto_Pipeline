@@ -10,7 +10,12 @@ on:
         description: "plan — тизме гана; trash — себетке жылдыруу (уруксат менен)"
         default: plan
         type: choice
-        options: [plan, trash]
+        options: [plan, trash, restore, trash_named, trash_final]
+      set:
+        description: "Топ: tests (сынак файлдары) · extra (Long_Videos/clips_2k/extra_0*) · preview (Video_003 превью) · colab_clips (Long_Videos/clips*) · colab_rest (Colab калган убактылуу медиа)"
+        default: tests
+        type: choice
+        options: [tests, extra, preview, colab_clips, colab_rest, colab_videos, keep_latest]
       plan_code:
         description: "trash үчүн: план режиминде берилген код"
         default: ""
@@ -41,11 +46,12 @@ jobs:
           GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
           CLEAN_MODE: ${{ inputs.mode }}
           CLEAN_CODE: ${{ inputs.plan_code }}
+          CLEAN_SET: ${{ inputs.set }}
         run: python -m pipeline.drive_cleanup
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: drive-cleanup-${{ inputs.mode }}
+          name: drive-cleanup-${{ inputs.set }}-${{ inputs.mode }}
           path: drive_cleanup/
           if-no-files-found: ignore
           retention-days: 30
