@@ -12,33 +12,33 @@
   "shots": [
     {
       "source": "photo",
-      "file": "assets/reels06/p06.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p06.png",
       "motion": "card",
       "visual": "photo p06.png",
       "onscreen": "Бири-бирин чокуп жатабы?",
       "n": 1,
-      "duration": 3.5
+      "duration": 4.49
     },
     {
       "source": "photo",
-      "file": "assets/reels06/header_wound.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/header_wound.png",
       "motion": "card",
       "visual": "photo header_wound.png",
       "onscreen": "Бул кокус эмес",
       "n": 2,
-      "duration": 3.0
+      "duration": 3.85
     },
     {
       "source": "photo",
-      "file": "assets/reels06/p02.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p02.png",
       "motion": "card",
       "visual": "photo p02.png",
       "onscreen": "1. Жарык өтө күчтүү",
       "n": 3,
-      "duration": 3.5
+      "duration": 4.49
     },
     {
-      "source": "real",
+      "source": "stock",
       "visual": "baby chicks under lamp",
       "stock_query": [
         "baby chicks heat lamp",
@@ -54,28 +54,37 @@
       "fallback_photo": "assets/reels06/p01.png",
       "onscreen": "Ачык жарык — тынчсыздык",
       "n": 4,
-      "duration": 3.5
+      "duration": 4.49,
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-26-7b89a8d0-reel-ky/work/stock_4.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 67072,
+        "url": "https://pixabay.com/videos/id-67072/",
+        "author": "BenjaminNelan",
+        "query": "baby chicks heat lamp",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "source": "photo",
-      "file": "assets/reels06/p03.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p03.png",
       "motion": "card",
       "visual": "photo p03.png",
       "onscreen": "2. Тыгыздык",
       "n": 5,
-      "duration": 4.0
+      "duration": 5.13
     },
     {
       "source": "photo",
-      "file": "assets/reels06/p04.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p04.png",
       "motion": "card",
       "visual": "photo p04.png",
       "onscreen": "3. Жемде белок аз",
       "n": 6,
-      "duration": 3.5
+      "duration": 4.49
     },
     {
-      "source": "real",
+      "source": "stock",
       "visual": "baby chicks eating",
       "stock_query": [
         "baby chicks eating",
@@ -91,64 +100,73 @@
       "fallback_photo": "assets/reels06/header_chick.png",
       "onscreen": "Жетишпегенди жүндөн издейт",
       "n": 7,
-      "duration": 3.5
+      "duration": 4.49,
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-26-7b89a8d0-reel-ky/work/stock_7.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 352519,
+        "url": "https://pixabay.com/videos/id-352519/",
+        "author": "Kaffeesüchtig",
+        "query": "baby chicks eating",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "source": "photo",
-      "file": "assets/reels06/p05.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p05.png",
       "motion": "card",
       "visual": "photo p05.png",
       "onscreen": "4. Стресс: үн, чуу",
       "n": 8,
-      "duration": 3.8
+      "duration": 4.87
     },
     {
       "source": "photo",
-      "file": "assets/reels06/p01.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p01.png",
       "motion": "card",
       "visual": "photo p01.png",
       "onscreen": "5. Витамин, минерал аз",
       "n": 9,
-      "duration": 3.0
+      "duration": 3.85
     },
     {
       "source": "photo",
-      "file": "assets/reels06/p07.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p07.png",
       "motion": "card",
       "visual": "photo p07.png",
       "onscreen": "✓ Суу жана тоют дайыма",
       "n": 10,
-      "duration": 3.5
+      "duration": 4.49
     },
     {
       "source": "photo",
-      "file": "assets/reels06/p08.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p08.png",
       "motion": "card",
       "visual": "photo p08.png",
       "onscreen": "✓ Орточо жарык, туура жылуулук",
       "n": 11,
-      "duration": 3.8
+      "duration": 4.87
     },
     {
       "source": "photo",
-      "file": "assets/reels06/p09.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p09.png",
       "motion": "card",
       "visual": "photo p09.png",
       "onscreen": "✓ Кенен аянт",
       "n": 12,
-      "duration": 3.0
+      "duration": 3.85
     },
     {
       "source": "photo",
-      "file": "assets/reels06/p10.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/p10.png",
       "motion": "card",
       "visual": "photo p10.png",
       "onscreen": "✓ Витамин — адистин кеңеши менен",
       "n": 13,
-      "duration": 3.5
+      "duration": 4.49
     },
     {
-      "source": "real",
+      "source": "stock",
       "visual": "single baby chick",
       "stock_query": [
         "baby chick",
@@ -163,25 +181,34 @@
       "fallback_photo": "assets/reels06/p06.png",
       "onscreen": "Жарадарын дароо бөлүңүз",
       "n": 14,
-      "duration": 4.0
+      "duration": 5.13,
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/out/2026-11-26-7b89a8d0-reel-ky/work/stock_14.mp4",
+      "stock": {
+        "source": "Pixabay",
+        "id": 10435,
+        "url": "https://pixabay.com/videos/id-10435/",
+        "author": "papynoun",
+        "query": "baby chick",
+        "license": "https://pixabay.com/service/license-summary/"
+      }
     },
     {
       "source": "photo",
-      "file": "assets/reels06/infographic.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/infographic.png",
       "motion": "card",
       "visual": "photo infographic.png",
       "onscreen": "Жара оор болсо — ветеринарга",
       "n": 15,
-      "duration": 3.0
+      "duration": 3.85
     },
     {
       "source": "photo",
-      "file": "assets/reels06/header_chick.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels06/header_chick.png",
       "motion": "card",
       "visual": "photo header_chick.png",
       "onscreen": "Катталыңыз!",
       "n": 16,
-      "duration": 2.5
+      "duration": 3.21
     }
   ],
   "fade": 0.25,
@@ -259,8 +286,67 @@
   ],
   "output_name": "Instagram_Reels_06.mp4",
   "needs_vet_review": true,
-  "lint_issues": [],
+  "lint_issues": [
+    "Reel узактыгы 70.04с — 15–60с болушу керек"
+  ],
   "status": "pending_review",
   "ai_voice": true,
-  "id": "2026-11-26-7b89a8d0-reel-ky"
+  "id": "2026-11-26-7b89a8d0-reel-ky",
+  "music_info": {
+    "source": "generated",
+    "license": "own composition (poultry_ig_agent/music_gen.py)",
+    "key": "D",
+    "bpm": 79,
+    "progression": [
+      0,
+      3,
+      0,
+      4
+    ],
+    "mood": "warm"
+  },
+  "licenses": [
+    {
+      "shot": 4,
+      "source": "Pixabay",
+      "id": 67072,
+      "url": "https://pixabay.com/videos/id-67072/",
+      "author": "BenjaminNelan",
+      "query": "baby chicks heat lamp",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 7,
+      "source": "Pixabay",
+      "id": 352519,
+      "url": "https://pixabay.com/videos/id-352519/",
+      "author": "Kaffeesüchtig",
+      "query": "baby chicks eating",
+      "license": "https://pixabay.com/service/license-summary/"
+    },
+    {
+      "shot": 14,
+      "source": "Pixabay",
+      "id": 10435,
+      "url": "https://pixabay.com/videos/id-10435/",
+      "author": "papynoun",
+      "query": "baby chick",
+      "license": "https://pixabay.com/service/license-summary/"
+    }
+  ],
+  "tts": {
+    "model": "gemini-3.8-flash-tts",
+    "voice": "Charon",
+    "style": "warm",
+    "consistency": [
+      {
+        "try": 1,
+        "f0": 125,
+        "centroid": 922,
+        "distance": 0.062
+      }
+    ]
+  },
+  "video": "final.mp4",
+  "video_status": "ready"
 }
