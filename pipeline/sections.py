@@ -262,7 +262,28 @@ def previous_stories(registry: dict, video_id: str) -> list[dict]:
             if vid != video_id and e.get("story_example")]
 
 
-def enforce(g, text: str, topic: str, prev: list[dict], log, tries: int = 2) -> tuple[str, dict, dict]:
+def badness(rep: dict) -> float:
+    """Отчеттун начарлыгы (аз — жакшы). run #45879596165: оңдолгон вариант окуяны ордуна койсо да, көйгөйлөрдүн
+    САНЫ азайбаса ташталчу. Окуянын орду/көлөмү (структура) оор, бурулушсуз жер узундугуна жараша."""
+    b = 0.0
+    for p in rep.get("problems") or []:
+        b += 3.0 if p.startswith(("окуя", "негизги", "бөлүктөр", "hook узун")) else 1.0
+    gap = rep.get("max_gap_sec") or 0
+    return b + max(0.0, gap - TURN_GAP_SEC) / 40.0
+
+
+def _story_hint(rep: dict, n: int) -> str:
+    """Окуя эрте башталса — так нускама: канча сөз жылдыруу керек."""
+    st = rep.get("story") or {}
+    if st and st.get("start") is not None and st["start"] < STORY_START[0]:
+        need = int((STORY_START[0] + 0.05 - st["start"]) * n)
+        return (f"\n- Сейчас история начинается примерно на {st.get('w0')}-м слове ({st['start']:.0%} текста) — это слишком рано. "
+                f"Перенеси её позже: перед историей добавь ~{need} слов раскрытия проблемы и причин (новые мысли, вопрос "
+                f"к зрителю), а практику и финал сократи на столько же. Hook (первые ~20 секунд) не меняй.")
+    return ""
+
+
+def enforce(g, text: str, topic: str, prev: list[dict], log, tries: int = 3) -> tuple[str, dict, dict]:
     """Белгилейт → текшерет → бузулса, замечаниялар менен оңдотот (≤tries). → (текст, info, отчет)."""
     info = map_sections(g, text)
     rep = check(info, text, prev, g)
@@ -271,7 +292,8 @@ def enforce(g, text: str, topic: str, prev: list[dict], log, tries: int = 2) -> 
             break
         log(f"   ⚠ Формат ({k + 1}/{tries}): {'; '.join(rep['problems'])} — оңдолот")
         try:
-            new = g.text(FIX_PROMPT.format(topic=topic, why="\n".join(f"- {x}" for x in rep["problems"]),
+            why = "\n".join(f"- {x}" for x in rep["problems"]) + _story_hint(rep, len(text.split()))
+            new = g.text(FIX_PROMPT.format(topic=topic, why=why,
                                            n=len(text.split()), a=int(STORY_START[0] * len(text.split())) + 10,
                                            b=int(0.55 * len(text.split())), text=text),
                          purpose="format_fix", temperature=0.6).strip()
@@ -285,8 +307,12 @@ def enforce(g, text: str, topic: str, prev: list[dict], log, tries: int = 2) -> 
             continue
         info2 = map_sections(g, new)
         rep2 = check(info2, new, prev, g)
-        if len(rep2["problems"]) < len(rep["problems"]) or (not rep2["problems"]):
+        if not rep2["problems"] or badness(rep2) < badness(rep):
             text, info, rep = new, info2, rep2
+            log(f"   ✓ Оңдолгон вариант кабыл алынды ({len(new.split())} сөз): "
+                f"{'; '.join(rep2['problems']) or 'көйгөй жок'}")
+        else:
+            log(f"   ⚠ Оңдолгон вариант жакшырган жок: {'; '.join(rep2['problems'])[:300]}")
     return text, info, rep
 
 

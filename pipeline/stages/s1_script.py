@@ -373,12 +373,28 @@ class ScriptStage(Stage):
         if fmt_on:                              # акыркы текст боюнча: format.json (s2/s9 колдонот)
             info = sec.map_sections(g, text)
             fmt = dict(sec.check(info, text, prev_sto, g), info=info)
+            if fmt["problems"]:
+                # run #45879596165: hook кайра жазылгандан кийин формат бузулуп (бурулушсуз 59 → 105 сек), текст
+                # ошол бойдон s3'кө өтүп, TTS квотасы бекер коротулган → акыркы текстке дагы бир оңдотуу
+                ctx.log("   🔁 Hook жазылгандан кийин формат кайра текшерилди — оңдолот")
+                fixed, info2, frep = sec.enforce(g, text, topic, prev_sto, ctx.log, tries=2)
+                if fixed != text:
+                    fixed = adjust_length(g, fixed, cfg.words_min, cfg.words_max, ctx.log)
+                    if not duplicate_sentences(fixed):
+                        text = fixed
+                        info = sec.map_sections(g, text)
+                        fmt = dict(sec.check(info, text, prev_sto, g), info=info)
             ctx.path("script", "format.json").write_text(sec.dump(fmt), encoding="utf-8")
             so = fmt.get("story") or {}
             ctx.log(f"   🧩 Формат: бөлүктөр {[x['section'] for x in info.get('sections', [])]}; окуя "
                     f"{len(info.get('stories', []))} ({so.get('start', '-')}–үлүш {so.get('share', '-')}); эң узун "
                     f"бурулушсуз жер {fmt.get('max_gap_sec')} сек" +
                     (f" — ⚠ {'; '.join(fmt['problems'])}" if fmt["problems"] else " ✓"))
+            if fmt["problems"]:
+                # Формат МИЛДЕТТҮҮ (s9 check_format): бузук сценарий менен үн/монтажга (TTS квотасы, 1.5 саат) өтпөйбүз
+                ctx.path("script", "script.txt").write_text(text + "\n", encoding="utf-8")
+                raise StageError("Сценарийдин форматы оңдолгон жок: " + "; ".join(fmt["problems"])[:400] +
+                                 " — s3 (TTS) бекер коротулбасын үчүн токтотулду; s1'ден кайра иштетиңиз")
 
         script = ctx.path("script", "script.txt")
         script.write_text(text + "\n", encoding="utf-8")

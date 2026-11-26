@@ -23,6 +23,10 @@ def make_script(n_words: int = 1150, seed: str = "") -> str:
         from pipeline.textutil import word_count
         total += word_count(s)
         i += 1
+    k = int(0.35 * len(sents))           # кыска сценарийде да окуянын мисалы ортосунда болсун (s1 формат шлюзу)
+    lo, hi = -(-3 * len(sents) // 10), int(0.55 * len(sents))     # 30–55% (сүйлөм индекси)
+    if not any(x.startswith("Например,") for x in sents[lo:hi + 1]) and sents[k].startswith("Иногда"):
+        sents[k] = "Например," + sents[k][len("Иногда"):]
     paras = [" ".join(sents[k:k + 4]) for k in range(0, len(sents), 4)]
     return "\n\n".join(paras)
 
