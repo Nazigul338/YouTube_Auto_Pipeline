@@ -702,7 +702,8 @@ def tts_lines(out_dir: Path, spec: dict = SPEC, log=print) -> dict[str, Path]:
     for name, text in spec["narration"].items():
         expect = [asr.norm_word(w) for w in text.split() if asr.norm_word(w)]
         tries = []
-        for attempt, variant in enumerate((0, 2, 0, 2), 1):
+        # variant 2 (таза текст) биринчи: run #45753645612'да variant 0 нускаманы 3/3 окуп койду (квота бекер)
+        for attempt, variant in enumerate((2, 0, 2, 0), 1):
             pcm, rate = g.tts(text, voice=cfg.tts_voice, style=spec["tts_style"], variant=variant, lang="English")
             raw = out_dir / f"{name}_raw.wav"
             with wave.open(str(raw), "wb") as w:
