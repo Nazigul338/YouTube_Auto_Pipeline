@@ -1,0 +1,59 @@
+name: 🎬 Shorts hook (9:16, QR коддор)
+
+# Tech History (EN): «The Car Parts That Created QR Codes» — кинематографиялык hook (≤5 сек) + тарыхка көпүрө.
+# Кадрлар, музыка жана эффекттер pipeline/shorts_hook.py'де нөлдөн жасалат; диктор — Gemini TTS (Algenib).
+# Жыйынтык: run бетиндеги Artifacts → «qr_hook_9x16» (MP4 + JSON отчет). Drive'га жазбайт. ~2–4 мүн, Colab керек эмес.
+on:
+  workflow_dispatch:
+    inputs:
+      voice:
+        description: "Диктордун үнү (Gemini TTS). Өчүк болсо — үнсүз превью"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: FFmpeg жана шрифттер (Inter Black, JetBrains Mono — OFL)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-inter fonts-jetbrains-mono fonts-dejavu-core
+
+      - name: Китепканалар
+        run: pip install -q -r requirements.txt qrcode
+
+      - name: Тесттер
+        env:
+          YTA_SKIP_SLOW: "1"
+        run: python -m unittest tests.test_shorts_hook
+
+      - name: Рендер
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          if [ "${{ inputs.voice }}" = "true" ]; then
+            python -m pipeline.shorts_hook --out out/qr_hook_9x16.mp4 --tts
+          else
+            python -m pipeline.shorts_hook --out out/qr_hook_9x16.mp4
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qr_hook_9x16
+          path: |
+            out/qr_hook_9x16.mp4
+            out/qr_hook_9x16.json
+          retention-days: 14

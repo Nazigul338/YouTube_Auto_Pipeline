@@ -42,6 +42,15 @@ QA `check_story`. Модулдар: `pipeline/story.py`, `pipeline/continuity.py
 - Код: `pipeline/lang.py` (тил/формат), `pipeline/doc_script.py` (s1), `pipeline/sources.py`,
   `niches/tech_history.yaml`, `.github/workflows/make_video_en.yml`; тесттер `tests/test_tech_history.py`.
 
+## 📱 Shorts hook (9:16): «The Car Parts That Created QR Codes» (2026-11-26)
+
+`pipeline/shorts_hook.py` + workflow **«🎬 Shorts hook (9:16, QR коддор)»**: 1080×1920, ≤5 сек кинематографиялык hook
+(QR макро + сканер + lock → zoom-through + жарк → 1990-жылдардын башындагы унаа тетиктери заводу) + Масахиро Хара тууралуу
+окуяга көпүрө (lower-third «1992 · DENSO, JAPAN»). Логотип/интро жок. Кадрлар, музыка жана SFX нөлдөн синтезделет (CC0),
+завод экранда «ILLUSTRATIVE RECONSTRUCTION» деп белгиленет. Диктор: Gemini TTS Algenib (`--tts`, `GOOGLE_API_KEY`).
+Текшерүүлөр: текст ≤1 сек, hook ≤5.0 сек, биринчи кадр караңгы эмес. `--story <mp4>` — негизги окуяны 9:16'га келтирип улайт.
+Жыйынтык: run бетиндеги Artifacts → `qr_hook_9x16` (Drive'га жазбайт).
+
 ## 🥇 Оригиналдуулук — №1 приоритет
 Ар видео өз монтаж концепциясы менен жасалат жана мурунку даяр видеолор менен салыштырылат; окшош болсо QA
 видеону бербейт. Толук эреже: CLAUDE.md, docs/VIDEO_RULES.md (0-бөлүм), docs/RULES_IMPLEMENTATION.md.
