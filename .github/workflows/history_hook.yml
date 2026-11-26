@@ -74,7 +74,7 @@ jobs:
           retention-days: 14
 
       - name: MP4'тү branch'ка сактоо (deliverables/)
-        if: github.event_name == 'push' && success()
+        if: success() && github.ref_name == 'ccr-3cbc1b33-ozioi4'
         run: |
           mkdir -p deliverables
           cp out/qr_hook_16x9.mp4 out/qr_hook_16x9.json deliverables/
