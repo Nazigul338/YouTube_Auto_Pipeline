@@ -283,6 +283,36 @@ def restore(svc, log=print) -> list[dict]:
             return out
 
 
+TRASH_FINAL = {"Video_003_cinematic.mp4": 289269797}   # колдонуучу телефонго жүктөдү (2026-11-26) — аты + байт дал келсе
+
+
+def trash_final(svc, log=print) -> dict:
+    """Колдонуучунун так суроосу: Video_003 MP4'ти телефонго жүктөгөндөн кийин Drive'дан өчүрүү.
+    Себетке гана жылдырылат (биротоло өчүрүлбөйт). Аты ЖАНА байт көлөмү дал келген, колдонуучуга таандык файл гана;
+    Final_Videos ичинде. Обложка/сценарий/аудио/лицензия/реестр/клип базасына тийилбейт."""
+    done, failed, seen = [], [], set()
+    for name, size in TRASH_FINAL.items():
+        r = svc.files().list(q=f"name = '{name}' and trashed = false and 'me' in owners",
+                             fields="files(id,name,size,parents)", pageSize=50).execute(num_retries=3)
+        for f in r.get("files", []):
+            if int(f.get("size") or 0) != size or f["id"] in seen:
+                continue
+            seen.add(f["id"])
+            par = svc.files().get(fileId=f["parents"][0], fields="name").execute(num_retries=3)["name"] if f.get("parents") else ""
+            if par != "Final_Videos":
+                log(f"   ⏭ {par}/{name}: Final_Videos эмес — тийбедим")
+                continue
+            try:
+                svc.files().update(fileId=f["id"], body={"trashed": True}, fields="id").execute(num_retries=3)
+                chk = svc.files().get(fileId=f["id"], fields="trashed").execute(num_retries=3)
+                (done if chk.get("trashed") else failed).append(name)
+                log(f"🗑 Себетке жылдырылды: {par}/{name} ({size / 1_048_576:.0f} МБ)")
+            except Exception as e:
+                failed.append(name)
+                log(f"   ❌ {name}: {type(e).__name__}")
+    return {"trashed": done, "failed": failed}
+
+
 def main() -> int:
     from .drive import DriveClient
     drive = DriveClient.from_env()
@@ -293,6 +323,10 @@ def main() -> int:
         res = trash_named(drive.svc)
         print(json.dumps(res, ensure_ascii=False))
         return 1 if res["failed"] else 0
+    if os.environ.get("CLEAN_MODE") == "trash_final":
+        res = trash_final(drive.svc)
+        print(json.dumps(res, ensure_ascii=False))
+        return 1 if res["failed"] or not res["trashed"] else 0
     if os.environ.get("CLEAN_MODE") == "restore":
         res = restore(drive.svc)
         print(json.dumps([{"name": x["name"], "link": x.get("webViewLink")} for x in res], ensure_ascii=False))

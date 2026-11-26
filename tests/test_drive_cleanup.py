@@ -165,3 +165,35 @@ class TestCleanup(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestTrashFinal(unittest.TestCase):
+    def test_only_exact_name_size_in_final_videos(self):
+        from pipeline import drive_cleanup as dc
+
+        updates = []
+
+        class Req:
+            def __init__(s, v): s.v = v
+            def execute(s, **k): return s.v
+
+        class Files:
+            def list(s, q, **k):
+                return Req({"files": [
+                    {"id": "a", "name": "Video_003_cinematic.mp4", "size": "289269797", "parents": ["F"]},
+                    {"id": "b", "name": "Video_003_cinematic.mp4", "size": "363401299", "parents": ["F"]},
+                    {"id": "c", "name": "Video_003_cinematic.mp4", "size": "289269797", "parents": ["X"]}]})
+
+            def get(s, fileId, fields, **k):
+                if fileId == "F": return Req({"name": "Final_Videos"})
+                if fileId == "X": return Req({"name": "Elsewhere"})
+                return Req({"trashed": True})
+
+            def update(s, fileId, body, **k):
+                updates.append((fileId, body)); return Req({})
+
+        class Svc:
+            def files(s): return Files()
+        res = dc.trash_final(Svc(), log=lambda *a: None)
+        self.assertEqual(updates, [("a", {"trashed": True})])
+        self.assertEqual(res, {"trashed": ["Video_003_cinematic.mp4"], "failed": []})

@@ -10,7 +10,7 @@ on:
         description: "plan — тизме гана; trash — себетке жылдыруу (уруксат менен)"
         default: plan
         type: choice
-        options: [plan, trash, restore, trash_named]
+        options: [plan, trash, restore, trash_named, trash_final]
       set:
         description: "Топ: tests (сынак файлдары) · extra (Long_Videos/clips_2k/extra_0*) · preview (Video_003 превью) · colab_clips (Long_Videos/clips*) · colab_rest (Colab калган убактылуу медиа)"
         default: tests
