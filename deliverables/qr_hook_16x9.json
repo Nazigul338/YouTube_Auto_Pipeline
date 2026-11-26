@@ -1,0 +1,95 @@
+{
+  "topic": "The Car Parts That Created QR Codes",
+  "format": "1920x1080 (16:9), 30 fps",
+  "timeline": {
+    "l1_start": 0.12,
+    "l1_dur": 2.003,
+    "cut": 2.243,
+    "l2_start": 2.383,
+    "l2_dur": 2.126,
+    "hook_end": 4.609,
+    "bridge_start": 4.909,
+    "bridge_dur": 7.0,
+    "hara_at": 8.759,
+    "end": 12.71
+  },
+  "voice": {
+    "line1": 2.0,
+    "line2": 2.13,
+    "bridge": 7.0
+  },
+  "first_frame_luma": 147.5,
+  "photos": {
+    "scan": {
+      "fit": 8,
+      "source": "Pixabay",
+      "id": "pixabay-img:1903447",
+      "page": "https://pixabay.com/photos/qr-code-quick-response-code-to-scan-1903447/",
+      "author": "geralt",
+      "license": "Pixabay Content License",
+      "license_url": "https://pixabay.com/service/license-summary/",
+      "tags": "qr code, quick response code, to scan, display, barcodes, matrix, coded, mobile, smartphone, phone, business, communication, design, qr code, qr code, qr code, qr code, qr code",
+      "focus": [
+        0.85,
+        0.55
+      ]
+    },
+    "factory": {
+      "fit": 8,
+      "source": "Pixabay",
+      "id": "pixabay-img:186980",
+      "page": "https://pixabay.com/photos/company-factory-production-186980/",
+      "author": "marcin049",
+      "license": "Pixabay Content License",
+      "license_url": "https://pixabay.com/service/license-summary/",
+      "tags": "company, factory, production, machine production line, the production of, machine, line, the industry, industrial, traffic, technology, metal, machining, milling, stainless steel, the palette, elements, business, factory, factory, factory, factory, factory, production",
+      "focus": [
+        0.5,
+        0.5
+      ]
+    },
+    "barcode": {
+      "fit": 9,
+      "source": "Pixabay",
+      "id": "pixabay-img:3616",
+      "page": "https://pixabay.com/photos/barcode-code-price-pay-encryption-3616/",
+      "author": "PDPhotos",
+      "license": "Pixabay Content License",
+      "license_url": "https://pixabay.com/service/license-summary/",
+      "tags": "barcode, code, price, pay, encryption, binary, barcode, barcode, barcode, barcode, barcode",
+      "focus": [
+        0.48,
+        0.38
+      ]
+    },
+    "hara": {
+      "source": "Wikimedia Commons",
+      "title": "File:Masahiro Hara cropped 1 Masahiro Hara 202303.jpg",
+      "page": "https://commons.wikimedia.org/wiki/File:Masahiro_Hara_cropped_1_Masahiro_Hara_202303.jpg",
+      "author": "日本学士院",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0",
+      "focus": [
+        0.5,
+        0.38
+      ]
+    }
+  },
+  "description_credits": "Photos: stock images are illustrative of the era (not archival footage of Denso).\n- Pixabay: geralt — Pixabay Content License — https://pixabay.com/photos/qr-code-quick-response-code-to-scan-1903447/\n- Pixabay: marcin049 — Pixabay Content License — https://pixabay.com/photos/company-factory-production-186980/\n- Pixabay: PDPhotos — Pixabay Content License — https://pixabay.com/photos/barcode-code-price-pay-encryption-3616/\n- Wikimedia Commons: 日本学士院 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:Masahiro_Hara_cropped_1_Masahiro_Hara_202303.jpg",
+  "sources": [
+    "https://en.wikipedia.org/wiki/QR_code",
+    "https://en.wikipedia.org/wiki/Masahiro_Hara",
+    "https://www.epo.org/learning-events/european-inventor/finalists/2014/hara.html",
+    "https://www.jpo.go.jp/e/news/koho/innovation/01_qrcode_e.html"
+  ],
+  "checks": {
+    "text_by_1s": true,
+    "hook_le_5s": true,
+    "first_frame_not_dark": true,
+    "no_logo_intro": true,
+    "licenses_known": true,
+    "photos_fit": true,
+    "voice": true,
+    "ok": true
+  }
+}
