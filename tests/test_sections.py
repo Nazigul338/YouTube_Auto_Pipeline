@@ -222,3 +222,19 @@ class TestEnforceBadness(unittest.TestCase):
         self.assertIn("240", h)
         self.assertIn("Hook", h)
         self.assertEqual(sections._story_hint({"story": {"start": 0.4, "w0": 460}}, 1150), "")
+
+
+class TestStoryBeats(unittest.TestCase):
+    """run #45964943443: окуянын ичиндеги «Но когда…», «Дома…» жана бөлүктүн башы бурулуш катары эсептелет."""
+    def test_story_beats_and_section_heads(self):
+        para = " ".join(["слово"] * 60) + "."
+        t = f"Представь такую ситуацию. {para} Но когда он выходит, {para} Дома он молчит. {para} История показывает {para}"
+        w = t.split()
+        heads = [w[i] for i in sections.rule_turns(t)]
+        self.assertIn("Но", heads)
+        self.assertIn("Дома", heads)
+        k = w.index("История")
+        info = {"turns": [0], "sections": [{"section": "meaning", "w0": k}]}
+        gp, gap = sections._gap_problems(info, t, len(w), wps=2.1)
+        self.assertEqual(gp, [])
+        self.assertLessEqual(gap, sections.TURN_GAP_SEC)

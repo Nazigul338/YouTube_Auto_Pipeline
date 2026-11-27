@@ -187,7 +187,11 @@ def check(info: dict, text: str, prev: list[dict] | None = None, g=None) -> dict
 TURN_STARTS = ("первый", "первая", "первое", "второй", "вторая", "второе", "третий", "третья", "третье",
                "четвертый", "четвертая", "четвертое", "пятый", "пятая", "шаг", "упражнение", "вот простое",
                "вот упражнение", "задумайся", "представь", "например", "возьмем", "допустим", "почему",
-               "а теперь", "но вот", "и вот", "что, если", "что если")
+               "а теперь", "но вот", "и вот", "что, если", "что если",
+               # run #45964943443: окуянын ичиндеги сюжеттик бурулуштар (жаңы окуя/жай/убакыт) — 86 сек «бурулушсуз»
+               # деп эсептелген («Но когда он выходит из офиса…», «Дома Михаил…»)
+               "но когда", "дома", "однажды", "вдруг", "в этот", "в тот", "в вечер", "наутро", "на следующий",
+               "спустя", "через неделю", "через месяц", "через год")
 
 
 def rule_turns(text: str) -> list[int]:
@@ -207,7 +211,9 @@ def rule_turns(text: str) -> list[int]:
 
 
 def _gap_problems(info: dict, text: str, n: int, wps: float | None = None) -> tuple[list[str], float | None]:
-    turns = sorted(set(info.get("turns") or []) | set(rule_turns(text)))
+    # бөлүктүн башы (проблема → себептер → окуя → мааниси…) — өзү эле жаңы ой
+    heads = {s["w0"] for s in info.get("sections") or [] if isinstance(s, dict) and s.get("w0")}
+    turns = sorted(set(info.get("turns") or []) | set(rule_turns(text)) | heads)
     gaps = [b - a for a, b in zip([0] + turns, turns + [n])]
     max_gap = round(max(gaps) / (wps or REAL_WPS), 1) if gaps else None
     if not turns:
