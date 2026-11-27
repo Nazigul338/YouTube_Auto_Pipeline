@@ -266,7 +266,10 @@ class VisualsStage(Stage):
         from .. import sections as _sec
         if _sec.enabled(ctx.cfg) and not _st.is_story(ctx.cfg):
             # run #45354695418 (mp7): 56 начар кадрдын 25'и гана сыналып, орточо 2.90 (<3.0) калды → 2 айлампа
-            self.rounds = 2
+            # run #45968547724 (Video_006): 81 начар кадр, 2×25=50'сү гана сыналып, 37 алмашты, орточо 2.90 →
+            # кино форматтагыдай 50 кадр × 3 айлампа (бардык начар кадр жок дегенде бир жолу сыналат)
+            self.MAX_REPLACE = 50
+            self.rounds = 3
         if quality:
             results, ai_stats = self.ai_relevance(ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u)
             ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
