@@ -455,6 +455,12 @@ class VisualsStage(Stage):
 
     FIRST_MIN = 4          # биринчи кадр (hook'тун алгачкы 3 сек) — ≥4/5 болмоюнча алмаштырылат
     LOW_SCORE = 2          # ≤2/5 — клип сахнанын текстине дал келбейт
+    # run #45987020953: s5'те биринчи кадр өттү, QA кайра баалап 3/5 берди (баалоонун чачырашы) →
+    # s5 биринчи кадрды 5/5'ке чейин жакшыртып көрөт (жаңысы жакшыраак болсо гана алмашат)
+    FIRST_TARGET = 5
+    # run #45987020953: 3 айлампадан кийин орточо 2.97 (<3.0 QA) → орточо ушул чекке жеткенче кошумча айлампа
+    AVG_TARGET = 3.15
+    MAX_ROUNDS = 5
     MAX_REPLACE = 25
     RATE_BATCH = 20     # квота: 180 кадр = 9 суроо (мурун 8 → 23 суроо); бир суроодо 20 сүрөт — Gemini көтөрөт
 
@@ -616,7 +622,7 @@ SHOTS:
         first = min(scores) if scores else None
 
         def is_low(i: int) -> bool:   # 2026-11-24: алгачкы 3 сек — биринчи кадр да күчтүү болушу керек (≥4/5)
-            return scores.get(i, 5) <= self.LOW_SCORE or (i == first and scores.get(i, 5) < self.FIRST_MIN)
+            return scores.get(i, 5) <= self.LOW_SCORE or (i == first and scores.get(i, 5) < self.FIRST_TARGET)
         low = sorted((i for i in scores if is_low(i)), key=lambda i: (i != first, scores[i]))
         replaced = 0
         beats: dict = {}
@@ -626,7 +632,11 @@ SHOTS:
         btext = {i: text(i) for i in low} if film else stext
         # run #44921404755: бир айлампада 99 начар кадрдын 17'си гана алмашты → кино форматта 2 айлампа
         # run #45002414086: 2 айлампа × 50 = 100 < 139 начар кадр → кино форматта 3 айлампа
-        for round_ in range(3 if film else getattr(self, "rounds", 1)):
+        base_rounds = 3 if film else getattr(self, "rounds", 1)
+        extra = self.MAX_ROUNDS if base_rounds >= 3 else base_rounds
+        for round_ in range(max(base_rounds, extra)):
+            if round_ >= base_rounds and scores and sum(scores.values()) / len(scores) >= self.AVG_TARGET:
+                break
             todo = sorted((i for i in low if is_low(i)),
                           key=lambda i: (i != first, scores[i]))[: self.MAX_REPLACE]
             if not todo:

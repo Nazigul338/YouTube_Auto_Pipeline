@@ -109,6 +109,37 @@ class TestAIRelevance(unittest.TestCase):
         self.assertEqual(st["scores"][2], 2)
         self.assertEqual(len(out), 3)
 
+    def run_rounds(self, first_scores, retry_score, rounds=3):
+        class Gem:
+            calls = 0
+
+            def rate_frames(self, items):
+                Gem.calls += 1
+                return list(first_scores) if Gem.calls == 1 else [retry_score] * len(items)
+        stage = VisualsStage()
+        stage.rounds = rounds
+        self.ctx.services["gemini"] = Gem()
+        chosen = {k: (asset(k), "fresh", 0.5) for k in range(3)}
+        finder = mock.Mock()
+        finder.beat_candidate.return_value = None
+        finder.replacement.side_effect = lambda pool, dur: asset(200 + Gem.calls)
+        fetch = lambda i: (i, chosen[i][0], self.clip, 8.0, "fresh", 0.0)
+        with mock.patch.object(VisualsStage, "visual_beats", return_value={}):
+            stage.ai_relevance(self.ctx, self.results, self.shots, self.scenes, chosen,
+                               {k: None for k in range(3)}, finder, fetch, lambda i: 0.5)
+        return Gem.calls
+
+    def test_extra_rounds_while_average_below_target(self):
+        # run #45987020953: 3 айлампадан кийин орточо 2.97 → MAX_ROUNDS'ка чейин улантылат
+        self.assertEqual(self.run_rounds([5, 1, 1], 2), 1 + VisualsStage.MAX_ROUNDS)
+
+    def test_no_extra_rounds_when_average_reached(self):
+        self.assertEqual(self.run_rounds([5, 5, 2], 2), 1 + 3)
+
+    def test_first_shot_pushed_to_five(self):
+        # биринчи кадр 4/5 (QA'дан өтөт, бирок кайра баалоодо 3 болушу мүмкүн) → 5'ке жакшыртылып көрүлөт
+        self.assertGreater(self.run_rounds([4, 5, 5], 5, rounds=1), 1)
+
     def test_quota_failure_does_not_break(self):
         with mock.patch("time.sleep"):
             out, st = self.run_stage(FakeGem([], fail=True), [asset(100)])
