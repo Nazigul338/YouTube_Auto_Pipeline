@@ -140,6 +140,38 @@ class TestAIRelevance(unittest.TestCase):
         # биринчи кадр 4/5 (QA'дан өтөт, бирок кайра баалоодо 3 болушу мүмкүн) → 5'ке жакшыртылып көрүлөт
         self.assertGreater(self.run_rounds([4, 5, 5], 5, rounds=1), 1)
 
+    def test_carry_best_restores_better_previous_clip(self):
+        # Video_006: rerun нөлдөн тандап, жакшы клиптер жоголгон → мурункусу жакшыраак болсо кайтарылат
+        import json as _json
+        ctx = SimpleNamespace(log=lambda m: None, path=lambda *p: self.d.joinpath(*p))
+        (self.d / "clips").mkdir()
+        old = [{"i": k, "scene": 1, "dur": 3.0, "kind": "video", "source": "pixabay", "asset": f"pixabay:{900 + k}",
+                "file": f"old{k}.mp4", "url": "u", "ai_score": sc, "real_duration": 8.0}
+               for k, sc in enumerate([4, 2, 5])]
+        (self.d / "clips" / "shots.json").write_text(_json.dumps({"total": 9, "shots": old}))
+        (self.d / "clips" / "licenses.json").write_text(_json.dumps(
+            [{"shot": k, "author": "a", "license": "Pixabay", "license_url": "l"} for k in range(3)]))
+        prev = VisualsStage.previous_best(ctx, self.shots)
+        self.assertEqual(sorted(prev), [0, 1, 2])
+        stock = mock.Mock()
+        stock.download.side_effect = lambda a, path: path.write_bytes(self.clip.read_bytes())
+        st = {"scores": {0: 3, 1: 3, 2: 5}, "avg": 11 / 3}
+        out, kept = VisualsStage().carry_best(ctx, list(self.results), self.shots, st, prev, stock)
+        self.assertEqual(kept, 1)                               # 0-кадр: 4 > 3; 1-кадр: 2 < 3; 2-кадр: тең
+        self.assertEqual(out[0][1].id, "pixabay:900")
+        self.assertEqual(out[1][1].id, "pixabay:1")
+        self.assertEqual(st["scores"][0], 4)
+        self.assertAlmostEqual(st["avg"], 4.0)
+
+    def test_previous_best_ignores_changed_plan(self):
+        import json as _json
+        ctx = SimpleNamespace(path=lambda *p: self.d.joinpath(*p))
+        (self.d / "clips").mkdir()
+        old = [{"scene": 2, "dur": 3.0, "kind": "video", "asset": "pixabay:1", "file": "f", "ai_score": 5}]
+        (self.d / "clips" / "shots.json").write_text(_json.dumps({"shots": old}))
+        (self.d / "clips" / "licenses.json").write_text(_json.dumps([{"shot": 0}]))
+        self.assertEqual(VisualsStage.previous_best(ctx, self.shots), {})
+
     def test_quota_failure_does_not_break(self):
         with mock.patch("time.sleep"):
             out, st = self.run_stage(FakeGem([], fail=True), [asset(100)])

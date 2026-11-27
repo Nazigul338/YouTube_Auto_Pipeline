@@ -177,6 +177,7 @@ class VisualsStage(Stage):
         stock = ctx.services.get("stock") or from_env()
         rng = random.Random(int(hashlib.md5(ctx.video_id.encode()).hexdigest(), 16))
 
+        prev = self.previous_best(ctx, shots) if quality else {}
         mem = ClipMemory.load(ctx.store, ctx.registry)
         released = mem.release(ctx.video_id)          # кайра иштетүүдө өзүн өзү бөгөттөбөйт
         finder = ClipFinder(stock, mem, ctx.video_id, min_duration=MIN_SHOT + 0.5, log=ctx.log)
@@ -275,6 +276,11 @@ class VisualsStage(Stage):
             ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
                     f"{ai_stats.get('low', 0)}, алмаштырылды {ai_stats.get('replaced', 0)}, "
                     f"орточо {ai_stats.get('avg', 0):.2f}/5")
+            if prev and ai_stats.get("scores"):
+                results, kept = self.carry_best(ctx, results, shots, ai_stats, prev, stock)
+                if kept:
+                    ctx.log(f"   ♻️ Мурунку аракеттин жакшыраак бааланган клиби кайтарылды: {kept} кадр; "
+                            f"орточо {ai_stats['avg']:.2f}/5")
         cont: dict = {}
         from .. import story as _story
         if quality and _story.is_story(ctx.cfg):    # кино-окуя: каарман бир адам бойдон калсын
@@ -597,6 +603,70 @@ SHOTS:
                     seen.update(q.lower() for q in qs)        # бир видеодо бир идея эки жолу эмес
                     out[i] = (str(row.get("idea", ""))[:160], qs)
         return out
+
+    @staticmethod
+    def previous_best(ctx, shots) -> dict[int, dict]:
+        """Ушул видеонун мурунку s5 аракетинин (rerun) AI бааланган кадрлары: {кадр: shot+лицензия}.
+
+        Себеби (Video_006, run #45968547724/#45987020953/#45995554580): ар rerun кадрларды нөлдөн тандап,
+        орточо 2.90 → 2.97 → 2.85 болуп, жакшы табылган клиптер жоголуп жатты. Кадрлардын планы ошол эле
+        (убактысы/сахнасы дал келет) болсо гана колдонулат."""
+        try:
+            old = json.loads(ctx.path("clips", "shots.json").read_text(encoding="utf-8"))["shots"]
+            lic = json.loads(ctx.path("clips", "licenses.json").read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        lic_by = {r.get("shot"): r for r in lic if isinstance(r, dict)}
+        out: dict[int, dict] = {}
+        for k, o in enumerate(old):
+            if k >= len(shots) or not isinstance(o, dict) or o.get("ai_score") is None:
+                continue
+            sh = shots[k]
+            if (o.get("scene") != sh["scene"] or abs(float(o.get("dur", 0)) - sh["dur"]) > 0.05
+                    or o.get("kind") != "video" or o.get("source") == "gemini" or k not in lic_by):
+                continue
+            out[k] = {**o, "lic": lic_by[k]}
+        return out
+
+    def carry_best(self, ctx, results, shots, ai_stats, prev, stock):
+        """Жаңы тандоодо кадр мурункудан ТӨМӨН бааланса — мурунку клипти кайтарат (уникалдуулук сакталат)."""
+        scores = ai_stats["scores"]
+        by_i = {r[0]: r for r in results}
+        used = {r[1].id for r in results}
+        kept = 0
+        first = min(scores) if scores else None
+        for i in sorted(prev, key=lambda k: (k != first, scores.get(k, 0) - prev[k]["ai_score"])):
+            o = prev[i]
+            if i not in by_i or o["ai_score"] <= scores.get(i, 0) or o["asset"] in used:
+                continue
+            L = o["lic"]
+            a = Asset(o["source"], "video", o["asset"], o.get("url", ""), 1920, 1080, float(o.get("real_duration") or 0),
+                      o.get("page_url", ""), L.get("author", ""), L.get("license", ""), L.get("license_url", ""),
+                      query=o.get("query", ""))
+            path = ctx.path("clips", o["file"])
+            try:
+                try:
+                    stock.download(a, path)
+                except TransientError:
+                    fresh = stock.refresh_url(a.id) if hasattr(stock, "refresh_url") else None
+                    if not fresh:
+                        continue
+                    a.url = fresh
+                    stock.download(a, path)
+                real = media.stream_durations(path)["video"]
+                if real is None or real < shots[i]["dur"] + MIN_CLIP_ROOM:
+                    continue
+            except Exception:
+                continue
+            used.discard(by_i[i][1].id)
+            used.add(a.id)
+            by_i[i] = (i, a, path, real, "fresh", float(o.get("match", 0.0)))
+            scores[i] = o["ai_score"]
+            kept += 1
+        if kept:
+            ai_stats["avg"] = sum(scores.values()) / len(scores)
+            ai_stats["carried"] = kept
+        return [by_i[i] for i in sorted(by_i)], kept
 
     def ai_relevance(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u):
         """Ар кадрды (клиптин ортосунан) ОШОЛ кадрдагы диктордун сөзүнө Gemini менен баалайт; ≤2/5 болсо —
