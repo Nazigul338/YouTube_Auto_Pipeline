@@ -16,7 +16,7 @@
       "motion": "card",
       "visual": "photo header_coop.png",
       "onscreen": "Кыш келди",
-      "duration": 4.6,
+      "duration": 2.28,
       "n": 1
     },
     {
@@ -25,7 +25,7 @@
       "motion": "card",
       "visual": "photo header_hen.png",
       "onscreen": "Тооктор үшүп жатабы?",
-      "duration": 4.6,
+      "duration": 6.52,
       "n": 2
     },
     {
@@ -34,7 +34,7 @@
       "motion": "card",
       "visual": "photo p01.png",
       "onscreen": "1. Жылуулук: 0°C'тан төмөн эмес",
-      "duration": 5.25,
+      "duration": 5.07,
       "n": 3
     },
     {
@@ -43,7 +43,7 @@
       "motion": "card",
       "visual": "photo p02.png",
       "onscreen": "2. Жарык: 12–14 саат",
-      "duration": 5.25,
+      "duration": 6.38,
       "n": 4
     },
     {
@@ -52,7 +52,7 @@
       "motion": "card",
       "visual": "photo p03.png",
       "onscreen": "3. Энергиялуу жем",
-      "duration": 5.91,
+      "duration": 5.94,
       "n": 5
     },
     {
@@ -61,7 +61,7 @@
       "motion": "card",
       "visual": "photo p04.png",
       "onscreen": "4. Суу тоңбосун: 10–20°C",
-      "duration": 5.91,
+      "duration": 6.38,
       "n": 6
     },
     {
@@ -70,7 +70,7 @@
       "motion": "card",
       "visual": "photo p05.png",
       "onscreen": "5. Жылуу, тынч уя",
-      "duration": 5.25,
+      "duration": 6.81,
       "n": 7
     },
     {
@@ -79,7 +79,7 @@
       "motion": "card",
       "visual": "photo p06.png",
       "onscreen": "6. Желдетүү, сквознякасыз",
-      "duration": 5.25,
+      "duration": 4.64,
       "n": 8
     },
     {
@@ -88,7 +88,7 @@
       "motion": "card",
       "visual": "photo p07.png",
       "onscreen": "7. Мите курттардан сактаңыз",
-      "duration": 5.25,
+      "duration": 5.07,
       "n": 9
     },
     {
@@ -97,7 +97,7 @@
       "motion": "card",
       "visual": "photo p08.png",
       "onscreen": "8. Витамин — адистин кеңеши менен",
-      "duration": 6.57,
+      "duration": 7.68,
       "n": 10
     },
     {
@@ -106,7 +106,7 @@
       "motion": "card",
       "visual": "photo p09.png",
       "onscreen": "9. 1 м²ге 4–5 тоок",
-      "duration": 5.25,
+      "duration": 5.94,
       "n": 11
     },
     {
@@ -115,7 +115,7 @@
       "motion": "card",
       "visual": "photo p10.png",
       "onscreen": "10. Иммунитет",
-      "duration": 5.25,
+      "duration": 4.64,
       "n": 12
     },
     {
@@ -124,7 +124,7 @@
       "motion": "card",
       "visual": "photo infographic.png",
       "onscreen": "Ооруса — ветеринарга",
-      "duration": 4.6,
+      "duration": 2.9,
       "n": 13
     },
     {
@@ -133,7 +133,7 @@
       "motion": "card",
       "visual": "photo p05.png",
       "onscreen": "Сактап коюңуз!",
-      "duration": 3.28,
+      "duration": 1.74,
       "n": 14
     }
   ],
@@ -220,39 +220,5 @@
   ],
   "status": "pending_review",
   "ai_voice": true,
-  "id": "2026-11-27-b94fa7ff-reel-ky",
-  "music_info": {
-    "source": "generated",
-    "license": "own composition (poultry_ig_agent/music_gen.py)",
-    "key": "A",
-    "bpm": 80,
-    "progression": [
-      0,
-      5,
-      3,
-      0
-    ],
-    "mood": "calm"
-  },
-  "tts": {
-    "model": "gemini-3.8-flash-tts",
-    "voice": "Charon",
-    "style": "warm",
-    "consistency": [
-      {
-        "try": 1,
-        "f0": 107,
-        "centroid": 789,
-        "distance": 0.152
-      },
-      {
-        "try": 2,
-        "f0": 123,
-        "centroid": 972,
-        "distance": 0.054
-      }
-    ]
-  },
-  "video": "final.mp4",
-  "video_status": "ready"
+  "id": "2026-11-27-b94fa7ff-reel-ky"
 }
