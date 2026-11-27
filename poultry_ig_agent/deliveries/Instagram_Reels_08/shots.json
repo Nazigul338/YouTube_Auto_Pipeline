@@ -5,7 +5,7 @@
     "motion": "card",
     "visual": "photo header_coop.png",
     "onscreen": "Кыш келди",
-    "duration": 4.6,
+    "duration": 2.58,
     "n": 1
   },
   {
@@ -14,7 +14,7 @@
     "motion": "card",
     "visual": "photo header_hen.png",
     "onscreen": "Тооктор үшүп жатабы?",
-    "duration": 4.6,
+    "duration": 7.39,
     "n": 2
   },
   {
@@ -23,7 +23,7 @@
     "motion": "card",
     "visual": "photo p01.png",
     "onscreen": "1. Жылуулук: 0°C'тан төмөн эмес",
-    "duration": 5.25,
+    "duration": 5.74,
     "n": 3
   },
   {
@@ -32,7 +32,7 @@
     "motion": "card",
     "visual": "photo p02.png",
     "onscreen": "2. Жарык: 12–14 саат",
-    "duration": 5.25,
+    "duration": 7.23,
     "n": 4
   },
   {
@@ -41,7 +41,7 @@
     "motion": "card",
     "visual": "photo p03.png",
     "onscreen": "3. Энергиялуу жем",
-    "duration": 5.91,
+    "duration": 6.73,
     "n": 5
   },
   {
@@ -50,7 +50,7 @@
     "motion": "card",
     "visual": "photo p04.png",
     "onscreen": "4. Суу тоңбосун: 10–20°C",
-    "duration": 5.91,
+    "duration": 7.23,
     "n": 6
   },
   {
@@ -59,7 +59,7 @@
     "motion": "card",
     "visual": "photo p05.png",
     "onscreen": "5. Жылуу, тынч уя",
-    "duration": 5.25,
+    "duration": 7.71,
     "n": 7
   },
   {
@@ -68,7 +68,7 @@
     "motion": "card",
     "visual": "photo p06.png",
     "onscreen": "6. Желдетүү, сквознякасыз",
-    "duration": 5.25,
+    "duration": 5.26,
     "n": 8
   },
   {
@@ -77,7 +77,7 @@
     "motion": "card",
     "visual": "photo p07.png",
     "onscreen": "7. Мите курттардан сактаңыз",
-    "duration": 5.25,
+    "duration": 5.74,
     "n": 9
   },
   {
@@ -86,7 +86,7 @@
     "motion": "card",
     "visual": "photo p08.png",
     "onscreen": "8. Витамин — адистин кеңеши менен",
-    "duration": 6.57,
+    "duration": 8.0,
     "n": 10
   },
   {
@@ -95,7 +95,7 @@
     "motion": "card",
     "visual": "photo p09.png",
     "onscreen": "9. 1 м²ге 4–5 тоок",
-    "duration": 5.25,
+    "duration": 6.73,
     "n": 11
   },
   {
@@ -104,7 +104,7 @@
     "motion": "card",
     "visual": "photo p10.png",
     "onscreen": "10. Иммунитет",
-    "duration": 5.25,
+    "duration": 5.26,
     "n": 12
   },
   {
@@ -113,7 +113,7 @@
     "motion": "card",
     "visual": "photo infographic.png",
     "onscreen": "Ооруса — ветеринарга",
-    "duration": 4.6,
+    "duration": 3.29,
     "n": 13
   },
   {
@@ -122,7 +122,7 @@
     "motion": "card",
     "visual": "photo p05.png",
     "onscreen": "Сактап коюңуз!",
-    "duration": 3.28,
+    "duration": 2.66,
     "n": 14
   }
 ]
