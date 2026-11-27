@@ -177,6 +177,7 @@ class VisualsStage(Stage):
         stock = ctx.services.get("stock") or from_env()
         rng = random.Random(int(hashlib.md5(ctx.video_id.encode()).hexdigest(), 16))
 
+        prev = self.previous_best(ctx, shots) if quality else {}
         mem = ClipMemory.load(ctx.store, ctx.registry)
         released = mem.release(ctx.video_id)          # кайра иштетүүдө өзүн өзү бөгөттөбөйт
         finder = ClipFinder(stock, mem, ctx.video_id, min_duration=MIN_SHOT + 0.5, log=ctx.log)
@@ -266,12 +267,20 @@ class VisualsStage(Stage):
         from .. import sections as _sec
         if _sec.enabled(ctx.cfg) and not _st.is_story(ctx.cfg):
             # run #45354695418 (mp7): 56 начар кадрдын 25'и гана сыналып, орточо 2.90 (<3.0) калды → 2 айлампа
-            self.rounds = 2
+            # run #45968547724 (Video_006): 81 начар кадр, 2×25=50'сү гана сыналып, 37 алмашты, орточо 2.90 →
+            # кино форматтагыдай 50 кадр × 3 айлампа (бардык начар кадр жок дегенде бир жолу сыналат)
+            self.MAX_REPLACE = 50
+            self.rounds = 3
         if quality:
             results, ai_stats = self.ai_relevance(ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u)
             ctx.log(f"   🎯 AI маани текшерүү: бааланды {ai_stats.get('rated', 0)}/{len(shots)}, ≤2/5 болгон "
                     f"{ai_stats.get('low', 0)}, алмаштырылды {ai_stats.get('replaced', 0)}, "
                     f"орточо {ai_stats.get('avg', 0):.2f}/5")
+            if prev and ai_stats.get("scores"):
+                results, kept = self.carry_best(ctx, results, shots, ai_stats, prev, stock)
+                if kept:
+                    ctx.log(f"   ♻️ Мурунку аракеттин жакшыраак бааланган клиби кайтарылды: {kept} кадр; "
+                            f"орточо {ai_stats['avg']:.2f}/5")
         cont: dict = {}
         from .. import story as _story
         if quality and _story.is_story(ctx.cfg):    # кино-окуя: каарман бир адам бойдон калсын
@@ -452,6 +461,12 @@ class VisualsStage(Stage):
 
     FIRST_MIN = 4          # биринчи кадр (hook'тун алгачкы 3 сек) — ≥4/5 болмоюнча алмаштырылат
     LOW_SCORE = 2          # ≤2/5 — клип сахнанын текстине дал келбейт
+    # run #45987020953: s5'те биринчи кадр өттү, QA кайра баалап 3/5 берди (баалоонун чачырашы) →
+    # s5 биринчи кадрды 5/5'ке чейин жакшыртып көрөт (жаңысы жакшыраак болсо гана алмашат)
+    FIRST_TARGET = 5
+    # run #45987020953: 3 айлампадан кийин орточо 2.97 (<3.0 QA) → орточо ушул чекке жеткенче кошумча айлампа
+    AVG_TARGET = 3.15
+    MAX_ROUNDS = 5
     MAX_REPLACE = 25
     RATE_BATCH = 20     # квота: 180 кадр = 9 суроо (мурун 8 → 23 суроо); бир суроодо 20 сүрөт — Gemini көтөрөт
 
@@ -589,6 +604,70 @@ SHOTS:
                     out[i] = (str(row.get("idea", ""))[:160], qs)
         return out
 
+    @staticmethod
+    def previous_best(ctx, shots) -> dict[int, dict]:
+        """Ушул видеонун мурунку s5 аракетинин (rerun) AI бааланган кадрлары: {кадр: shot+лицензия}.
+
+        Себеби (Video_006, run #45968547724/#45987020953/#45995554580): ар rerun кадрларды нөлдөн тандап,
+        орточо 2.90 → 2.97 → 2.85 болуп, жакшы табылган клиптер жоголуп жатты. Кадрлардын планы ошол эле
+        (убактысы/сахнасы дал келет) болсо гана колдонулат."""
+        try:
+            old = json.loads(ctx.path("clips", "shots.json").read_text(encoding="utf-8"))["shots"]
+            lic = json.loads(ctx.path("clips", "licenses.json").read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+        lic_by = {r.get("shot"): r for r in lic if isinstance(r, dict)}
+        out: dict[int, dict] = {}
+        for k, o in enumerate(old):
+            if k >= len(shots) or not isinstance(o, dict) or o.get("ai_score") is None:
+                continue
+            sh = shots[k]
+            if (o.get("scene") != sh["scene"] or abs(float(o.get("dur", 0)) - sh["dur"]) > 0.05
+                    or o.get("kind") != "video" or o.get("source") == "gemini" or k not in lic_by):
+                continue
+            out[k] = {**o, "lic": lic_by[k]}
+        return out
+
+    def carry_best(self, ctx, results, shots, ai_stats, prev, stock):
+        """Жаңы тандоодо кадр мурункудан ТӨМӨН бааланса — мурунку клипти кайтарат (уникалдуулук сакталат)."""
+        scores = ai_stats["scores"]
+        by_i = {r[0]: r for r in results}
+        used = {r[1].id for r in results}
+        kept = 0
+        first = min(scores) if scores else None
+        for i in sorted(prev, key=lambda k: (k != first, scores.get(k, 0) - prev[k]["ai_score"])):
+            o = prev[i]
+            if i not in by_i or o["ai_score"] <= scores.get(i, 0) or o["asset"] in used:
+                continue
+            L = o["lic"]
+            a = Asset(o["source"], "video", o["asset"], o.get("url", ""), 1920, 1080, float(o.get("real_duration") or 0),
+                      o.get("page_url", ""), L.get("author", ""), L.get("license", ""), L.get("license_url", ""),
+                      query=o.get("query", ""))
+            path = ctx.path("clips", o["file"])
+            try:
+                try:
+                    stock.download(a, path)
+                except TransientError:
+                    fresh = stock.refresh_url(a.id) if hasattr(stock, "refresh_url") else None
+                    if not fresh:
+                        continue
+                    a.url = fresh
+                    stock.download(a, path)
+                real = media.stream_durations(path)["video"]
+                if real is None or real < shots[i]["dur"] + MIN_CLIP_ROOM:
+                    continue
+            except Exception:
+                continue
+            used.discard(by_i[i][1].id)
+            used.add(a.id)
+            by_i[i] = (i, a, path, real, "fresh", float(o.get("match", 0.0)))
+            scores[i] = o["ai_score"]
+            kept += 1
+        if kept:
+            ai_stats["avg"] = sum(scores.values()) / len(scores)
+            ai_stats["carried"] = kept
+        return [by_i[i] for i in sorted(by_i)], kept
+
     def ai_relevance(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u):
         """Ар кадрды (клиптин ортосунан) ОШОЛ кадрдагы диктордун сөзүнө Gemini менен баалайт; ≤2/5 болсо —
         сөздүн маанисин көрсөткөн өзүнчө идея боюнча жаңы клип издейт (жок болсо — сахнанын запас клиби),
@@ -613,7 +692,7 @@ SHOTS:
         first = min(scores) if scores else None
 
         def is_low(i: int) -> bool:   # 2026-11-24: алгачкы 3 сек — биринчи кадр да күчтүү болушу керек (≥4/5)
-            return scores.get(i, 5) <= self.LOW_SCORE or (i == first and scores.get(i, 5) < self.FIRST_MIN)
+            return scores.get(i, 5) <= self.LOW_SCORE or (i == first and scores.get(i, 5) < self.FIRST_TARGET)
         low = sorted((i for i in scores if is_low(i)), key=lambda i: (i != first, scores[i]))
         replaced = 0
         beats: dict = {}
@@ -623,7 +702,11 @@ SHOTS:
         btext = {i: text(i) for i in low} if film else stext
         # run #44921404755: бир айлампада 99 начар кадрдын 17'си гана алмашты → кино форматта 2 айлампа
         # run #45002414086: 2 айлампа × 50 = 100 < 139 начар кадр → кино форматта 3 айлампа
-        for round_ in range(3 if film else getattr(self, "rounds", 1)):
+        base_rounds = 3 if film else getattr(self, "rounds", 1)
+        extra = self.MAX_ROUNDS if base_rounds >= 3 else base_rounds
+        for round_ in range(max(base_rounds, extra)):
+            if round_ >= base_rounds and scores and sum(scores.values()) / len(scores) >= self.AVG_TARGET:
+                break
             todo = sorted((i for i in low if is_low(i)),
                           key=lambda i: (i != first, scores[i]))[: self.MAX_REPLACE]
             if not todo:

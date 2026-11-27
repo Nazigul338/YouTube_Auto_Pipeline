@@ -208,3 +208,33 @@ class TestRuleTurns(unittest.TestCase):
         long = " ".join(["слово"] * 300) + "."
         bad = sections.refresh_gaps({"info": {"ok": True, "n": 300, "turns": [0]}, "problems": []}, long)
         self.assertTrue(any("бурулуш" in p for p in bad["problems"]))
+
+
+class TestEnforceBadness(unittest.TestCase):
+    """run #45879596165: окуя 21%да калды — оңдолгон вариант көйгөй САНЫ азайбаса ташталчу."""
+    def test_badness_prefers_story_fix(self):
+        early = {"problems": ["окуя ортосунда эмес (21%)", "59 сек бурулушсуз"], "max_gap_sec": 59}
+        gap_only = {"problems": ["70 сек бурулушсуз", "башка"], "max_gap_sec": 70}
+        self.assertLess(sections.badness(gap_only), sections.badness(early))
+
+    def test_story_hint(self):
+        h = sections._story_hint({"story": {"start": 0.21, "w0": 240}}, 1150)
+        self.assertIn("240", h)
+        self.assertIn("Hook", h)
+        self.assertEqual(sections._story_hint({"story": {"start": 0.4, "w0": 460}}, 1150), "")
+
+
+class TestStoryBeats(unittest.TestCase):
+    """run #45964943443: окуянын ичиндеги «Но когда…», «Дома…» жана бөлүктүн башы бурулуш катары эсептелет."""
+    def test_story_beats_and_section_heads(self):
+        para = " ".join(["слово"] * 60) + "."
+        t = f"Представь такую ситуацию. {para} Но когда он выходит, {para} Дома он молчит. {para} История показывает {para}"
+        w = t.split()
+        heads = [w[i] for i in sections.rule_turns(t)]
+        self.assertIn("Но", heads)
+        self.assertIn("Дома", heads)
+        k = w.index("История")
+        info = {"turns": [0], "sections": [{"section": "meaning", "w0": k}]}
+        gp, gap = sections._gap_problems(info, t, len(w), wps=2.1)
+        self.assertEqual(gp, [])
+        self.assertLessEqual(gap, sections.TURN_GAP_SEC)
