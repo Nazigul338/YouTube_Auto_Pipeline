@@ -88,6 +88,7 @@ s9: биринчи фраза даяр үндө ≤5 сек, жалган уба
 | 🔧 Жөндөөнү текшерүү | Ачкычтар, Gemini, Pixabay, Drive, музыка |
 | 🔐 Drive авторизациясын текшерүү | OAuth режими (Testing/Production), токен жаңыртуу, чыныгы жүктөө |
 | 🔬 Мүмкүнчүлүктөрдү сыноо | Gemini моделдери, TTS, Whisper чынында иштейби |
+| 🎞 Remotion сынагы (15 сек, TEST) | Remotion + FFmpeg: 15 сек сынак видео, MP4/шайкештик текшерүү, учурдагы конвейердин тесттери (секретсиз, Drive'га жазбайт) |
 
 ## Системанын архитектурасы
 
@@ -224,3 +225,25 @@ API ачкычтары **GitHub Secrets'те гана**; логдо email жаш
   `python -m pipeline.sfx_synth <папка>`; 2026-11-19 Drive `Sound_Effects/`'ке жүктөлдү. (2) Сиз өзүңүз салган аудио (metadata менен).
   Pixabay API'де үн эффекттери жок; ZvukiPro/Pixabay ж.б. сайттардан автоматтык жүктөө/scraping ЖОК.
 - **Чыгым:** $0 (FFmpeg гана). Кошумча убакыт ≈ 1–2 мүн.
+
+## 🎞 Remotion — кинематографиялык анимациялар (СЫНАК, 2026-11-28)
+
+**Бөлүштүрүү:** FFmpeg — негизги монтаж, үн, бириктирүү, кодировка (s6–s8 өзгөргөн жок). Remotion — аталыштар,
+карта/маршрут анимациясы, motion graphics, сөз-сөз жарыктанган субтитр, өтүүлөр (`@remotion/transitions`).
+Remotion өзүнчө MP4 клип рендерлейт, FFmpeg аны кадимки клип катары кабыл алып, акыркы кодировкасын жасайт.
+
+- Долбоор: `tools/remotion/` (remotion 4.0.547, версиялар бекитилген; `npm ci`). Композиция `DocTest` →
+  `src/DocFilm.tsx`: аталыш (тамгалар фокустан ачылат), процедуралык «архив картасы» (ар видеонун seed'инен
+  өз географиясы), цитата + акцент, lower-third, пленка grain, виньетка, субтитр (`@remotion/captions` Caption форматы).
+  Ар видео өз props'ун берет (түс, шрифт, текст, маршрут, өтүүлөрдүн түрү, сахна узундугу) — шаблон кайталанбайт.
+- Python: `pipeline/remotion_render.py` — `render()`, `finish()` (FFmpeg: H.264 High/yuv420p/bt709 + AAC, faststart),
+  `validate()` (1920×1080, 30 fps, кодек, узактык, видео=үн, толук декоддоо), `sync_report()` (жарк ↔ бип ≤50 мс).
+  Желек `YTA_REMOTION` — демейки ӨЧҮК; өндүрүш этаптарына азырынча туташкан жок.
+- Сынак: Actions → «🎞 Remotion сынагы» → жыйынтык run'дын Artifacts'ында (`remotion-test`: MP4, отчет, кадрлар).
+  Локалдык: `cd tools/remotion && npm ci && npx remotion browser ensure`, анан `python -m pipeline.remotion_render --selftest out`.
+- Браузер: Remotion өз Chrome Headless Shell'ин `remotion.media`'дан жүктөйт. Ал бөгөттөлгөн чөйрөдө гана
+  `YTA_REMOTION_BROWSER=<chrome-headless-shell жолу>`.
+- Лицензия: жеке адам жана ≤3 кишилик компания үчүн акысыз (remotion.dev/docs/license). Ачкыч керек болсо — Secret
+  `YTA_REMOTION_LICENSE` аркылуу гана.
+- Claude Code plugin: `claude plugin marketplace add remotion-dev/claude-code-plugin` → `claude plugin install remotion@remotion`
+  (skill'дер: best-practices, create, markup (анимация/эффекттер/өтүүлөр), captions, maps, render, multimedia, elements…).

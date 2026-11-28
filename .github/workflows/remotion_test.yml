@@ -1,0 +1,68 @@
+name: 🎞 Remotion сынагы (15 сек, TEST)
+
+# Remotion + FFmpeg интеграциясынын сынагы. Production'го (make_video, Drive) ТИЙБЕЙТ: эч кандай секрет
+# колдонбойт, Drive'га жазбайт. Жыйынтык — run'дын Artifacts бөлүмүндө (MP4 + отчет + кадрлар).
+# Текшерет: Remotion булуттагы runner'де рендерлейби, MP4 туурабы (1920×1080, H.264/AAC, 15 сек),
+# үн менен видео шайкешпи (бип ↔ жарк ≤50 мс), учурдагы FFmpeg конвейери (тесттер) мурункудай иштейби.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  remotion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/remotion/package-lock.json
+
+      - name: FFmpeg жана шрифттер
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+          ffmpeg -version | head -1
+
+      - name: Python көз карандылыктары
+        run: pip install -q -r requirements.txt
+
+      - name: Remotion орнотуу (бекитилген версиялар) + браузер
+        working-directory: tools/remotion
+        env:
+          REMOTION_DISABLE_TELEMETRY: "1"
+        run: |
+          npm ci --no-fund --no-audit
+          npx remotion versions
+          npx tsc -p .
+          npx remotion browser ensure
+          npx remotion compositions src/index.ts
+
+      - name: 15 сек сынак видео (Remotion → FFmpeg) жана текшерүү
+        run: |
+          python -m pipeline.remotion_render --selftest remotion_out
+          ffmpeg -v error -y -i remotion_out/remotion_test_15s.mp4 \
+            -vf "select='eq(n\,75)+eq(n\,200)+eq(n\,260)+eq(n\,420)',scale=640:360,tile=2x2" \
+            -frames:v 1 remotion_out/contact_sheet.jpg
+
+      - name: Учурдагы FFmpeg конвейери иштейби (бардык тез тесттер + бүт конвейердин чыныгы FFmpeg тести)
+        run: |
+          YTA_SKIP_SLOW=1 python -m unittest discover tests
+          python -m unittest tests.test_full_local -v
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: remotion-test
+          path: remotion_out/
+          retention-days: 14

@@ -1,0 +1,24 @@
+{
+  "name": "yta-remotion",
+  "private": true,
+  "description": "Remotion cinematic motion graphics (titles, maps, captions) for the YouTube pipeline. FFmpeg stays the main renderer; Remotion renders overlay/scene clips. Versions are pinned.",
+  "license": "UNLICENSED",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "compositions": "remotion compositions src/index.ts",
+    "render:test": "remotion render src/index.ts DocTest out/remotion_raw.mp4"
+  },
+  "dependencies": {
+    "@remotion/captions": "4.0.547",
+    "@remotion/cli": "4.0.547",
+    "@remotion/media": "4.0.547",
+    "@remotion/transitions": "4.0.547",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "remotion": "4.0.547"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}

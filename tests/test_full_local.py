@@ -19,8 +19,13 @@ from tests.test_stages_audio import fake_whisper_for
 
 def small_cfg(root):
     from pipeline.config import load_config
-    return load_config("motivation", drive_root=root, words_min=110, words_max=150,
-                       min_duration_sec=30)
+    cfg = load_config("motivation", drive_root=root, words_min=110, words_max=150,
+                      min_duration_sec=30)
+    # mp7 форматынын дарбазасы (7 бөлүк, окуя 10–25%) — Gemini'нин чыныгы белгилөөсүн талап кылат; FakeGemini'нин
+    # 150 сөздүк сценарийи аны өтө албайт (mp7 демейки болгондон бери тест ушундан жыгылып келген). Бул тест FFmpeg
+    # монтаж конвейерин текшерет — формат дарбазасы өзүнчө тесттерде (test_sections) текшерилет.
+    cfg.niche_data = {**(cfg.niche_data or {}), "structure": None}
+    return cfg
 
 
 @unittest.skipIf(os.environ.get("YTA_SKIP_SLOW"), "узак тест")

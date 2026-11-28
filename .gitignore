@@ -6,3 +6,7 @@ __pycache__/
 secrets*.json
 /_local_drive/
 node_modules/
+
+# Remotion (tools/remotion): render outputs and per-run copies
+/tools/remotion/out/
+/tools/remotion/public/_yta_*
