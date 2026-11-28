@@ -7,10 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "status — лимитти гана көрүү; test — сүрөт жаратуу"
+        description: "status — лимит; test — FLUX schnell 1–5 сүрөт; models — уруксаттар+моделдер (сүрөтсүз); image — 1 кинематографиялык сүрөт → Drive TEST"
         default: status
         type: choice
-        options: [status, test]
+        options: [status, test, models, image]
+      model:
+        description: "(image режими) модель, мис. @cf/leonardo/lucid-origin; бош — сапаттуусунан баштап тандалат"
+        required: false
+        type: string
       images:
         description: "test режиминде сүрөт саны (1–5)"
         default: "5"
@@ -46,8 +50,14 @@ jobs:
           GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
           CF_MODE: ${{ inputs.mode }}
           CF_IMAGES: ${{ inputs.images }}
+          CF_MODEL: ${{ inputs.model }}
           CF_OUT: cf_test
-        run: python -m pipeline.cf_probe
+        run: |
+          if [ "$CF_MODE" = "models" ] || [ "$CF_MODE" = "image" ]; then
+            python -m pipeline.cf_image_probe
+          else
+            python -m pipeline.cf_probe
+          fi
       - name: Натыйжа (артефакт)
         if: always()
         uses: actions/upload-artifact@v4
