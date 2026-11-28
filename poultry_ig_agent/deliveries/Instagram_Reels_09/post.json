@@ -12,120 +12,120 @@
   "shots": [
     {
       "source": "photo",
-      "file": "assets/reels09/header_incubator.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/header_incubator.png",
       "motion": "card",
       "visual": "photo header_incubator.png",
       "onscreen": "Инкубатор аласызбы?",
       "n": 1,
-      "duration": 3.42
+      "duration": 3.63
     },
     {
       "source": "photo",
-      "file": "assets/reels09/header_chick.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/header_chick.png",
       "motion": "card",
       "visual": "photo header_chick.png",
       "onscreen": "Жумуртка текке кетпесин",
       "n": 2,
-      "duration": 7.13
+      "duration": 7.57
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p01.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p01.png",
       "motion": "card",
       "visual": "photo p01.png",
       "onscreen": "1. Түрүн тандаңыз",
       "n": 3,
-      "duration": 5.64
+      "duration": 5.99
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p02.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p02.png",
       "motion": "card",
       "visual": "photo p02.png",
       "onscreen": "2. Сыйымдуулугу",
       "n": 4,
-      "duration": 7.43
+      "duration": 7.89
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p03.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p03.png",
       "motion": "card",
       "visual": "photo p03.png",
       "onscreen": "3. Так температура: 37,5°C",
       "n": 5,
-      "duration": 6.53
+      "duration": 6.93
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p04.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p04.png",
       "motion": "card",
       "visual": "photo p04.png",
       "onscreen": "4. Автоматтык айландыруу",
       "n": 6,
-      "duration": 6.09
+      "duration": 6.46
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p05.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p05.png",
       "motion": "card",
       "visual": "photo p05.png",
       "onscreen": "5. Нымдуулук: 50–70%",
       "n": 7,
-      "duration": 8.32
+      "duration": 8.0
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p06.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p06.png",
       "motion": "card",
       "visual": "photo p06.png",
       "onscreen": "6. Желдетүү",
       "n": 8,
-      "duration": 5.64
+      "duration": 5.99
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p07.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p07.png",
       "motion": "card",
       "visual": "photo p07.png",
       "onscreen": "7. Ички жарык",
       "n": 9,
-      "duration": 4.31
+      "duration": 4.57
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p08.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p08.png",
       "motion": "card",
       "visual": "photo p08.png",
       "onscreen": "8. Тунук терезе",
       "n": 10,
-      "duration": 5.2
+      "duration": 5.52
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p09.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p09.png",
       "motion": "card",
       "visual": "photo p09.png",
       "onscreen": "9. Сапат жана кепилдик",
       "n": 11,
-      "duration": 6.53
+      "duration": 6.93
     },
     {
       "source": "photo",
-      "file": "assets/reels09/p10.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/p10.png",
       "motion": "card",
       "visual": "photo p10.png",
       "onscreen": "Натыйжа: жогорку чыгуу пайызы",
       "n": 12,
-      "duration": 5.2
+      "duration": 5.52
     },
     {
       "source": "photo",
-      "file": "assets/reels09/infographic.png",
+      "file": "/home/runner/work/YouTube_Auto_Pipeline/YouTube_Auto_Pipeline/poultry_ig_agent/assets/reels09/infographic.png",
       "motion": "card",
       "visual": "photo infographic.png",
       "onscreen": "Сактап коюңуз!",
       "n": 13,
-      "duration": 3.56
+      "duration": 4.61
     }
   ],
   "fade": 0.0,
@@ -206,8 +206,40 @@
   ],
   "output_name": "Instagram_Reels_09.mp4",
   "needs_vet_review": false,
-  "lint_issues": [],
+  "lint_issues": [
+    "Тыюу салынган сөз/үлгү: «автоматт»",
+    "Ырасталбаган сан/баа: «70%» (course.json же calc аркылуу гана)",
+    "Reel узактыгы 79.61с — 15–60с болушу керек"
+  ],
   "status": "pending_review",
   "ai_voice": true,
-  "id": "2026-11-28-4971c064-reel-ky"
+  "id": "2026-11-28-4971c064-reel-ky",
+  "music_info": {
+    "source": "generated",
+    "license": "own composition (poultry_ig_agent/music_gen.py)",
+    "key": "C",
+    "bpm": 89,
+    "progression": [
+      0,
+      3,
+      5,
+      4
+    ],
+    "mood": "warm"
+  },
+  "tts": {
+    "model": "gemini-3.8-flash-tts",
+    "voice": "Charon",
+    "style": "warm",
+    "consistency": [
+      {
+        "try": 1,
+        "f0": 130,
+        "centroid": 919,
+        "distance": 0.085
+      }
+    ]
+  },
+  "video": "final.mp4",
+  "video_status": "ready"
 }
