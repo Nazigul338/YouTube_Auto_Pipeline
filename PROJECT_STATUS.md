@@ -218,9 +218,29 @@ Stock 100/мүн чегин өзү сактайт). Pixabay Content License: к�
 | Whisper (faster-whisper small, CPU) | ✅ (`av` талап кылынбайт) |
 | Google Drive | ✅ иштейт, бирок ⚠️ токен Testing (1-көйгөй) |
 | YouTube | – автоматтык жарыялоо атайын кошула элек |
-| Cloudflare Workers AI (FLUX.1 schnell) | ✅ 2026-11-24: токен active, модель бар, 1 сүрөт 1024×1024 жаралды (run #45426883614); видеого кошула элек |
+| Cloudflare Workers AI | ✅ 2026-11-28: токен active, Account ID ✅, Workers AI read+run ✅, Analytics ❌; 6 сүрөт модели; lucid-origin 1344×768 тест сүрөт (run #46145555644, ~4 118 neuron баалоо); видеого кошула элек |
 
 ## 8. Кийинки аткарыла турган тапшырмалар (ирети менен)
+
+### 8s. ☁️ CLOUDFLARE WORKERS AI — көп моделдүү сүрөт модулу (СЫНАК, 2026-11-28 ~12:40 UTC; PRODUCTION'го КОШУЛГАН ЖОК)
+- Код: `pipeline/cf_images.py` (моделдер тизмеси API'ден, схемага жараша JSON/multipart суроо, base64/чийки сүрөт,
+  баа API'деги price'тан), `pipeline/cf_image_probe.py` (`models` / `image` режимдери), workflow «☁️ Cloudflare AI
+  сыноо» (жаңы режимдер гана; make_video өзгөргөн жок). Тест `tests/test_cf_images.py` (10, жалган HTTP).
+- **run #46145021501 (models, сүрөтсүз):** ✅ токен active (user токени), ✅ Account ID + Workers AI окуу,
+  ⚠️ Account Analytics: Read ЖОК (чыныгы чыгымды өлчөй албайбыз). 6 Text-to-Image модели: flux-1-schnell, flux-2-dev,
+  flux-2-klein-4b, flux-2-klein-9b (баасы API'де жок, multipart талаалары көрсөтүлгөн эмес), leonardo/lucid-origin
+  ($0.007/512px плитка + $0.000132/кадам; ≤2500 px), leonardo/phoenix-1.0 ($0.00583/плитка + $0.00011/кадам; ≤2048 px).
+- **run #46145555644 (image):** ✅ Workers AI run уруксаты; lucid-origin, 1344×768, 25 кадам, 5.2 сек, 432 КБ JPEG;
+  баа ~4 118 neuron (API баасы, ӨЛЧӨНГӨН ЭМЕС) ≈ $0.045 акы төлөнсө; акысыз 10 000/күндүн 41%. Drive:
+  `YouTube_Auto_TEST/Projects/_cloudflare_ai_test/cf_lucid-origin_20261128_123744.jpg` (+ .json).
+  Көз менен баа: жарык/түс (лампа + көк терезе, teal/amber), тери, колдор — реалдуу, кинематографиялык ✅;
+  ❌ карточкада бузук жазуу («Whent Tean / THANK YOU TEAM») — промпт карама-каршы болгон (жазуу + «no text») →
+  мындан ары жазуусуз буюм сурайбыз; ⚠️ композиция борбордо, кейипкер камерага карайт (сурагандай четке эмес);
+  ⚠️ реалдуу адамдын жүзү → YouTube «Altered or synthetic content» = Yes керек; 1344×768 → 1080p'ге чоңойтуу.
+- Чыгым салыштыруу (8 мүн видео ≈ 72 сүрөт): lucid ≈ 296 000 neuron ≈ $3.3/видео (акысыз лимит күнүнө ~2 сүрөт);
+  phoenix ≈ $2.6; flux-1-schnell ~58 neuron/сүрөт → 72 сүрөт ≈ 4 100 neuron (акысыз). Чечим — колдонуучуда.
+- ▶️ Колдонуучунун уруксатын күтөт: production интеграциясы (кайсы модель, канча сүрөт, кайсы кадрлар).
+  Сунуш: токенге «Account Analytics: Read» кошуу (чыныгы чыгымды өлчөө үчүн).
 
 ### 8r. 🎞 REMOTION — TEST'те даяр, PRODUCTION'до ӨЧҮК (2026-11-28 ~12:30 UTC)
 - ✅ Булуттагы 15 сек сынак run #46139421952, оңдоолордон кийин кайра **run #46142461742 ✅** (commit f0712af: жарк↔бип 0 мс raw+final, 389 тест, test_full_local 2/2, test_remotion 16/16 — тунук кириллица карточкасы Remotion'дун өз браузери менен да). Визуалдык текшерүү: өтүүлөр

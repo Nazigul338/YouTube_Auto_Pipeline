@@ -203,6 +203,13 @@ API ачкычтары **GitHub Secrets'те гана**; логдо email жаш
 баалоо колдонулат (1024×1024, 4 кадам ≈ 57.6 neuron) жана бул отчетто ачык жазылат.
 Код: `pipeline/cloudflare_ai.py`, `pipeline/cf_budget.py`, `pipeline/cf_probe.py`.
 
+**Көп моделдүү сүрөт модулу (2026-11-28, СЫНАК):** `pipeline/cf_images.py` + `pipeline/cf_image_probe.py`.
+Ошол эле workflow'дун жаңы режимдери: `models` — токен/Account ID/уруксаттар + аккаунттагы бардык Text-to-Image
+моделдери жана алардын API'деги баасы (сүрөт жаратпайт); `image` — 1 кинематографиялык сүрөт (`model` бош болсо
+баасы белгилүү сапаттуусу: lucid-origin → phoenix → flux-1-schnell), баа суроодон мурун API price'тан эсептелип
+бюджет менен текшерилет, натыйжа Drive `YouTube_Auto_TEST/Projects/_cloudflare_ai_test/` папкасына (+ .json).
+Видео системасына (make_video) кошулган ЭМЕС.
+
 ## 🔊 Үн эффекттери (Sound Effects Library) — PRODUCTION'до күйүк (2026-11-20)
 
 - **Иштетүү:** `🎞 Cinematic сынак` → `rerun_from=s7_music` (же андан мурунку этап), `sound_effects` ✓.
