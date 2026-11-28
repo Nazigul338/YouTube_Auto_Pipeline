@@ -19,15 +19,40 @@ import uuid
 
 from .cloudflare_ai import API, CloudflareAI, CloudflareError, QuotaError
 
-# «Реалдуу кинематографиялык» сүрөт үчүн тандоо ирети (аккаунтта бар биринчиси алынат).
+# «Реалдуу кинематографиялык» сүрөт үчүн автоматтык тандоо ирети — БААСЫ API'де белгилүү моделдер гана
+# (run #46145021501: Leonardo моделдеринде price бар; FLUX.2 dev/klein'де жок жана multipart талаалары схемада
+# көрсөтүлгөн эмес → чыгымды алдын ала эсептөө мүмкүн эмес, ошондуктан алар колдонуучу атайын тандаса гана).
 PREFERRED = (
-    "@cf/black-forest-labs/flux-2-dev",
     "@cf/leonardo/lucid-origin",
     "@cf/leonardo/phoenix-1.0",
     "@cf/black-forest-labs/flux-1-schnell",
 )
+# Workers AI акы төлөнүүчү баасы: $0.011 / 1 000 neuron (акысыз: 10 000 neuron/күн).
+USD_PER_1K_NEURONS = 0.011
+DEFAULT_STEPS = 25
 # Баасы белгисиз моделдин суроосуна бюджетте коюлган коопсуз (чоң) баалоо, neuron.
-UNKNOWN_COST = 600.0
+UNKNOWN_COST = 5000.0
+
+
+def estimate_cost(props: dict, width: int, height: int, steps: int | None) -> dict | None:
+    """API'деги price касиетинен: {"usd", "neurons", "tiles", "steps"}; баа жок болсо None."""
+    import math
+
+    price = props.get("price") if isinstance(props, dict) else None
+    if not isinstance(price, list) or not price:
+        return None
+    tiles = math.ceil(width / 512) * math.ceil(height / 512)
+    st = steps or DEFAULT_STEPS
+    usd = 0.0
+    for x in price:
+        unit, val = str(x.get("unit", "")), float(x.get("price") or 0)
+        if "tile" in unit:
+            usd += tiles * val
+        elif "step" in unit:
+            usd += st * val
+        else:
+            return None                     # белгисиз бирдик — эсептебейбиз
+    return {"usd": round(usd, 5), "neurons": round(usd / USD_PER_1K_NEURONS * 1000, 1), "tiles": tiles, "steps": st}
 
 
 def _request_raw(cf: CloudflareAI, method: str, path: str, data: bytes | None, ctype: str | None

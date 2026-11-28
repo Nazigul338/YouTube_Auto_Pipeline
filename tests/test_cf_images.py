@@ -86,8 +86,17 @@ class TestInputs(unittest.TestCase):
         sp = ci.input_spec(SCHEMAS[cfa.FLUX_MODEL])
         self.assertEqual(ci.build_inputs(sp, "p", 1344, 768, 4), {"prompt": "p", "steps": 4})
 
+    def test_cost_from_api_price(self):
+        props = {"price": [{"unit": "per 512 by 512 tile", "price": 0.007}, {"unit": "per step", "price": 0.000132}]}
+        c = ci.estimate_cost(props, 1344, 768, 25)          # 3×2 плитка
+        self.assertEqual(c["tiles"], 6)
+        self.assertAlmostEqual(c["usd"], 6 * 0.007 + 25 * 0.000132, places=5)
+        self.assertAlmostEqual(c["neurons"], c["usd"] / 0.011 * 1000, places=0)
+        self.assertIsNone(ci.estimate_cost({}, 1344, 768, 25))
+
     def test_pick_prefers_quality(self):
-        self.assertEqual(ci.pick_model([cfa.FLUX_MODEL, LUCID]), LUCID)
+        self.assertEqual(ci.pick_model([cfa.FLUX_MODEL, LUCID, FLUX2]), LUCID)
+        self.assertEqual(ci.pick_model([FLUX2, cfa.FLUX_MODEL]), cfa.FLUX_MODEL)   # баасы белгисизи автоматтык эмес
         self.assertIsNone(ci.pick_model([cfa.FLUX_MODEL], "@cf/x/none"))
 
 
@@ -125,6 +134,7 @@ class TestProbe(unittest.TestCase):
         self.assertEqual(len(runs), 1)
         self.assertIn(LUCID, runs[0][1])
         self.assertEqual(json.loads(runs[0][2])["width"], 1344)
+        self.assertIn("API баасы", res["cost_estimate"]["source"])          # баа API'деги price'тан
         drive.ensure_path.assert_called_once_with(*probe.TEST_FOLDER)
         self.assertEqual(res["image"]["size"], (1344, 768))
         self.assertEqual(drive.upload_file.call_count, 2)                       # сүрөт + json
@@ -142,7 +152,7 @@ class TestProbe(unittest.TestCase):
 
     def test_multipart_request(self):
         fake = Fake(models=(FLUX2,))
-        res, logs, _ = self.run_probe(fake, "image")
+        res, logs, _ = self.run_probe(fake, "image", model=FLUX2)
         self.assertTrue(res["ok"], logs)
         run = next(c for c in fake.calls if "/ai/run/" in c[1])
         self.assertIn("multipart/form-data", run[3].get("Content-type", ""))

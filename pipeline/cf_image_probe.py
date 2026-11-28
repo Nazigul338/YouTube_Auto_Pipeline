@@ -125,14 +125,22 @@ def run(out: Path, mode: str = "models", model: str = "", log=print, drive=None,
     budget = cb.Budget(store.load())
     if r["today"]:
         budget.set_api(r["today"]["neurons"])
-    est = cb.estimate_neurons(1344, 768, 4) if chosen == FLUX_MODEL else ci.UNKNOWN_COST
+    props = next((m["properties"] for m in r["models"]["models"] if m["name"] == chosen), {})
+    steps = 4 if chosen == FLUX_MODEL else ci.DEFAULT_STEPS
+    cost = ci.estimate_cost(props, 1344, 768, steps)
+    if chosen == FLUX_MODEL:
+        est, src = cb.estimate_neurons(1024, 1024, 4), "жарыяланган баа (1024×1024, 4 кадам)"
+    elif cost:
+        est, src = cost["neurons"], f"API баасы: {cost['tiles']} плитка × + {cost['steps']} кадам = ${cost['usd']}"
+    else:
+        est, src = ci.UNKNOWN_COST, "баасы белгисиз — коопсуз чоң баалоо"
+    res["cost_estimate"] = {"neurons": est, "source": src, "usd_if_paid": round(est / 1000 * ci.USD_PER_1K_NEURONS, 4)}
     before = model_usage(cf, chosen)
-    log(f"🎨 Модель: {chosen}; бюджет алдын ала: ~{est} neuron (коопсуз баалоо); бүгүн колдонулду {budget.used():.0f}")
+    log(f"🎨 Модель: {chosen}; алдын ала баа ~{est} neuron ({src}); бүгүн колдонулду {budget.used():.0f}")
     t0 = time.monotonic()
     try:
-        img, params = ci.generate(cf, chosen, PROMPT, width=1344, height=768,
-                                  steps=4 if chosen == FLUX_MODEL else None, spec=schemas.get(chosen),
-                                  budget=budget, est=est)
+        img, params = ci.generate(cf, chosen, PROMPT, width=1344, height=768, steps=steps,
+                                  spec=schemas.get(chosen), budget=budget, est=est)
     except cb.BudgetExceeded as e:
         res["error"] = f"⛔ {e}"
     except QuotaError as e:
@@ -157,7 +165,7 @@ def run(out: Path, mode: str = "models", model: str = "", log=print, drive=None,
         budget.set_measured(rec, measured)
     meta = {"model": chosen, "prompt": PROMPT, "params": params, "size": ci.image_size(img), "bytes": len(img),
             "seconds": secs, "neurons_estimate": est, "neurons_measured": measured,
-            "usd_if_paid": round((measured or est) / 1000 * 0.011, 5),
+            "usd_if_paid": round((measured or est) / 1000 * ci.USD_PER_1K_NEURONS, 5), "cost_source": src,
             "created_utc": stamp, "note": "TEST — видео системасына кошулган эмес"}
     (out / f"{name}.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     res["image"] = meta
