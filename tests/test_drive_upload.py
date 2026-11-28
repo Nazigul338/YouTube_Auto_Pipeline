@@ -53,5 +53,44 @@ class TestResumable(unittest.TestCase):
             client()._resumable(make, "f", sleep=lambda s: None)
 
 
+class FakeExec:
+    def __init__(self, behaviours):
+        self.b = behaviours
+        self.calls = 0
+
+    def execute(self, num_retries=0):
+        self.calls += 1
+        act = self.b.pop(0)
+        if isinstance(act, Exception):
+            raise act
+        return act
+
+
+class TestReadRetry(unittest.TestCase):
+    """run #46137167431: find_file SSLError (UNEXPECTED_EOF) 1 сааттык s5'ти «күтүлбөгөн ката» кылып жиберген."""
+
+    def test_ssl_eof_is_retried(self):
+        import ssl
+
+        req = FakeExec([ssl.SSLError("UNEXPECTED_EOF_WHILE_READING"), ConnectionResetError(), {"files": []}])
+        sleeps = []
+        self.assertEqual(client()._read(req, "find_file", sleep=sleeps.append), {"files": []})
+        self.assertEqual(req.calls, 3)
+        self.assertEqual(sleeps, [5.0, 10.0])
+
+    def test_gives_up_as_transient(self):
+        import ssl
+
+        req = FakeExec([ssl.SSLError("eof")] * 5)
+        with self.assertRaises(TransientError) as cm:
+            client()._read(req, "find_file", sleep=lambda s: None)
+        self.assertIn("find_file", str(cm.exception))
+        self.assertEqual(req.calls, 5)
+
+    def test_bug_is_not_swallowed(self):
+        with self.assertRaises(KeyError):
+            client()._read(FakeExec([KeyError("x")]), "f", sleep=lambda s: None)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -51,7 +51,8 @@ export const QuoteScene: React.FC<{readonly look: Look; readonly quote: string; 
         style={{
           position: 'absolute', left: 120, bottom: 230, padding: '16px 28px', backgroundColor: '#000000aa',
           borderLeft: `6px solid ${look.accent}`, color: look.ink, fontSize: 34,
-          translate: `${interpolate(frame, [2 * fps, 2.7 * fps], [-700, 0], {...ease, easing: Easing.bezier(0.16, 1, 0.3, 1)})}px 0px`,
+          // fully off-screen before it slides in (a fixed -700px left the tail of a long label visible)
+          translate: `calc(${interpolate(frame, [2 * fps, 2.7 * fps], [1, 0], {...ease, easing: Easing.bezier(0.16, 1, 0.3, 1)})} * (-100% - 160px)) 0px`,
         }}
       >
         {lowerThird}

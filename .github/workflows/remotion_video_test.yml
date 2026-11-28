@@ -1,0 +1,111 @@
+name: "🎞 Remotion — бир видеолук сынак (TEST гана)"
+
+# Көзөмөлдөнгөн сынак: БИР жаңы видео кадимки конвейер менен жасалат, айырмасы — 8-этаптагы текст-карточкалар
+# Remotion менен (ар видеого өз анимация стили; ишке ашпаса HyperFrames → ASS). Production'дун «🎬 Видео жасоо»
+# workflow'у ӨЗГӨРГӨН ЖОК. Бул workflow ар дайым YouTube_Auto_TEST папкасына жазат; код production папкасында
+# Remotion'ду өзү өчүрөт (remotion_render.REMOTION_PRODUCTION_APPROVED = False).
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: "Жаңы видеонун темасы (орусча)"
+        required: false
+        type: string
+      video_id:
+        description: "TEST папкасындагы бар видеону улантуу/кайра жасоо үчүн ID (жаңы видео үчүн бош)"
+        required: false
+        type: string
+      rerun_from:
+        description: "Ушул этаптан кайра (video_id менен; карточкалар үчүн s8_render жетиштүү)"
+        required: false
+        default: none
+        type: choice
+        options: [none, s1_script, s2_scenes, s3_voice, s4_subtitles, s5_visuals, s6_animation, s7_music, s8_render, s9_qa]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: make-video
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: FFmpeg жана шрифттер
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core fonts-montserrat || \
+          sudo apt-get install -y -qq ffmpeg fonts-dejavu-core
+
+      - name: Whisper модели (кэш)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: whisper-small-v1
+
+      - name: Китепканалар
+        run: pip install -q -r requirements.txt
+
+      - name: HyperFrames (запас карточкалар үчүн)
+        continue-on-error: true
+        env:
+          HYPERFRAMES_NO_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+        run: |
+          cd tools/hyperframes
+          npm ci --no-fund --no-audit
+          npx hyperframes browser ensure
+
+      - name: Remotion (бекитилген версиялар) + браузер
+        continue-on-error: true       # иштебесе карточкалар HyperFrames/ASS менен жасалат
+        env:
+          REMOTION_DISABLE_TELEMETRY: "1"
+        run: |
+          cd tools/remotion
+          npm ci --no-fund --no-audit
+          npx remotion browser ensure
+          npx remotion compositions src/index.ts
+
+      - name: Тесттер
+        env:
+          YTA_SKIP_SLOW: "1"
+        run: python -m unittest discover tests
+
+      - name: Видео жасоо (TEST, Remotion карточкалары)
+        env:
+          VIDEO_TOPIC: ${{ inputs.topic }}
+          VIDEO_ID: ${{ inputs.video_id }}
+          VIDEO_NICHE: motivation
+          VIDEO_RERUN_FROM: ${{ inputs.rerun_from }}
+          VIDEO_STOP_AFTER: none
+          VIDEO_QA_PROFILE: current
+          YTA_DRIVE_FOLDER: YouTube_Auto_TEST
+          YTA_CINEMATIC: "1"
+          YTA_HYPERFRAMES: "1"
+          YTA_REMOTION: "1"
+          YTA_SFX: "1"
+          YTA_VOICE_STYLE: motivational
+          HYPERFRAMES_NO_TELEMETRY: "1"
+          REMOTION_DISABLE_TELEMETRY: "1"
+          DO_NOT_TRACK: "1"
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          GDRIVE_CLIENT_ID: ${{ secrets.GDRIVE_CLIENT_ID }}
+          GDRIVE_CLIENT_SECRET: ${{ secrets.GDRIVE_CLIENT_SECRET }}
+          GDRIVE_REFRESH_TOKEN: ${{ secrets.GDRIVE_REFRESH_TOKEN }}
+        run: python -m pipeline.ci

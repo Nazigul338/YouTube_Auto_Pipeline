@@ -1,5 +1,6 @@
 import React from 'react';
 import {Composition} from 'remotion';
+import {Card, calculateCardMetadata} from './Card';
 import {calculateDocMetadata, DocFilm} from './DocFilm';
 
 // One registration; every real video passes its own props (look, text, route, transitions, captions) from the
@@ -54,6 +55,16 @@ export const RemotionRoot: React.FC = () => (
         audio: null,
         syncMarks: [],
       }}
+    />
+    <Composition
+      id="Card"
+      component={Card}
+      durationInFrames={90}
+      fps={30}
+      width={1920}
+      height={1080}
+      calculateMetadata={calculateCardMetadata}
+      defaultProps={{text: 'Похвала — не приговор', dur: 3, accent: '#f2c14e', style: 'focus' as const, seed: 'card-test'}}
     />
   </>
 );

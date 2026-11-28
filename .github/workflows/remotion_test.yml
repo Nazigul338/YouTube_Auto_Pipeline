@@ -59,6 +59,7 @@ jobs:
         run: |
           YTA_SKIP_SLOW=1 python -m unittest discover tests
           python -m unittest tests.test_full_local -v
+          python -m unittest tests.test_remotion -v   # узак да: 15 сек рендер + тунук кириллица карточкасы
 
       - uses: actions/upload-artifact@v4
         if: always()

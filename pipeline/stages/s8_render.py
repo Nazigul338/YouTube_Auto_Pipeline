@@ -383,7 +383,7 @@ class RenderStage(Stage):
         if cine:
             t0 = time.time()
             card_for_shot, cards_ass, hf_n, ass_n = self._cinematic_cards(ctx, shots, motions, plan, rdir)
-            ctx.log(f"   🎞 CINEMATIC (сынак): HyperFrames карточкалары {hf_n}, ASS карточкалары {ass_n} "
+            ctx.log(f"   🎞 CINEMATIC (сынак): анимацияланган карточкалар (Remotion/HyperFrames) {hf_n}, ASS карточкалары {ass_n} "
                     f"({time.time() - t0:.0f} сек)")
             debug.append({"label": "cinematic_cards", "hyperframes": hf_n, "ass": ass_n})
         ctx.log(f"   1/4 Кадрлар рендерленүүдө: {len(jobs)} …")
@@ -616,11 +616,26 @@ class RenderStage(Stage):
             placed.append({**c, "shot": sh["i"], "delay": delay, "dur": dur})
         done: dict[int, Path] = {}
         usable = [p for p in placed if p["dur"] >= 1.2]
-        if hfcards.requested() and usable:
-            accent = hfcards.accent_css(plan["concept_params"].get("card_color", "&H004EC1F2&"))
-            res = hfcards.render_all(usable, rdir / "hf_cards", accent, log=ctx.log)
+        from .. import remotion_render
+
+        accent = hfcards.accent_css(plan["concept_params"].get("card_color", "&H004EC1F2&"))
+        store = getattr(ctx, "store", None)
+        if remotion_render.blocked_reason(store):
+            ctx.log("   ℹ️ " + remotion_render.blocked_reason(store))
+        if remotion_render.active(store) and usable:
+            # Remotion (СЫНАК): ар видеого өз анимация стили; ишке ашпаган карточка HyperFrames/ASS'ка өтөт
+            reg = getattr(ctx, "registry", None) or {}
+            style = remotion_render.pick_card_style(ctx.video_id, reg)
+            reg.setdefault("videos", {}).setdefault(ctx.video_id, {})["remotion_card_style"] = style
+            ctx.log(f"   🎞 Remotion карточкалары: стиль «{style}», {len(usable)} карточка")
+            res = remotion_render.render_cards(usable, rdir / "remotion_cards", accent, style, ctx.video_id,
+                                               log=ctx.log)
             done = {id(usable[k]): v for k, v in res.items()}
-        elif not hfcards.requested():
+        rest = [p for p in usable if id(p) not in done]
+        if hfcards.requested() and rest:
+            res = hfcards.render_all(rest, rdir / "hf_cards", accent, log=ctx.log)
+            done.update({id(rest[k]): v for k, v in res.items()})
+        if not hfcards.requested() and not remotion_render.active(store):
             ctx.log("   ℹ️ YTA_HYPERFRAMES өчүк — карточкалар ASS бойдон")
         card_for_shot = {p["shot"]: (done[id(p)], p["delay"]) for p in usable if id(p) in done}
         left = [c for c in items if not any(id(p) in done and p["text"] == c["text"] and

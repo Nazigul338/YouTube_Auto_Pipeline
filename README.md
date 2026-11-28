@@ -88,6 +88,7 @@ s9: биринчи фраза даяр үндө ≤5 сек, жалган уба
 | 🔧 Жөндөөнү текшерүү | Ачкычтар, Gemini, Pixabay, Drive, музыка |
 | 🔐 Drive авторизациясын текшерүү | OAuth режими (Testing/Production), токен жаңыртуу, чыныгы жүктөө |
 | 🔬 Мүмкүнчүлүктөрдү сыноо | Gemini моделдери, TTS, Whisper чынында иштейби |
+| 🎞 Remotion — бир видеолук сынак (TEST гана) | Бир жаңы видео кадимки конвейер менен, 8-этаптагы карточкалар Remotion менен (YouTube_Auto_TEST, production workflow өзгөрбөйт) |
 | 🎞 Remotion сынагы (15 сек, TEST) | Remotion + FFmpeg: 15 сек сынак видео, MP4/шайкештик текшерүү, учурдагы конвейердин тесттери (секретсиз, Drive'га жазбайт) |
 
 ## Системанын архитектурасы
@@ -238,7 +239,19 @@ Remotion өзүнчө MP4 клип рендерлейт, FFmpeg аны кади�
   Ар видео өз props'ун берет (түс, шрифт, текст, маршрут, өтүүлөрдүн түрү, сахна узундугу) — шаблон кайталанбайт.
 - Python: `pipeline/remotion_render.py` — `render()`, `finish()` (FFmpeg: H.264 High/yuv420p/bt709 + AAC, faststart),
   `validate()` (1920×1080, 30 fps, кодек, узактык, видео=үн, толук декоддоо), `sync_report()` (жарк ↔ бип ≤50 мс).
-  Желек `YTA_REMOTION` — демейки ӨЧҮК; өндүрүш этаптарына азырынча туташкан жок.
+  `render_cards()` — 8-этаптын текст-карточкалары (тунук ProRes 4444): ар видеого өз анимация стили
+  (`focus`/`mask`/`cascade`/`frame`, акыркы видеонун стили кайталанбайт, реестрде `remotion_card_style`);
+  ишке ашпаган карточка → HyperFrames → ASS (видео токтобойт).
+
+**Күйгүзүү / өчүрүү (`YTA_REMOTION`):**
+- Демейки — ӨЧҮК. «🎬 Видео жасоо» (production) workflow'унда бул желек ЖОК — production видеолоруна таасири жок.
+- Күйгүзүү: workflow'дун `env:` бөлүгүнө `YTA_REMOTION: "1"` (даяр: «🎞 Remotion — бир видеолук сынак»).
+  Локалдык: `YTA_REMOTION=1 YTA_CINEMATIC=1 python -m pipeline.ci ...`.
+- Өчүрүү: желекти алып салуу же `YTA_REMOTION: "0"` → карточкалар мурункудай HyperFrames/ASS.
+- Коргоо: желек күйүк болсо да Remotion TEST папкаларында гана (`YouTube_Auto_TEST`, `YouTube_Auto_EN_TEST`)
+  иштейт. Production папкасында логго «уруксат керек» деп жазып, өчүк калат. Production'го өткөрүү — колдонуучунун
+  уруксаты менен гана: `pipeline/remotion_render.py` → `REMOTION_PRODUCTION_APPROVED = True` + «🎬 Видео жасоо»
+  workflow'на Remotion орнотуу кадамы жана `YTA_REMOTION: "1"`.
 - Сынак: Actions → «🎞 Remotion сынагы» → жыйынтык run'дын Artifacts'ында (`remotion-test`: MP4, отчет, кадрлар).
   Локалдык: `cd tools/remotion && npm ci && npx remotion browser ensure`, анан `python -m pipeline.remotion_render --selftest out`.
 - Браузер: Remotion өз Chrome Headless Shell'ин `remotion.media`'дан жүктөйт. Ал бөгөттөлгөн чөйрөдө гана

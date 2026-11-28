@@ -92,20 +92,48 @@ class DriveClient:
         return cls(*(_secret(n) for n in SECRET_NAMES))
 
     # ---------- окуу ----------
+    READ_TRIES = 5
+    READ_WAIT = 5.0
+
+    def _read(self, req, what: str, sleep: Callable[[float], None] = time.sleep) -> Any:
+        """Окуу суроосу (list/get — кайталоо коопсуз). googleapiclient'тин ички кайталоосу (~7 сек) кыска
+        тармак үзүлүшүнө жетпей калат: Video_006, run #46137167431 — s5 бүтөөрдө `find_file` SSLError
+        (UNEXPECTED_EOF) менен жыгылып, 1 сааттык этап «күтүлбөгөн ката» болуп жоголду. Эми 5 жолу
+        (5, 10, 20, 40 сек тыныгуу менен), баары ишке ашпаса — TransientError (этап кайра аракет/улантылат)."""
+        import httplib2
+        from googleapiclient.errors import HttpError
+
+        from .errors import TransientError
+
+        last: Exception | None = None
+        for attempt in range(self.READ_TRIES):
+            try:
+                return req.execute(num_retries=3)
+            except HttpError as e:
+                if getattr(e.resp, "status", 0) not in (429, 500, 502, 503, 504):
+                    raise
+                last = e
+            except (OSError, httplib2.HttpLib2Error) as e:   # SSLError, ConnectionError, TimeoutError ⊂ OSError
+                last = e
+            if attempt < self.READ_TRIES - 1:
+                sleep(self.READ_WAIT * 2 ** attempt)
+        raise TransientError(f"Drive окуу ({what}) {self.READ_TRIES} аракеттен кийин ишке ашкан жок: "
+                             f"{type(last).__name__}. Кайра иштетсеңиз улантылат.")
+
     def whoami(self) -> str:
-        about = self.svc.about().get(fields="user(emailAddress)").execute(num_retries=3)
+        about = self._read(self.svc.about().get(fields="user(emailAddress)"), "whoami")
         return about["user"]["emailAddress"]
 
     def list_children(self, parent_id: str) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
         token = None
         while True:
-            resp = self.svc.files().list(
+            resp = self._read(self.svc.files().list(
                 q=f"'{parent_id}' in parents and trashed = false",
                 fields="nextPageToken, files(id, name, mimeType, size, md5Checksum)",
                 pageSize=200,
                 pageToken=token,
-            ).execute(num_retries=3)
+            ), "list_children")
             items.extend(resp.get("files", []))
             token = resp.get("nextPageToken")
             if not token:
@@ -123,12 +151,12 @@ class DriveClient:
         return out
 
     def find_folder(self, name: str, parent_id: str = "root") -> str | None:
-        resp = self.svc.files().list(
+        resp = self._read(self.svc.files().list(
             q=(f"name = '{_escape(name)}' and '{parent_id}' in parents "
                f"and mimeType = '{FOLDER_MIME}' and trashed = false"),
             fields="files(id)",
             pageSize=1,
-        ).execute(num_retries=3)
+        ), "find_folder")
         files = resp.get("files", [])
         return files[0]["id"] if files else None
 
@@ -235,11 +263,11 @@ class DriveClient:
 
     # ---------- системанын өз файлдары (жаңыртууга болот) ----------
     def find_file(self, name: str, parent_id: str) -> dict[str, Any] | None:
-        resp = self.svc.files().list(
+        resp = self._read(self.svc.files().list(
             q=(f"name = '{_escape(name)}' and '{parent_id}' in parents "
                f"and mimeType != '{FOLDER_MIME}' and trashed = false"),
             fields="files(id, name, size, md5Checksum)", pageSize=1,
-        ).execute(num_retries=3)
+        ), "find_file")
         files = resp.get("files", [])
         return files[0] if files else None
 

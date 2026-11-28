@@ -10,7 +10,10 @@
 Лицензия: жеке адам / ≤3 кишилик компания үчүн акысыз (https://www.remotion.dev/docs/license). Ачкыч болсо —
 YTA_REMOTION_LICENSE (GitHub Secret) аркылуу гана; кодго/логго жазылбайт.
 
-Өндүрүштө азырынча КОЛДОНУЛБАЙТ (YTA_REMOTION=1 жана сынак ийгиликтүү болгондон кийин гана туташат).
+Күйгүзүү: YTA_REMOTION=1 (демейки өчүк). Ошондо да TEST папкаларында гана иштейт (YouTube_Auto_TEST,
+YouTube_Auto_EN_TEST); production папкасы үчүн REMOTION_PRODUCTION_APPROVED = True керек — аны колдонуучунун
+уруксаты менен гана өзгөртүү. Азыр колдонулушу: 8-этаптагы текст-карточкалар (HyperFrames/ASS ордунда;
+Remotion иштебей калса — HyperFrames, андан кийин ASS).
 
 Сыноо: python -m pipeline.remotion_render --selftest out_dir
 """
@@ -35,8 +38,46 @@ FPS = 30
 W, H = 1920, 1080
 
 
+# Production папкасында иштөөгө колдонуучунун уруксаты (2026-11-28: али берилген жок — False бойдон).
+REMOTION_PRODUCTION_APPROVED = False
+CARD_STYLES = ("focus", "mask", "cascade", "frame")
+
+
 def enabled() -> bool:
+    """Желек гана (YTA_REMOTION=1). Папканы текшерүү — active()."""
     return os.environ.get("YTA_REMOTION", "").strip().lower() in ("1", "true", "yes")
+
+
+def allowed(store=None) -> bool:
+    from . import cinematic
+
+    return cinematic.is_test_root(store) or REMOTION_PRODUCTION_APPROVED
+
+
+def active(store=None) -> bool:
+    """Remotion ушул видеодо колдонулабы: желек күйүк ЖАНА папка уруксат берилген."""
+    return enabled() and allowed(store)
+
+
+def blocked_reason(store=None) -> str | None:
+    if enabled() and not allowed(store):
+        from . import cinematic
+
+        return (f"YTA_REMOTION=1, бирок папка «{cinematic.root_name(store) or '?'}» — Remotion азырынча TEST "
+                f"папкаларында гана (production'го колдонуучунун уруксаты керек). Өчүк калды.")
+    return None
+
+
+def pick_card_style(video_id: str, registry: dict | None) -> str:
+    """Ар видеого карточка стили: video_id'ден, бирок акыркы видеонун стили КАЙТАЛАНБАЙТ."""
+    import hashlib
+
+    vids = ((registry or {}).get("videos") or {})
+    prev = [v.get("remotion_card_style") for k, v in sorted(vids.items()) if k != video_id and isinstance(v, dict)]
+    last = next((x for x in reversed(prev) if x), None)
+    start = int(hashlib.sha1(video_id.encode()).hexdigest(), 16) % len(CARD_STYLES)
+    order = CARD_STYLES[start:] + CARD_STYLES[:start]
+    return next(st for st in order if st != last)
 
 
 def tools_dir() -> Path:
@@ -55,7 +96,7 @@ def available() -> tuple[bool, str]:
 
 
 def render(composition: str, props: dict, out: Path, *, audio: Path | None = None, log=print,
-           timeout: int = 1800) -> Path:
+           timeout: int = 1800, extra: list[str] | None = None) -> Path:
     """Remotion композициясын props менен MP4'кө рендерлейт. audio берилсе — public/ ичине көчүрүлөт."""
     ok, why = available()
     if not ok:
@@ -74,7 +115,7 @@ def render(composition: str, props: dict, out: Path, *, audio: Path | None = Non
         json.dump(props, f, ensure_ascii=False)
         pfile = f.name
     cmd = [str(d / "node_modules" / ".bin" / "remotion"), "render", "src/index.ts", composition, str(out.resolve()),
-           f"--props={pfile}", "--log=info"]
+           f"--props={pfile}", "--log=info", *(extra or [])]
     browser = os.environ.get("YTA_REMOTION_BROWSER", "").strip()
     if browser:
         cmd.append(f"--browser-executable={browser}")
@@ -97,6 +138,41 @@ def render(composition: str, props: dict, out: Path, *, audio: Path | None = Non
             tail = tail.replace(lic, "***")
         raise StageError(f"Remotion рендер катасы (код {r.returncode}):\n{tail}")
     return out
+
+
+ALPHA_ARGS = ["--codec=prores", "--prores-profile=4444", "--pixel-format=yuva444p10le", "--image-format=png"]
+
+
+def render_card(text: str, dur: float, workdir: Path, accent: str, style: str, seed: str,
+                log=print) -> tuple[Path | None, str]:
+    """Бир тунук карточка (ProRes 4444 MOV, alpha). (жол же None, түшүндүрмө) — ката болсо видео токтобойт."""
+    from . import hfcards
+
+    out = Path(workdir).resolve() / "card.mov"
+    try:
+        render("Card", {"text": text, "dur": round(dur, 3), "accent": accent, "style": style, "seed": seed}, out,
+               log=lambda *_: None, timeout=300, extra=ALPHA_ARGS)
+    except StageError as e:
+        return None, str(e).splitlines()[0][:200]
+    ok, why = hfcards.validate(out, dur)
+    return (out if ok else None), why
+
+
+def render_cards(cards: list[dict], workdir: Path, accent: str, style: str, seed: str,
+                 log=print) -> dict[int, Path]:
+    """{карточканын индекси: mov}. Ишке ашпагандары кайтарылбайт (алар HyperFrames/ASS бойдон калат)."""
+    ok, why = available()
+    if not ok:
+        log(f"   ⚠️ Remotion жеткиликсиз ({why}) — карточкалар HyperFrames/ASS менен")
+        return {}
+    done: dict[int, Path] = {}
+    for k, c in enumerate(cards):
+        path, why = render_card(c["text"], c["dur"], Path(workdir) / f"card_{k:02d}", accent, style, f"{seed}-{k}")
+        log(f"   {'✓' if path else '⚠️'} Remotion карточка {k + 1}/{len(cards)} «{c['text']}» ({style}): {why}"
+            + ("" if path else " → HyperFrames/ASS колдонулат"))
+        if path:
+            done[k] = path
+    return done
 
 
 def finish(raw: Path, out: Path, *, audio: Path | None = None) -> Path:
