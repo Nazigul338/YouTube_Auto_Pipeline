@@ -172,6 +172,33 @@ class TestAIRelevance(unittest.TestCase):
         (self.d / "clips" / "licenses.json").write_text(_json.dumps([{"shot": 0}]))
         self.assertEqual(VisualsStage.previous_best(ctx, self.shots), {})
 
+    def test_boost_first_tries_several_candidates(self):
+        # run #46125420574: биринчи кадр 3/5 калды → өзүнчө бир нече талапкер, эң жакшысы алынат
+        class Gem:
+            calls = 0
+
+            def rate_frames(self, items):
+                Gem.calls += 1
+                if Gem.calls == 1:
+                    return [3, 5, 5]
+                if len(items) > 1:                        # биринчи кадрдын талапкерлери: 2, 5, 4
+                    return [2, 5, 4][:len(items)]
+                return [3] * len(items)                   # айлампалар жакшырта алган жок
+        self.ctx.services["gemini"] = Gem()
+        chosen = {k: (asset(k), "fresh", 0.5) for k in range(3)}
+        finder = mock.Mock()
+        finder.beat_candidate.return_value = None
+        n = iter(range(300, 400))
+        finder.replacement.side_effect = lambda pool, dur: asset(next(n))
+        fetch = lambda i: (i, chosen[i][0], self.clip, 8.0, "fresh", 0.0)
+        stage = VisualsStage()
+        stage.FIRST_TRIES = 3
+        with mock.patch.object(VisualsStage, "visual_beats", return_value={}):
+            out, st = stage.ai_relevance(self.ctx, self.results, self.shots, self.scenes, chosen,
+                                         {k: None for k in range(3)}, finder, fetch, lambda i: 0.5)
+        self.assertEqual(st["scores"][0], 5)
+        self.assertEqual(out[0][1].id, chosen[0][0].id)
+
     def test_quota_failure_does_not_break(self):
         with mock.patch("time.sleep"):
             out, st = self.run_stage(FakeGem([], fail=True), [asset(100)])

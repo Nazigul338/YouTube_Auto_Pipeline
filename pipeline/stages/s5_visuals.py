@@ -668,6 +668,57 @@ SHOTS:
             ai_stats["carried"] = kept
         return [by_i[i] for i in sorted(by_i)], kept
 
+    FIRST_TRIES = 8
+
+    def boost_first(self, ctx, first, by_i, scores, chosen, pool_of, finder, fetch, off_u, text, btext, shots) -> bool:
+        """Биринчи кадр (hook) айлампалардан кийин да <FIRST_MIN болсо — ага өзүнчө бир нече талапкер
+        (кадр идеясынын ар бир суроосунан 3 клипке чейин + сахнанын запастары) издеп, бирге баалап, эң жакшысын алат.
+
+        Себеби (Video_006, run #46125420574): кадр мааниси 3.26 менен өттү, бирок биринчи кадр 3/5 калды —
+        айлампаларда ага бир гана талапкер сыналчу."""
+        dur = shots[first]["dur"]
+        cands = []
+        qs = list(self.visual_beats(ctx, [first], btext).get(first, ("", []))[1])
+        for q in qs:
+            for _ in range(3):
+                c = finder.beat_candidate(q, dur)
+                if c is None or len(cands) >= self.FIRST_TRIES:
+                    break
+                cands.append(c)
+        while len(cands) < self.FIRST_TRIES:
+            c = finder.replacement(pool_of[first], dur)
+            if c is None:
+                break
+            cands.append(c)
+        old = chosen[first]
+        got = []
+        for c in cands:
+            chosen[first] = (c, "fresh", 0.0)
+            try:
+                got.append(fetch(first))
+            except Exception:
+                continue
+        chosen[first] = old
+        if not got:
+            ctx.log(f"   🎬 Биринчи кадр: жаңы талапкер табылган жок ({scores.get(first)}/5 калды)")
+            return False
+        items = []
+        for k, r in enumerate(got):
+            off = pick_offset(r[3], dur, off_u(first)) if r[3] else 0.0
+            items.append((k, self._frame(r[2], r[1].kind, off, dur), text(first)))
+        rated = self._rate(ctx, items)
+        if not rated:
+            return False
+        k, best = max(rated.items(), key=lambda kv: kv[1])
+        ctx.log(f"   🎬 Биринчи кадр: {len(got)} талапкер сыналды, эң жакшысы {best}/5 (мурун {scores.get(first)}/5)")
+        if best <= scores.get(first, 0):
+            return False
+        r = got[k]
+        by_i[first] = r
+        chosen[first] = (r[1], "fresh", 0.0)
+        scores[first] = best
+        return True
+
     def ai_relevance(self, ctx, results, shots, scenes, chosen, pool_of, finder, fetch, off_u):
         """Ар кадрды (клиптин ортосунан) ОШОЛ кадрдагы диктордун сөзүнө Gemini менен баалайт; ≤2/5 болсо —
         сөздүн маанисин көрсөткөн өзүнчө идея боюнча жаңы клип издейт (жок болсо — сахнанын запас клиби),
@@ -744,6 +795,9 @@ SHOTS:
                     by_i[i] = r
                     scores[i] = new_scores[i]
                     replaced += 1
+        if first is not None and scores.get(first, 5) < self.FIRST_MIN:
+            if self.boost_first(ctx, first, by_i, scores, chosen, pool_of, finder, fetch, off_u, text, btext, shots):
+                replaced += 1
         out = [by_i[i] for i in sorted(by_i)]
         avg = sum(scores.values()) / len(scores) if scores else 0.0
         beats_won = sum(1 for i in beat_used if by_i[i] is trial.get(i))
