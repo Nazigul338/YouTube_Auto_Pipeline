@@ -668,28 +668,64 @@ SHOTS:
             ai_stats["carried"] = kept
         return [by_i[i] for i in sorted(by_i)], kept
 
-    FIRST_TRIES = 8
+    FIRST_TRIES = 12
+    HOOK_QUERIES = 6
+
+    HOOK_PROMPT = """You are a film editor choosing the OPENING SHOT (first 3 seconds) of a Russian-language
+psychology YouTube video. The viewer must instantly see the exact moment the narrator describes, not a vague mood.
+Narration of the opening shot: {shot}
+Next words of the hook: {more}
+{rules}
+Write {n} DIFFERENT English stock-footage search queries (2-4 words each, common words that exist on Pixabay/Pexels)
+that literally show this moment: who is there, what they do, the visible emotion (e.g. a person being praised or
+applauded who looks away uneasy). Vary the setting (office, home, friends, family). No clichés (chess, light bulb,
+puzzle, trophy, handshake), no logos, no text on screen.
+Return a JSON array of strings only."""
+
+    def hook_queries(self, ctx, first, btext, shots) -> list[str]:
+        """Биринчи кадрга өзүнчө так суроолор (hook'тун көз ирмеми). Ката болсо — кадимки visual_beats."""
+        from ..visual_rules import VISUAL_RULES
+        from .base import gemini_of
+
+        nxt = [k for k in sorted(range(len(shots)), key=lambda k: shots[k].get("start", k)) if k != first][:2]
+        try:
+            data = gemini_of(ctx).json(self.HOOK_PROMPT.format(
+                shot=btext.get(first, "")[:300], more=" ".join(btext.get(i, "") for i in nxt)[:300],
+                rules=VISUAL_RULES, n=self.HOOK_QUERIES), purpose="visual_beats", temperature=0.7)
+            qs = [q.strip() for q in data if isinstance(q, str) and q.strip()] if isinstance(data, list) else []
+        except Exception as e:
+            ctx.log(f"   ⚠️ Биринчи кадрдын суроолору жазылган жок ({type(e).__name__})")
+            qs = []
+        if not qs:
+            qs = list(self.visual_beats(ctx, [first], btext).get(first, ("", []))[1])
+        return list(dict.fromkeys(qs))[:self.HOOK_QUERIES]
 
     def boost_first(self, ctx, first, by_i, scores, chosen, pool_of, finder, fetch, off_u, text, btext, shots) -> bool:
         """Биринчи кадр (hook) айлампалардан кийин да <FIRST_MIN болсо — ага өзүнчө бир нече талапкер
-        (кадр идеясынын ар бир суроосунан 3 клипке чейин + сахнанын запастары) издеп, бирге баалап, эң жакшысын алат.
+        (hook'тун так көз ирмемине жазылган 6 суроонун ар биринен 2 клипке чейин + сахнанын запастары) издеп,
+        бирге баалап, эң жакшысын алат.
 
-        Себеби (Video_006, run #46125420574): кадр мааниси 3.26 менен өттү, бирок биринчи кадр 3/5 калды —
-        айлампаларда ага бир гана талапкер сыналчу."""
+        Себеби (Video_006): run #46125420574 — айлампаларда биринчи кадрга бир гана талапкер сыналчу (3/5);
+        run #46131015885 — 8 талапкер, бирок 2 жалпы суроодон гана (3/5). Издөө лимити бүтсө да ушул
+        суроолор үчүн өзүнчө лимит берилет."""
         dur = shots[first]["dur"]
         cands = []
-        qs = list(self.visual_beats(ctx, [first], btext).get(first, ("", []))[1])
+        qs = self.hook_queries(ctx, first, btext, shots)
+        if hasattr(finder, "budget") and isinstance(getattr(finder, "budget", None), int):
+            finder.budget = max(finder.budget, getattr(finder, "calls", 0)) + len(qs)
         for q in qs:
-            for _ in range(3):
+            for _ in range(2):
                 c = finder.beat_candidate(q, dur)
                 if c is None or len(cands) >= self.FIRST_TRIES:
                     break
                 cands.append(c)
+        from_q = len(cands)
         while len(cands) < self.FIRST_TRIES:
             c = finder.replacement(pool_of[first], dur)
             if c is None:
                 break
             cands.append(c)
+        ctx.log(f"   🎬 Биринчи кадр: {len(qs)} суроо ({'; '.join(qs)[:200]}) → талапкер {from_q}, запастан {len(cands) - from_q}")
         old = chosen[first]
         got = []
         for c in cands:

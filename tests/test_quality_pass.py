@@ -199,6 +199,37 @@ class TestAIRelevance(unittest.TestCase):
         self.assertEqual(st["scores"][0], 5)
         self.assertEqual(out[0][1].id, chosen[0][0].id)
 
+    def test_boost_first_uses_hook_queries(self):
+        # run #46131015885: 8 талапкер 2 жалпы суроодон → 3/5. Hook'ко өзүнчө суроолор, ар биринен клип
+        class Gem:
+            def json(self, prompt, **kw):
+                self.prompt = prompt
+                return ["woman praised looks away", "man applauded uneasy", "woman praised looks away"]
+
+            def rate_frames(self, items):
+                return [3] + [5] * (len(items) - 1)
+        gem = Gem()
+        self.ctx.services["gemini"] = gem
+        chosen = {k: (asset(k), "fresh", 0.5) for k in range(3)}
+        finder = mock.Mock()
+        finder.budget, finder.calls = 10, 10
+        n = iter(range(500, 600))
+        finder.beat_candidate.side_effect = lambda q, dur: asset(next(n))
+        finder.replacement.return_value = None
+        fetch = lambda i: (i, chosen[i][0], self.clip, 8.0, "fresh", 0.0)
+        by_i = {r[0]: r for r in self.results}
+        scores = {0: 3, 1: 5, 2: 5}
+        ok = VisualsStage().boost_first(self.ctx, 0, by_i, scores, chosen, {0: None}, finder, fetch,
+                                        lambda i: 0.5, lambda i: "текст", {0: "после похвалы", 1: "оговорку"},
+                                        self.shots)
+        self.assertTrue(ok)
+        self.assertEqual(scores[0], 5)
+        qs = [c.args[0] for c in finder.beat_candidate.call_args_list]
+        self.assertEqual(sorted(set(qs)), ["man applauded uneasy", "woman praised looks away"])  # дубликат жок
+        self.assertEqual(len(qs), 4)                              # ар суроодон 2 клип
+        self.assertEqual(finder.budget, 12)                       # лимит бүтсө да суроолорго орун
+        self.assertIn("после похвалы", gem.prompt)
+
     def test_quota_failure_does_not_break(self):
         with mock.patch("time.sleep"):
             out, st = self.run_stage(FakeGem([], fail=True), [asset(100)])
